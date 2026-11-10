@@ -4,6 +4,7 @@
  */
 
 export const DA_ADMIN = 'https://admin.da.live';
+export const AEM_API = 'https://api.aem.live';
 const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/i;
 const PATH = /^(\/[a-zA-Z0-9][a-zA-Z0-9._-]*)+$|^\/$/;
 const KEY = /^[a-zA-Z0-9-]{8,128}$/;
@@ -125,8 +126,8 @@ function rateLimit(key, now) {
 }
 
 /**
- * Confirms the caller's Adobe IMS token can read the page through the DA source API.
- * Results are cached for five minutes per token and page.
+ * Confirms the caller's Adobe IMS token can read the page through the DA source API (or the
+ * newer AEM source API for sites that moved to it). Cached for five minutes per token and page.
  */
 export async function authorize(request, page, env, now = Date.now()) {
   const header = request.headers.get('Authorization') || '';
@@ -137,11 +138,17 @@ export async function authorize(request, page, env, now = Date.now()) {
   rateLimit(tokenKey, now);
   const key = `${tokenKey}|${page.org}/${page.site}${docPath(page.path)}`;
   if (authCache.get(key) > now) return;
+  const doc = `${docPath(page.path)}.html`;
+  const urls = [
+    `${DA_ADMIN}/source/${page.org}/${page.site}${doc}`,
+    `${AEM_API}/${page.org}/sites/${page.site}/source${doc}`,
+  ];
   let resp;
   try {
-    resp = await fetch(`${DA_ADMIN}/source/${page.org}/${page.site}${docPath(page.path)}.html`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    for (let i = 0; i < urls.length && (!resp || resp.status === 404); i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      resp = await fetch(urls[i], { method: 'HEAD', headers: { Authorization: `Bearer ${token}` } });
+    }
   } catch {
     throw new HttpError(502, 'Could not reach Document Authoring to check your access.');
   }

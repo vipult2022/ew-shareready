@@ -1,7 +1,9 @@
+/* global globalThis */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseConfig, configFromQuery, bulkFor, toAdminUrl, siteOrigins, loadConfig, fetchSource,
+  findSiteIndex,
 } from '../../tools/shareready/lib/sources.js';
 import { platformIssues } from '../../tools/shareready/lib/checks.js';
 
@@ -91,6 +93,52 @@ test('loads config and source through the DA admin API', async () => {
   );
   const offline = fakeFetcher({ 'https://admin.da.live/config/northwind/site/': new Error('offline') });
   assert.deepEqual(await loadConfig(offline, { org: 'northwind', repo: 'site' }), {});
+});
+
+test('falls back to the AEM API for config and source on newer sites', async () => {
+  const fetcher = fakeFetcher({
+    'https://api.aem.live/northwind/sites/site/config/editor/da.json': { shareready: [{ key: 'brand', value: 'Northwind Bank' }] },
+    'https://api.aem.live/northwind/sites/site/source/offers/spring.html': '<body>new</body>',
+  });
+  assert.deepEqual(await loadConfig(fetcher, { org: 'northwind', repo: 'site' }), { brand: 'Northwind Bank' });
+  assert.equal(await fetchSource(fetcher, { org: 'northwind', repo: 'site', path: '/offers/spring' }), '<body>new</body>');
+  assert.deepEqual(fetcher.calls, [
+    'https://admin.da.live/config/northwind/site/',
+    'https://api.aem.live/northwind/sites/site/config/editor/da.json',
+    'https://admin.da.live/source/northwind/site/offers/spring.html',
+    'https://api.aem.live/northwind/sites/site/source/offers/spring.html',
+  ]);
+});
+
+test('finds the query index on the plugin origin, then on the live site', async () => {
+  const context = { org: 'northwind', repo: 'site' };
+  const original = globalThis.fetch;
+  const calls = [];
+  const serve = (found) => async (url) => {
+    calls.push(url);
+    return found.includes(url)
+      ? { ok: true, status: 200, json: async () => ({ data: [{ path: '/' }] }) }
+      : { ok: false, status: 404 };
+  };
+  try {
+    globalThis.fetch = serve(['https://main--site--northwind.aem.live/query-index.json']);
+    const fromSite = await findSiteIndex(context, {}, new URL('https://main--site--northwind.aem.page/tools/shareready.html'));
+    assert.deepEqual(fromSite, { index: { data: [{ path: '/' }] }, error: null });
+    assert.deepEqual(calls.splice(0), [
+      'https://main--site--northwind.aem.page/query-index.json',
+      'https://main--site--northwind.aem.live/query-index.json',
+    ]);
+
+    globalThis.fetch = serve([]);
+    const missing = await findSiteIndex(context, { 'query-index': '/en/query-index.json' }, new URL('https://tools.example/'));
+    assert.deepEqual(missing, {
+      index: null,
+      error: { url: 'https://main--site--northwind.aem.live/en/query-index.json', error: 'HTTP 404' },
+    });
+    assert.equal(calls.length, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
 });
 
 test('platform issues follow the field each platform shows', () => {

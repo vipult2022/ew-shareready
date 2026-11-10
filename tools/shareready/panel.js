@@ -2,6 +2,9 @@ import { h, clear } from './lib/dom.js';
 import { PLATFORMS } from './lib/platforms.js';
 import { SEVERITY, platformIssues } from './lib/checks.js';
 import { renderPreview } from './lib/previews.js';
+import {
+  plural, verdict, worst, ring, fitFrames as fitStages,
+} from './lib/ui.js';
 
 const DOCS_URL = 'https://github.com/vipult2022/ew-shareready#readme';
 
@@ -41,22 +44,6 @@ const FIELD_PASS = {
   image: 'image-good',
   'image-alt': 'image-alt-ok',
 };
-
-function plural(n, word) {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
-}
-
-function verdict(result) {
-  if (result.counts.error) return { label: 'Not ready to share', tone: 'error' };
-  if (result.counts.warning) return { label: 'Almost ready', tone: 'warning' };
-  return { label: 'Ready to share', tone: 'pass' };
-}
-
-function worst(issues) {
-  if (issues.some((c) => c.severity === 'error')) return 'error';
-  if (issues.some((c) => c.severity === 'warning')) return 'warning';
-  return 'pass';
-}
 
 function fileName(src) {
   return String(src || '').split(/[?#]/)[0].split('/').pop();
@@ -159,16 +146,6 @@ export default function createPanel(root, state, actions, { demoPages = {} } = {
   }
 
   /* Summary */
-
-  function ring(score, tone) {
-    return h(
-      'div',
-      {
-        class: `sr-ring sr-tone-${tone}`, style: { '--p': String(score) }, role: 'img', 'aria-label': `Share score ${score} of 100`,
-      },
-      h('span', {}, String(score)),
-    );
-  }
 
   function renderSummary() {
     clear(els.summary);
@@ -479,15 +456,7 @@ export default function createPanel(root, state, actions, { demoPages = {} } = {
   }
 
   function fitFrames() {
-    els.body.querySelectorAll('.sr-stage').forEach((stage) => {
-      const frame = stage.firstElementChild;
-      if (!frame) return;
-      const style = getComputedStyle(stage);
-      const available = stage.clientWidth
-        - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      const native = parseFloat(frame.style.width) || frame.offsetWidth;
-      frame.style.zoom = String(Math.min(1, available / native));
-    });
+    fitStages(els.body);
   }
 
   function renderPreviews(page, result) {

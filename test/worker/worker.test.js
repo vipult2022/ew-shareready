@@ -42,13 +42,14 @@ beforeEach(() => {
     if (!hit) throw new Error(`Unexpected fetch ${url}`);
     return hit.respond(url, init);
   };
-  route(/^https:\/\/admin\.da\.live\/source\//, () => new Response('<body></body>'));
+  route(/^https:\/\/admin\.da\.live\/source\//, () => new Response(null));
   route('https://graph.facebook.com/', () => Response.json({
     title: 'Save & grow', updated_time: '2026-11-10T10:00:00+0000', image: [{ url: 'https://fb/img.png' }],
   }));
   route('https://api.indexnow.org/', () => new Response(null, { status: 202 }));
   route('https://hooks.slack.com/', () => new Response('ok'));
   route(/^https:\/\/main--site--northwind\.aem\.(live|page)\//, () => new Response(LIVE_HTML));
+  route('https://api.aem.live/', () => new Response(null, { status: 404 }));
 });
 
 afterEach(() => {
@@ -140,13 +141,26 @@ test('checks the token against the DA source API and caches the answer', async (
   const da = calls.filter((c) => c.url.startsWith('https://admin.da.live/'));
   assert.equal(da.length, 1);
   assert.equal(da[0].url, 'https://admin.da.live/source/northwind/site/offers/savings.html');
+  assert.equal(da[0].init.method, 'HEAD');
   assert.equal(da[0].init.headers.Authorization, 'Bearer tok');
+  assert.equal(calls.some((c) => c.url.startsWith('https://api.aem.live/')), false);
+});
+
+test('falls back to the newer AEM source API when DA does not have the page', async () => {
+  routes[0] = { match: 'https://admin.da.live/', respond: () => new Response(null, { status: 404 }) };
+  routes[5] = { match: 'https://api.aem.live/', respond: () => new Response(null) };
+  const { resp } = await share({ ...PAGE, steps: ['indexnow'] });
+  assert.equal(resp.status, 200);
+  const aem = calls.find((c) => c.url.startsWith('https://api.aem.live/'));
+  assert.equal(aem.url, 'https://api.aem.live/northwind/sites/site/source/offers/savings.html');
 });
 
 test('maps DA answers to clear errors and runs no steps', async () => {
-  const cases = [[401, 401, /expired/], [403, 403, /access/], [404, 404, /not found/], [500, 502, /500/]];
+  const cases = [
+    [401, 401, /expired/, 1], [403, 403, /access/, 1], [404, 404, /not found/, 2], [500, 502, /500/, 1],
+  ];
   for (let i = 0; i < cases.length; i += 1) {
-    const [status, expected, message] = cases[i];
+    const [status, expected, message, count] = cases[i];
     resetState();
     calls = [];
     routes[0] = { match: 'https://admin.da.live/', respond: () => new Response('', { status }) };
@@ -154,7 +168,7 @@ test('maps DA answers to clear errors and runs no steps', async () => {
     const r = await share();
     assert.equal(r.resp.status, expected);
     assert.match(r.data.error, message);
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, count);
   }
 });
 

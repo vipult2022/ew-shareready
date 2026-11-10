@@ -6,19 +6,16 @@ import {
   buildProposal, mergeRows, toTableHtml, toPlainText, applyToDocument, selectionInMetadata,
 } from './lib/metadata-block.js';
 import {
-  createFetcher, fetchSource, loadConfig, configFromQuery, loadBulk, bulkFor, loadIndex,
+  createFetcher, fetchSource, loadConfig, configFromQuery, loadBulk, bulkFor, findSiteIndex,
   loadImageInfo, siteOrigins,
 } from './lib/sources.js';
+import {
+  DEMO_PAGES, DEMO_HOST, DEMO_BRAND, demoUrl, demoIndexUrl,
+} from './lib/demo.js';
 import createPanel from './panel.js';
 
 const params = new URLSearchParams(window.location.search);
 
-const DEMO_PAGES = {
-  'spring-savings': { label: 'Spring Savings (needs work)', path: '/offers/spring-savings' },
-  'everyday-checking': { label: 'Everyday Checking (ready)', path: '/accounts/everyday-checking' },
-};
-const DEMO_HOST = 'www.northwind-bank.example';
-const DEMO_BRAND = 'Northwind Bank';
 const SDK_TIMEOUT = 4000;
 
 const state = {
@@ -171,23 +168,9 @@ function onLiveDocument({ html, selection, editable }) {
 }
 
 async function loadSiteIndex() {
-  const { org, repo } = state.context;
-  const indexPath = state.config['query-index'] || '/query-index.json';
-  const origins = siteOrigins(state.context);
-  const sameSite = window.location.hostname.includes(`--${repo}--${org}.`)
-    || window.location.hostname === 'localhost';
-  const urls = [
-    sameSite ? new URL(indexPath, window.location.origin).href : null,
-    new URL(indexPath, origins.live).href,
-  ].filter(Boolean);
-  let last = {};
-  for (let i = 0; i < urls.length; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    last = await loadIndex(urls[i]);
-    if (last.index) break;
-  }
-  state.index = last.index;
-  state.indexError = last.index ? null : { url: urls[urls.length - 1], error: last.error };
+  const { index, error } = await findSiteIndex(state.context, state.config);
+  state.index = index;
+  state.indexError = error;
   await analyze();
 }
 
@@ -234,7 +217,7 @@ async function startLive(sdk) {
 async function loadDemo(name) {
   state.demo = name in DEMO_PAGES ? name : 'spring-savings';
   state.review = null;
-  const resp = await fetch(new URL(`./demo/${state.demo}.html`, import.meta.url));
+  const resp = await fetch(demoUrl(state.demo));
   state.html = await resp.text();
   state.doc = parseHtml(state.html);
   await analyze();
@@ -245,7 +228,7 @@ async function startDemo(fallback) {
   state.demoFallback = fallback;
   state.config = { brand: DEMO_BRAND, ...state.config };
   try {
-    const resp = await fetch(new URL('./demo/query-index.json', import.meta.url));
+    const resp = await fetch(demoIndexUrl());
     state.index = resp.ok ? await resp.json() : null;
   } catch {
     state.index = null;

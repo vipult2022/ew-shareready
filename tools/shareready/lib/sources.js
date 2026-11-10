@@ -1,6 +1,9 @@
 import { toMetaName } from './extract.js';
+import {
+  DA_ADMIN, AEM_API, sourceUrls, fetchFirst,
+} from './aem.js';
 
-export const DA_ADMIN = 'https://admin.da.live';
+export { DA_ADMIN };
 const DA_CONTENT = 'content.da.live';
 
 /** Config keys read from the `shareready` sheet (or the plugin URL's query string). */
@@ -18,6 +21,7 @@ function firstSheet(json) {
 
 function sheet(json, name) {
   if (!json || typeof json !== 'object') return null;
+  if (Array.isArray(json[name])) return json[name];
   if (Array.isArray(json[name]?.data)) return json[name].data;
   if (json[':sheetname'] === name || json[':name'] === name) return firstSheet(json);
   return null;
@@ -109,10 +113,9 @@ export function createFetcher(initialToken) {
   };
 }
 
-export async function fetchSource(fetcher, { org, repo, path }) {
-  const clean = (path || '/').replace(/\.html$/, '').replace(/\/$/, '/index');
-  const resp = await fetcher.auth(`${DA_ADMIN}/source/${org}/${repo}${clean}.html`);
-  if (!resp.ok) {
+export async function fetchSource(fetcher, context) {
+  const resp = await fetchFirst(fetcher, sourceUrls(context));
+  if (!resp?.ok) {
     const error = new Error(`Could not read the page (${resp.status})`);
     error.status = resp.status;
     throw error;
@@ -129,13 +132,18 @@ async function readJson(promise) {
   }
 }
 
+/** Site config: DA's config store, or the site config of the newer AEM API. */
 export async function loadConfig(fetcher, { org, repo }) {
-  const data = await readJson(fetcher.auth(`${DA_ADMIN}/config/${org}/${repo}/`));
+  const data = await readJson(fetcher.auth(`${DA_ADMIN}/config/${org}/${repo}/`))
+    || await readJson(fetcher.auth(`${AEM_API}/${org}/sites/${repo}/config/editor/da.json`));
   return parseConfig(data);
 }
 
 export async function loadBulk(fetcher, { org, repo }) {
-  return readJson(fetcher.auth(`${DA_ADMIN}/source/${org}/${repo}/metadata.json`));
+  return readJson(fetchFirst(fetcher, [
+    `${DA_ADMIN}/source/${org}/${repo}/metadata.json`,
+    `${AEM_API}/${org}/sites/${repo}/source/metadata.json`,
+  ]));
 }
 
 /** query-index.json is public but has no CORS headers unless the site adds them. */
@@ -147,6 +155,30 @@ export async function loadIndex(url) {
   } catch {
     return { index: null, error: 'blocked' };
   }
+}
+
+/**
+ * Finds the site's query index: on the plugin's own origin first (when ShareReady is served
+ * from the site), then on the live site. Returns { index, error: { url, error } | null }.
+ */
+export async function findSiteIndex(context, config = {}, here = window.location) {
+  const { org, repo } = context;
+  const indexPath = config['query-index'] || '/query-index.json';
+  const sameSite = here.hostname.includes(`--${repo}--${org}.`) || here.hostname === 'localhost';
+  const urls = [
+    sameSite ? new URL(indexPath, here.origin).href : null,
+    new URL(indexPath, siteOrigins(context).live).href,
+  ].filter(Boolean);
+  let last = {};
+  for (let i = 0; i < urls.length; i += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    last = await loadIndex(urls[i]);
+    if (last.index) break;
+  }
+  return {
+    index: last.index,
+    error: last.index ? null : { url: urls[urls.length - 1], error: last.error },
+  };
 }
 
 function probe(src, timeout) {

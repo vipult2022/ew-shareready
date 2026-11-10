@@ -1,0 +1,555 @@
+/* ShareReady Publish & Share dialog. Builds on shareready.css; scoped to .sr-publish. */
+
+.sr-publish {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sr-publish .sr-pub-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sr-publish .sr-pub-preview,
+.sr-publish .sr-pub-panel {
+  min-width: 0;
+}
+
+/* Preview column */
+
+.sr-publish .sr-pub-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: #fafafa;
+  border-bottom: 1px solid var(--sr-border);
+}
+
+.sr-publish .sr-pub-preview > *,
+.sr-publish .sr-pub-panel > * {
+  flex: none;
+}
+
+.sr-publish .sr-pub-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.sr-publish .sr-pub-head h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--tone-text);
+}
+
+.sr-publish .sr-pub-head p {
+  margin: 2px 0 0;
+  color: var(--sr-muted);
+}
+
+.sr-publish .sr-pub-stage {
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.sr-publish .sr-pub-clean {
+  margin: 0;
+  font-weight: 700;
+  color: var(--sr-pass);
+}
+
+.sr-publish .sr-pub-issues .sr-issues {
+  padding: 0;
+  font-size: 13px;
+}
+
+.sr-publish .sr-pub-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--sr-muted);
+}
+
+/* Slack message preview (what the worker posts) */
+
+.sr-publish .sr-pub-slack {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  font-family: var(--sr-social);
+  font-size: 15px;
+  color: #1d1c1d;
+}
+
+.sr-publish .sr-pub-slack-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #3b63fb, #b33bfb);
+  border-radius: 6px;
+}
+
+.sr-publish .sr-pub-slack-body {
+  min-width: 0;
+}
+
+.sr-publish .sr-pub-slack-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  color: #616061;
+}
+
+.sr-publish .sr-pub-slack-meta strong {
+  font-size: 15px;
+  color: #1d1c1d;
+}
+
+.sr-publish .sr-pub-slack-app {
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #e8e8e8;
+  border-radius: 3px;
+}
+
+.sr-publish .sr-pub-slack-channel {
+  margin-left: auto;
+}
+
+.sr-publish .sr-pub-slack-title {
+  display: block;
+  margin-top: 4px;
+  font-weight: 700;
+  color: #1264a3;
+  text-decoration: none;
+}
+
+.sr-publish .sr-pub-slack p {
+  margin: 2px 0 0;
+}
+
+.sr-publish .sr-pub-slack img {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 1.91;
+  margin-top: 8px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.sr-publish .sr-pub-slack blockquote {
+  padding-left: 10px;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  border-left: 4px solid #ddd;
+}
+
+.sr-publish .sr-pub-slack-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sr-publish .sr-pub-slack-buttons span {
+  padding: 3px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+}
+
+.sr-publish .sr-pub-slack-buttons .sr-pub-slack-primary {
+  color: #fff;
+  background: #007a5a;
+  border-color: #007a5a;
+}
+
+.sr-publish .sr-pub-slack .sr-pub-slack-context {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #616061;
+}
+
+/* Steps column */
+
+.sr-publish .sr-pub-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 0;
+}
+
+.sr-publish .sr-pub-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.sr-publish .sr-pub-url {
+  margin: 2px 0 12px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sr-publish .sr-pub-url a {
+  color: var(--sr-muted);
+}
+
+.sr-publish .sr-pub-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.sr-publish .sr-pub-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid #efefef;
+}
+
+.sr-publish .sr-pub-step:last-child {
+  border-bottom: 0;
+}
+
+.sr-publish .sr-pub-step input[type='checkbox'] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--sr-accent);
+  cursor: pointer;
+}
+
+.sr-publish .sr-pub-step input:disabled {
+  cursor: not-allowed;
+}
+
+.sr-publish .sr-pub-step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sr-publish .sr-pub-step label,
+.sr-publish .sr-pub-step strong {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sr-publish .sr-pub-step-body > p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--sr-muted);
+}
+
+.sr-publish .sr-pub-off label {
+  color: var(--sr-muted);
+  cursor: not-allowed;
+}
+
+.sr-publish .sr-pub-manual-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: #0a66c2;
+  border-radius: 4px;
+}
+
+.sr-publish .sr-pub-manual .sr-link {
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.sr-publish .sr-pub-step-body > .sr-pub-result {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sr-publish .sr-pub-result-ok {
+  color: var(--sr-pass);
+}
+
+.sr-publish .sr-pub-result-error {
+  color: var(--sr-error);
+}
+
+.sr-publish .sr-pub-result-skipped,
+.sr-publish .sr-pub-result-blocked {
+  color: var(--sr-warning-text);
+}
+
+.sr-publish .sr-pub-step-body > .sr-pub-result-running {
+  font-weight: 400;
+  color: var(--sr-muted);
+}
+
+.sr-publish .sr-pub-result a {
+  color: inherit;
+}
+
+/* Step status icons */
+
+.sr-publish .sr-pub-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+  line-height: 1;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.sr-publish .sr-pub-waiting {
+  border: 2px solid #d0d0d0;
+}
+
+.sr-publish .sr-pub-running {
+  border: 2px solid #d9e1fe;
+  border-top-color: var(--sr-accent);
+  animation: sr-spin 0.8s linear infinite;
+}
+
+.sr-publish .sr-pub-ok {
+  background: var(--sr-pass);
+}
+
+.sr-publish .sr-pub-ok::before {
+  content: '✓';
+}
+
+.sr-publish .sr-pub-error {
+  background: var(--sr-error);
+}
+
+.sr-publish .sr-pub-error::before {
+  content: '✕';
+}
+
+.sr-publish .sr-pub-skipped,
+.sr-publish .sr-pub-blocked {
+  background: var(--sr-warning);
+}
+
+.sr-publish .sr-pub-skipped::before,
+.sr-publish .sr-pub-blocked::before {
+  content: '–';
+}
+
+/* Slack note */
+
+.sr-publish .sr-pub-note {
+  margin-top: 8px;
+}
+
+.sr-publish .sr-pub-note textarea {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+}
+
+.sr-publish .sr-pub-note textarea:focus {
+  outline: 2px solid var(--sr-accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.sr-publish .sr-pub-utm {
+  margin: 4px 0 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--sr-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sr-publish .sr-pub-utm code {
+  font-size: 11px;
+}
+
+/* Notices and results */
+
+.sr-publish .sr-pub-notice {
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 12px;
+  background: #e9f2fd;
+  border-radius: 8px;
+}
+
+.sr-publish .sr-pub-notice p {
+  margin: 0 0 4px;
+}
+
+.sr-publish .sr-pub-notice a {
+  font-weight: 700;
+  color: var(--sr-accent);
+}
+
+.sr-publish .sr-pub-done {
+  padding: 14px;
+  margin-top: 14px;
+  background: var(--tone-soft);
+  border-radius: 12px;
+}
+
+.sr-publish .sr-pub-done h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--tone-text);
+}
+
+.sr-publish .sr-pub-done > p {
+  margin: 2px 0 10px;
+  font-size: 13px;
+}
+
+.sr-publish .sr-pub-link {
+  display: flex;
+  gap: 8px;
+}
+
+.sr-publish .sr-pub-link input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid #c6c6c6;
+  border-radius: 999px;
+}
+
+.sr-publish .sr-pub-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sr-publish .sr-pub-net {
+  text-decoration: none;
+}
+
+.sr-publish .sr-pub-net-linkedin {
+  color: #0a66c2;
+}
+
+.sr-publish .sr-pub-net-facebook {
+  color: #0866ff;
+}
+
+.sr-publish .sr-pub-net-x {
+  color: #000;
+}
+
+.sr-publish .sr-pub-net-whatsapp {
+  color: #128c7e;
+}
+
+.sr-publish .sr-pub-done .sr-pub-utm {
+  margin-top: 8px;
+}
+
+/* Action bar */
+
+.sr-publish .sr-pub-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 14px 0 16px;
+  margin-top: auto;
+  background: #fff;
+}
+
+.sr-publish .sr-pub-warn {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tone-text);
+}
+
+.sr-publish .sr-pub-go {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 22px;
+  font-size: 14px;
+}
+
+.sr-publish .sr-pub-spin {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 40%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: sr-spin 0.8s linear infinite;
+}
+
+.sr-publish .sr-pub-demo-pick {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Two columns in the dialog; each scrolls on its own */
+
+@media (width >= 760px) {
+  .sr-publish {
+    height: 100vh;
+  }
+
+  .sr-publish .sr-pub-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(340px, 1fr);
+    min-height: 0;
+  }
+
+  .sr-publish .sr-pub-preview,
+  .sr-publish .sr-pub-panel {
+    overflow-y: auto;
+  }
+
+  .sr-publish .sr-pub-preview {
+    border-right: 1px solid var(--sr-border);
+    border-bottom: 0;
+  }
+
+  .sr-publish .sr-pub-panel {
+    padding: 20px 24px 0;
+  }
+}
