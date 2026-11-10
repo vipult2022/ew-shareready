@@ -698,13 +698,13 @@ async function analyze(html, options) {
   state.error = null;
 }
 
-async function readPage() {
+async function readPage(ready = Promise.resolve()) {
   state.error = null;
   state.result = null;
   renderPreviewColumn();
   const origins = siteOrigins(state.context);
   try {
-    const html = await fetchSource(state.fetcher, state.context);
+    const [html] = await Promise.all([fetchSource(state.fetcher, state.context), ready]);
     await analyze(html, {
       path: state.context.path,
       host: shareHost(),
@@ -754,16 +754,20 @@ async function startLive(sdk) {
   });
   render();
 
-  const [config, bulk] = await Promise.all([
-    loadConfig(state.fetcher, state.context),
-    loadBulk(state.fetcher, state.context),
+  const settings = loadConfig(state.fetcher, state.context).then((config) => {
+    state.config = { ...config, ...configFromQuery(window.location.search) };
+    renderSteps();
+  });
+  const bulk = loadBulk(state.fetcher, state.context).then((json) => {
+    state.bulk = json ? bulkFor(state.context.path, json) : {};
+  });
+  const index = settings.then(() => findSiteIndex(state.context, state.config))
+    .then((res) => { state.index = res.index; });
+  await Promise.all([
+    readPage(Promise.all([settings, bulk, index])),
+    checkStatus(),
+    settings.then(checkWorker),
   ]);
-  state.config = { ...config, ...configFromQuery(window.location.search) };
-  state.bulk = bulk ? bulkFor(state.context.path, bulk) : {};
-  renderSteps();
-  const { index } = await findSiteIndex(state.context, state.config);
-  state.index = index;
-  await Promise.all([readPage(), checkStatus(), checkWorker()]);
 }
 
 async function loadDemo(name) {

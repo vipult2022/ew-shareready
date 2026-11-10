@@ -45,6 +45,7 @@ const loading = new Map();
 let panel;
 let analyzeSeq = 0;
 let liveTimer;
+let settings = Promise.resolve();
 
 function pageOptions() {
   if (state.mode === 'demo') {
@@ -126,7 +127,7 @@ async function analyze() {
   analyzeSeq += 1;
   const seq = analyzeSeq;
   const first = extractPage(state.doc, pageOptions());
-  await ensureImages(imageUrls(first));
+  await Promise.all([settings, ensureImages(imageUrls(first))]);
   if (seq !== analyzeSeq) return;
   const { page, result, opts } = analyzePage(state.doc);
   state.page = page;
@@ -190,13 +191,16 @@ async function startLive(sdk) {
   });
   panel.render();
 
-  const [config, bulk] = await Promise.all([
-    loadConfig(state.fetcher, state.context),
-    loadBulk(state.fetcher, state.context),
-  ]);
-  state.config = { ...config, ...configFromQuery(window.location.search) };
-  state.bulk = bulk ? bulkFor(state.context.path, bulk) : {};
-  loadSiteIndex();
+  // The page is read while config loads; bulk metadata and the index re-check when they land.
+  settings = loadConfig(state.fetcher, state.context).then((config) => {
+    state.config = { ...config, ...configFromQuery(window.location.search) };
+  });
+  loadBulk(state.fetcher, state.context).then((bulk) => {
+    if (!bulk) return;
+    state.bulk = bulkFor(state.context.path, bulk);
+    analyze();
+  });
+  settings.then(loadSiteIndex);
 
   if (state.mode === 'ew') {
     sdk.actions.subscribeLiveDocument(onLiveDocument);

@@ -197,16 +197,7 @@ function probe(src, timeout) {
   });
 }
 
-/**
- * Loads an image to learn its size. Returns { ok, width, height, display }, where display
- * is a URL the panel can show (a blob URL when the image needed the author's token).
- */
-export async function loadImageInfo(url, fetcher, timeout = 8000) {
-  if (!url) return { ok: false };
-  const direct = await probe(url, timeout);
-  if (direct) return { ok: true, ...direct, display: url };
-  const admin = toAdminUrl(url);
-  if (!admin || !fetcher?.token) return { ok: false };
+async function loadViaAdmin(admin, fetcher, timeout) {
   try {
     const resp = await fetcher.auth(admin);
     if (!resp.ok) return { ok: false };
@@ -216,4 +207,20 @@ export async function loadImageInfo(url, fetcher, timeout = 8000) {
   } catch {
     return { ok: false };
   }
+}
+
+/**
+ * Loads an image to learn its size. Returns { ok, width, height, display }, where display
+ * is a URL the panel can show (a blob URL when the image needed the author's token).
+ */
+export async function loadImageInfo(url, fetcher, timeout = 8000) {
+  if (!url) return { ok: false };
+  const admin = toAdminUrl(url);
+  // Protected sites answer content.da.live with a 401, so ask the source API first.
+  if (admin && fetcher?.token) {
+    const info = await loadViaAdmin(admin, fetcher, timeout);
+    if (info.ok) return info;
+  }
+  const direct = await probe(url, timeout);
+  return direct ? { ok: true, ...direct, display: url } : { ok: false };
 }
