@@ -104,7 +104,7 @@ export default function createPanel(root, state, actions, { demoPages = {} } = {
     const path = state.page?.path || state.context?.path || '';
     const modes = {
       demo: ['Demo', 'Sample pages for a fictional bank'],
-      ew: ['Live', 'Updates as you edit'],
+      ew: ['Live', 'Updates as you edit. Metadata table edits show once Experience Workspace saves them, a few seconds later.'],
       da: ['Draft', 'Reads the saved draft. Press ↻ after editing.'],
     };
     const [label, tip] = modes[state.mode] || [];

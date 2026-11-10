@@ -1,6 +1,8 @@
 // eslint-disable-next-line import/no-unresolved
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
-import { parseHtml, extractPage, pagePathname } from './lib/extract.js';
+import {
+  parseHtml, extractPage, pagePathname, withSavedMetadata, metadataSignature,
+} from './lib/extract.js';
 import { runChecks } from './lib/checks.js';
 import {
   buildProposal, mergeRows, toTableHtml, toPlainText, applyToDocument, selectionInMetadata,
@@ -17,6 +19,10 @@ import createPanel from './panel.js';
 const params = new URLSearchParams(window.location.search);
 
 const SDK_TIMEOUT = 4000;
+// EW saves the draft about 2s after the last edit (10s at most while typing).
+const SAVED_DELAYS = [2500, 7000];
+const FIX_DELAYS = [3000, 7000, 12000];
+const FIX_HOLD = 15000;
 
 const state = {
   mode: 'loading',
@@ -30,6 +36,10 @@ const state = {
   images: new Map(),
   html: '',
   doc: null,
+  // EW only: the saved draft, which still has the Metadata block the live HTML leaves out.
+  saved: null,
+  savedHtml: null,
+  expect: null,
   page: null,
   result: null,
   proposal: null,
@@ -46,6 +56,8 @@ let panel;
 let analyzeSeq = 0;
 let liveTimer;
 let settings = Promise.resolve();
+let savedFirst = Promise.resolve();
+let savedTimers = [];
 
 function pageOptions() {
   if (state.mode === 'demo') {
@@ -152,20 +164,70 @@ async function reloadSource() {
   }
 }
 
+async function rebuildLive() {
+  await savedFirst;
+  if (!state.html) return;
+  state.doc = withSavedMetadata(parseHtml(state.html), state.saved);
+  await analyze();
+}
+
+/** Reads the saved draft. Returns true when its Metadata block view changed. */
+async function loadSaved() {
+  const html = await fetchSource(state.fetcher, state.context);
+  if (html === state.savedHtml) return false;
+  const doc = parseHtml(html);
+  const { expect } = state;
+  if (expect) {
+    // Until EW has saved a Fix, keep showing the fixed block rather than the older draft.
+    const saved = html !== expect.before && metadataSignature(doc) === expect.signature;
+    if (!saved && Date.now() < expect.until) return false;
+    state.expect = null;
+  }
+  state.savedHtml = html;
+  state.saved = doc;
+  return true;
+}
+
+function refreshSaved() {
+  return loadSaved()
+    .then((changed) => (changed ? rebuildLive() : null))
+    .catch(() => null);
+}
+
+function scheduleSaved(delays = SAVED_DELAYS) {
+  savedTimers.forEach(clearTimeout);
+  savedTimers = delays.map((delay) => setTimeout(refreshSaved, delay));
+}
+
+/** Shows a Fix straight away; the saved draft takes over once EW has saved it. */
+function expectSaved(rows) {
+  const doc = applyToDocument(parseHtml('<main><div></div></main>'), rows);
+  state.expect = {
+    signature: metadataSignature(doc),
+    before: state.expect?.before ?? state.savedHtml,
+    until: Date.now() + FIX_HOLD,
+  };
+  state.saved = doc;
+  state.savedHtml = null;
+  scheduleSaved(FIX_DELAYS);
+  rebuildLive();
+}
+
 function onLiveDocument({ html, selection, editable }) {
-  state.live = { blockIndex: selection?.blockIndex ?? null, editable: editable !== false };
+  const blockIndex = selection?.blockIndex ?? null;
+  const moved = blockIndex !== state.live.blockIndex;
+  state.live = { blockIndex, editable: editable !== false };
   if (html === state.html) {
+    // Same HTML at the same block: an edit the live HTML can't show, such as in the Metadata table.
+    if (!moved) scheduleSaved();
     panel.renderStatus();
     return;
   }
   state.html = html;
+  scheduleSaved();
   clearTimeout(liveTimer);
-  const run = () => {
-    state.doc = parseHtml(html);
-    analyze();
-  };
-  if (!state.doc) run();
-  else liveTimer = setTimeout(run, 250);
+  if (!state.doc) rebuildLive();
+  else liveTimer = setTimeout(rebuildLive, 250);
 }
 
 async function loadSiteIndex() {
@@ -203,12 +265,15 @@ async function startLive(sdk) {
   settings.then(loadSiteIndex);
 
   if (state.mode === 'ew') {
+    savedFirst = loadSaved().catch(() => false);
     sdk.actions.subscribeLiveDocument(onLiveDocument);
     try {
       sdk.actions.subscribeChatTurnCompleted(() => {
+        // The assistant may have edited the Metadata table, which the live HTML leaves out.
+        scheduleSaved();
         if (!state.aiPending) return;
         state.aiPending = false;
-        panel.toast('Assistant finished. ShareReady re-checked the page.');
+        panel.toast('Assistant finished. ShareReady is re-checking the saved page.');
       });
     } catch {
       // Older hosts have no chat notifications.
@@ -318,6 +383,7 @@ async function applyFix() {
     state.sdk.actions.sendHTML(html);
     finishApply('Metadata block inserted at your cursor.');
     if (state.mode === 'da') setTimeout(reloadSource, 4000);
+    else expectSaved(out.rows);
     return;
   }
   if (state.mode !== 'ew' || state.sdk.capabilities?.sendHTMLReplace !== 1) {
@@ -335,6 +401,7 @@ async function applyFix() {
     return;
   }
   finishApply('Metadata block updated.');
+  expectSaved(out.rows);
 }
 
 function copyWithSelection(html) {
@@ -404,7 +471,8 @@ function refresh() {
   else if (state.mode === 'da') reloadSource();
   else if (state.mode === 'ew') {
     state.images.clear();
-    loadSiteIndex();
+    panel.setBusy(true);
+    Promise.all([refreshSaved(), loadSiteIndex()]).finally(() => panel.setBusy(false));
   }
 }
 

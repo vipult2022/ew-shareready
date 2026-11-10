@@ -114,7 +114,7 @@ export function createFetcher(initialToken) {
 }
 
 export async function fetchSource(fetcher, context) {
-  const resp = await fetchFirst(fetcher, sourceUrls(context));
+  const resp = await fetchFirst(fetcher, sourceUrls(context), { cache: 'no-store' });
   if (!resp?.ok) {
     const error = new Error(`Could not read the page (${resp.status})`);
     error.status = resp.status;

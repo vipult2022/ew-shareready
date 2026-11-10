@@ -94,6 +94,48 @@ function findMetadataBlocks(root) {
   return [...root.querySelectorAll('div.metadata')];
 }
 
+function mainOf(doc) {
+  return doc.querySelector('main') || doc.body;
+}
+
+/**
+ * Experience Workspace sends the live document as Live Preview HTML, which drops the
+ * page's first Metadata block (da-live prose2aem removeMetadata). This puts the saved
+ * draft's block back so the checks see it. When the live HTML already has every block
+ * the saved draft has, nothing was dropped and the live HTML is left alone.
+ * @param {Document} liveDoc parsed live document (changed in place and returned)
+ * @param {Document} savedDoc parsed saved draft, or an expected draft after a Fix
+ */
+export function withSavedMetadata(liveDoc, savedDoc) {
+  if (!savedDoc) return liveDoc;
+  const saved = findMetadataBlocks(mainOf(savedDoc));
+  const live = findMetadataBlocks(mainOf(liveDoc));
+  if (!saved.length || live.length >= saved.length) return liveDoc;
+  const block = liveDoc.importNode(saved[0], true);
+  if (live.length) {
+    live[0].before(block);
+    return liveDoc;
+  }
+  const main = mainOf(liveDoc);
+  let section = main.lastElementChild;
+  if (!section || section.tagName !== 'DIV') {
+    section = liveDoc.createElement('div');
+    main.append(section);
+  }
+  section.append(block);
+  return liveDoc;
+}
+
+/** Name=value pairs of the first Metadata block's text rows, to tell drafts apart. */
+export function metadataSignature(doc) {
+  const [block] = doc ? findMetadataBlocks(mainOf(doc)) : [];
+  if (!block) return '';
+  return readBlockRows(block)
+    .filter((r) => r.name !== 'image' && r.name !== 'og:image' && r.name !== 'twitter:image')
+    .map((r) => `${r.name}=${r.value}`)
+    .join('\n');
+}
+
 function isBlock(el) {
   return el.tagName === 'DIV' && el.classList.length > 0;
 }

@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DOMParser } from 'linkedom';
-import { extractPage, parseHtml } from '../../tools/shareready/lib/extract.js';
+import {
+  extractPage, parseHtml, withSavedMetadata, metadataSignature,
+} from '../../tools/shareready/lib/extract.js';
 import { runChecks } from '../../tools/shareready/lib/checks.js';
 import {
   buildProposal, mergeRows, toTableHtml, applyToDocument, selectionInMetadata, suggestTitle,
@@ -60,6 +62,38 @@ test('reads values from the Metadata block', async () => {
   assert.equal(page.imageAlt.source, 'metadata');
   assert.equal(page.og.siteName, 'Northwind Bank');
   assert.equal(page.paragraphs.some((p) => p.includes('Get paid up to two days')), false);
+});
+
+test('puts back the Metadata block that the EW live document leaves out', async () => {
+  const { doc: saved } = await load('everyday-checking');
+  const live = parseHtml(saved.querySelector('main').outerHTML, DOMParser);
+  live.querySelector('div.metadata').remove();
+  assert.equal(extractPage(live, OPTS).title.source, 'h1');
+
+  const merged = extractPage(withSavedMetadata(live, saved), { ...OPTS, path: '/accounts/everyday-checking' });
+  assert.equal(merged.hasMetadataBlock, true);
+  assert.equal(merged.metadataBlockCount, 1);
+  assert.equal(merged.title.value, 'Everyday Checking with No Monthly Fees');
+  assert.equal(merged.og.image, `${MEDIA}/checking-card.jpg`);
+  assert.equal(merged.paragraphs.some((p) => p.includes('Get paid up to two days')), false);
+
+  // Live HTML that already has every block is left alone; no saved block, nothing to add.
+  const full = parseHtml(saved.querySelector('main').outerHTML, DOMParser);
+  assert.equal(extractPage(withSavedMetadata(full, saved), OPTS).metadataBlockCount, 1);
+  const bare = parseHtml('<main><div><h1>Plain page</h1></div></main>', DOMParser);
+  assert.equal(extractPage(withSavedMetadata(bare, null), OPTS).hasMetadataBlock, false);
+  assert.equal(extractPage(withSavedMetadata(bare, parseHtml('<main><div></div></main>', DOMParser)), OPTS).hasMetadataBlock, false);
+});
+
+test('the metadata signature tracks text rows, not images', async () => {
+  const { doc } = await load('everyday-checking');
+  const before = metadataSignature(doc);
+  assert.match(before, /^title=Everyday Checking with No Monthly Fees$/m);
+  assert.doesNotMatch(before, /^image=/m);
+  doc.querySelector('div.metadata img')?.setAttribute('src', '/other.jpg');
+  assert.equal(metadataSignature(doc), before);
+  assert.equal(metadataSignature(parseHtml('<main><div><p>x</p></div></main>', DOMParser)), '');
+  assert.equal(metadataSignature(null), '');
 });
 
 test('an empty Title row means no title, with no fallback', () => {
