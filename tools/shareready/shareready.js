@@ -449,7 +449,7 @@ function aiPrompt() {
     `Make this page share-ready. ${page.hasMetadataBlock ? 'Update the existing Metadata table' : 'Add a Metadata table at the end of the page'} with these rows:`,
     '- Title: at most 60 characters, specific, key benefit first, no brand name.',
     '- Description: 120 to 155 characters, unique to this page, with a reason to click.',
-    `- Image: ${image} (pick a wider image from the page if this one is not close to 1.91:1).`,
+    `- Image: ${image} (pick a wider image from the page if this one is not close to 1.91:1). Put the picture itself in the cell, copied from the page, never its URL as text: a typed link is published as is and needs a DA sign-in.`,
     '- Image Alt: one sentence describing what the image shows.',
     issues.length ? `ShareReady found:\n${issues.join('\n')}` : '',
     'Then, in your reply only (not in the page), draft share copy: a LinkedIn post (2 to 3 short lines and 2 hashtags), an X post under 240 characters and a one-line Slack announcement.',
