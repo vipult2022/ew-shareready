@@ -355,25 +355,34 @@ export async function postSlack({
   const message = slackMessage({
     card: merged, url: shared, editUrl, note: String(note || '').trim(), host: new URL(url).host,
   });
-  let resp;
-  try {
-    resp = await fetch(env.SLACK_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(message),
-    });
-  } catch {
-    return { ok: false, message: 'Could not reach Slack.' };
+  const send = async (body) => {
+    try {
+      const resp = await fetch(env.SLACK_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const text = resp.ok ? '' : (await resp.text().catch(() => '')).slice(0, 200);
+      return { ok: resp.ok, status: resp.status, text };
+    } catch {
+      return { ok: false, unreachable: true };
+    }
+  };
+  let sent = await send(message);
+  let imageNote = '';
+  // Slack rejects the whole card when it cannot download the image, e.g. a private link.
+  if (!sent.ok && /invalid_blocks/.test(sent.text) && merged.image) {
+    const retry = await send({ ...message, blocks: message.blocks.filter((b) => b.type !== 'image') });
+    if (retry.ok) imageNote = ' Slack could not load the share image, so the card has no picture.';
+    sent = retry;
   }
-  if (!resp.ok) {
-    const text = (await resp.text().catch(() => '')).slice(0, 200);
-    return { ok: false, message: `Slack: ${text || `HTTP ${resp.status}`}` };
-  }
+  if (sent.unreachable) return { ok: false, message: 'Could not reach Slack.' };
+  if (!sent.ok) return { ok: false, message: `Slack: ${sent.text || `HTTP ${sent.status}`}` };
   return {
     ok: true,
-    message: `Posted to ${env.SLACK_CHANNEL || 'Slack'}.`,
+    message: `Posted to ${env.SLACK_CHANNEL || 'Slack'}.${imageNote}`,
     url: shared,
-    card: merged,
+    card: imageNote ? { ...merged, image: '' } : merged,
   };
 }
 

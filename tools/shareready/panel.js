@@ -340,7 +340,7 @@ export default function createPanel(root, state, actions, { demoPages = {} } = {
       const before = f.name === 'image' ? fileName(f.before) : f.before;
       const after = f.name === 'image' ? fileName(value) : value.trim();
       field.was.textContent = f.before && before !== after
-        ? `Was (${SOURCE_LABEL[f.source] || f.source}): ${before}` : '';
+        ? `Was (${SOURCE_LABEL[f.source] || f.source}): ${before}` : (f.note || '');
     });
     const apply = ui.form.querySelector('.sr-apply');
     apply.disabled = !out.proposal.changed || !state.live.editable;

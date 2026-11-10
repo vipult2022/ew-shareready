@@ -191,15 +191,19 @@ export function buildProposal(page, { images, index } = {}) {
     image: page.image.source,
     'image-alt': page.imageAlt.source,
   };
+  // A typed link must become a picture even when the image stays the same.
+  const relink = !!page.image.privateLink && sameImage;
   const fields = FIELDS.map((f) => {
     const inBlock = page.rows.some((r) => r.name === f.name && r.value);
-    const changed = !!after[f.name] && (after[f.name] !== before[f.name] || !inBlock);
+    const changed = !!after[f.name]
+      && (after[f.name] !== before[f.name] || !inBlock || (relink && f.name === 'image'));
     return {
       ...f,
       before: before[f.name],
       after: after[f.name],
       source: sources[f.name],
       imageUrl: f.name === 'image' ? image?.url : undefined,
+      note: relink && f.name === 'image' ? 'Was a typed link. Fix inserts the picture, which publishing copies to your site.' : undefined,
       changed,
       missing: !after[f.name],
     };

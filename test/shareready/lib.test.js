@@ -172,6 +172,34 @@ test('merging keeps unknown rows and existing labels', async () => {
   assert.deepEqual(rows.map((r) => r.label), ['Title', 'Description', 'Image', 'Image Alt', 'og:site_name']);
 });
 
+test('flags a typed content.da.live image link and Fix inserts the picture', async () => {
+  const html = await readFile(new URL('everyday-checking.html', DEMO), 'utf8');
+  const link = 'https://content.da.live/northwind/site/media/checking-card.jpg';
+  const typed = html.replace(/(<div>Image<\/div>\s*)<div>.*?<\/div>/s, `$1<div><p>${link}</p></div>`);
+  assert.notEqual(typed, html);
+  const page = extractPage(parseHtml(typed, DOMParser), { ...OPTS, path: '/accounts/everyday-checking' });
+  assert.equal(page.og.image, link);
+  assert.equal(page.image.privateLink, true);
+  const images = new Map([...IMAGES, [link, { ok: true, width: 1200, height: 630 }]]);
+  const result = runChecks(page, { images });
+  assert.ok(ids(result).includes('image-private'), ids(result).join(', '));
+  assert.ok(!ids(result).includes('image-broken'));
+
+  const proposal = buildProposal(page, { images });
+  const field = proposal.fields.find((f) => f.name === 'image');
+  assert.equal(proposal.changed, true);
+  assert.equal(field.changed, true);
+  assert.match(field.note, /typed link/);
+  const rows = mergeRows(page, proposal);
+  assert.ok(rows.find((r) => r.label === 'Image').html.includes(`<img src="${link}"`));
+
+  const doc = parseHtml(typed, DOMParser);
+  applyToDocument(doc, rows);
+  const fixed = extractPage(doc, { ...OPTS, path: '/accounts/everyday-checking' });
+  assert.equal(fixed.image.privateLink, false);
+  assert.ok(!ids(runChecks(fixed, { images })).includes('image-private'));
+});
+
 test('escapes author text in the generated table', () => {
   const page = extractPage(parseHtml('<main><div><h1>A &lt;b&gt; "quoted" title here</h1></div></main>', DOMParser), OPTS);
   const rows = mergeRows(page, buildProposal(page));

@@ -37,6 +37,15 @@ function childNodes(el) {
     || (n.nodeType === TEXT && n.textContent.trim()));
 }
 
+/** True for links into DA's content store, which needs a DA sign-in to read. */
+export function isDaContentUrl(url) {
+  try {
+    return new URL(url).hostname === 'content.da.live';
+  } catch {
+    return false;
+  }
+}
+
 function isImageHref(href) {
   try {
     const { pathname } = new URL(href, 'https://localhost/');
@@ -312,6 +321,9 @@ export function extractPage(doc, opts = {}) {
     image: twImage ? resolveAgainst(twImage, `${assetBase}${pathname}`) : og.image,
     site: metaConfig['twitter:site'] || '',
   };
+  // Publishing copies pictures to the site but keeps a typed link as it is.
+  const shareRow = rows.find((r) => r.value && r.name === (ogImageSrc ? 'og:image' : 'image'));
+  image.privateLink = !!shareRow && !shareRow.imageSrc && isDaContentUrl(og.image);
 
   return {
     path: pathname,

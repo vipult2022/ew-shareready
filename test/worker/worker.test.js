@@ -316,6 +316,20 @@ test('falls back to the panel card when the live page cannot be read', async () 
   assert.equal(data.results.slack.card.image, '');
 });
 
+test('posts the Slack card without the image when Slack cannot load it', async () => {
+  routes[3] = {
+    match: 'https://hooks.slack.com/',
+    respond: (url, init) => (JSON.parse(init.body).blocks.some((b) => b.type === 'image')
+      ? new Response('invalid_blocks', { status: 400 }) : new Response('ok')),
+  };
+  const { data } = await share({ ...PAGE, steps: ['slack'] });
+  const posts = calls.filter((c) => c.url.startsWith('https://hooks.slack.com/'));
+  assert.equal(posts.length, 2);
+  assert.equal(data.results.slack.ok, true);
+  assert.match(data.results.slack.message, /could not load the share image/);
+  assert.equal(data.results.slack.card.image, '');
+});
+
 test('reports Slack webhook errors', async () => {
   routes[3] = { match: 'https://hooks.slack.com/', respond: () => new Response('invalid_token', { status: 403 }) };
   const { data } = await share({ ...PAGE, steps: ['slack'] });

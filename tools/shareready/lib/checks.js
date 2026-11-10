@@ -182,6 +182,15 @@ function imageChecks(page, images, layouts, out) {
       detail: `The page has no image, so EDS falls back to ${DEFAULT_IMAGE}${info && !info.ok ? ', which does not exist' : ''}. Shares get a blank card.`,
       fix: 'metadata',
     });
+  } else if (image.privateLink) {
+    out.push({
+      id: 'image-private',
+      severity: 'error',
+      field: 'image',
+      title: 'Share image is a private link',
+      detail: 'The Image cell holds a typed link to content.da.live, which needs a DA sign-in. Publishing copies pictures to your site but keeps typed links as they are, so Facebook, LinkedIn, X and Slack show no image. Fix inserts the picture itself.',
+      fix: 'metadata',
+    });
   } else if (info && !info.ok) {
     out.push({
       id: 'image-broken',
