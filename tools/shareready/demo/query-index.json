@@ -1,0 +1,43 @@
+{
+  "total": 5,
+  "offset": 0,
+  "limit": 5,
+  "data": [
+    {
+      "path": "/",
+      "title": "Northwind Bank",
+      "description": "Checking, savings, cards and loans from Northwind Bank, a fictional bank used to demonstrate ShareReady.",
+      "image": "/tools/shareready/demo/media/checking-card.jpg",
+      "lastModified": "1762300800"
+    },
+    {
+      "path": "/offers/winter-savings",
+      "title": "Winter Savings Event",
+      "description": "Northwind Bank savings accounts help you grow your money with competitive rates, no monthly maintenance fees and round-the-clock access from the Northwind mobile app on ...",
+      "image": "/tools/shareready/demo/media/spring-square.jpg",
+      "lastModified": "1762300800"
+    },
+    {
+      "path": "/accounts/everyday-checking",
+      "title": "Everyday Checking with No Monthly Fees",
+      "description": "Get paid up to two days early with Northwind Everyday Checking. No monthly fees, no minimum balance and 40,000+ free ATMs nationwide.",
+      "image": "/tools/shareready/demo/media/checking-card.jpg",
+      "lastModified": "1762300800"
+    },
+    {
+      "path": "/offers/spring-savings",
+      "title": "Spring Savings Event: Earn 4.50% APY on a Northwind High-Yield Savings Account When You Open by May 31",
+      "description": "",
+      "image": "",
+      "lastModified": "1762300800"
+    },
+    {
+      "path": "/about",
+      "title": "About Northwind Bank",
+      "description": "Northwind Bank is a fictional bank. Learn who we are, how we keep your money safe and where to find us.",
+      "image": "",
+      "lastModified": "1762300800"
+    }
+  ],
+  ":type": "sheet"
+}

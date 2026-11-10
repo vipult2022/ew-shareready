@@ -5,7 +5,5 @@ LICENSE
 package.json
 package-lock.json
 test/*
-sync-block-collection.sh
 worker/*
-test/*
 docs/*
