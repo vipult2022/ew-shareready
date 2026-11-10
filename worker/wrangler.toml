@@ -1,0 +1,30 @@
+# ShareReady worker: the Publish & Share step (Facebook re-scrape, IndexNow, Slack).
+# Deploy from this folder with:  npx wrangler deploy
+#
+# Secrets (never commit these):
+#   npx wrangler secret put META_APP_ID        # Meta developer app ID
+#   npx wrangler secret put META_APP_SECRET    # Meta developer app secret
+#   npx wrangler secret put SLACK_WEBHOOK_URL  # https://hooks.slack.com/services/...
+#
+# Every secret is optional. A step whose secret is missing is reported as "not set up".
+
+name = "shareready"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[vars]
+# Required. Comma-separated orgs ("my-org") or sites ("my-org/my-site") this worker shares for.
+ALLOWED_ORGS = "vipult2022"
+# Optional. Extra public hosts to share, e.g. a production domain ("www.example.com").
+# The site's own main--site--org.aem.live and .aem.page hosts are always allowed.
+ALLOWED_HOSTS = ""
+# Public IndexNow key. A file named {key}.txt containing the key must be served at the site root.
+INDEXNOW_KEY = "9ff637071dbd6a45cea0841507f0d2db"
+# Shown in the dialog and in results ("Posted to #campaigns").
+SLACK_CHANNEL = "#campaigns"
+# Optional. Comma-separated origins allowed to call the worker. Wildcards (*) are allowed.
+# Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
+# http://localhost:3000
+# ALLOWED_ORIGINS = ""
+# Optional. Pin a Graph API version, e.g. "v24.0". Default: the app's default version.
+# META_GRAPH_VERSION = ""
