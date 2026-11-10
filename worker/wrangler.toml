@@ -28,3 +28,6 @@ SLACK_CHANNEL = "#campaigns"
 # ALLOWED_ORIGINS = ""
 # Optional. Pin a Graph API version, e.g. "v24.0". Default: the app's default version.
 # META_GRAPH_VERSION = ""
+# Optional. IndexNow endpoints to try in order, comma-separated. A rate-limited (429) or failing
+# engine is skipped for the next. Default: api.indexnow.org, then www.bing.com, then yandex.com.
+# INDEXNOW_ENDPOINT = ""

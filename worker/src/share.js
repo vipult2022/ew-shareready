@@ -240,6 +240,12 @@ export async function scrapeFacebook(url, env) {
   };
 }
 
+const INDEXNOW_ENDPOINTS = [
+  'https://api.indexnow.org/indexnow',
+  'https://www.bing.com/indexnow',
+  'https://yandex.com/indexnow',
+];
+
 const INDEXNOW_STATUS = {
   200: 'Search engines were notified.',
   202: 'IndexNow accepted the URL. The key is still being checked.',
@@ -255,23 +261,36 @@ export async function pingIndexNow(url, env) {
   if (!key) return skipped('IndexNow is not set up. Add INDEXNOW_KEY to the worker.');
   if (!KEY.test(key)) return { ok: false, message: 'INDEXNOW_KEY must be 8 to 128 letters, digits or dashes.' };
   const { host } = new URL(url);
-  let resp;
-  try {
-    resp = await fetch(env.INDEXNOW_ENDPOINT || 'https://api.indexnow.org/indexnow', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        host, key, keyLocation: `https://${host}/${key}.txt`, urlList: [url],
-      }),
-    });
-  } catch {
-    return { ok: false, message: 'Could not reach IndexNow.' };
+  const body = JSON.stringify({
+    host, key, keyLocation: `https://${host}/${key}.txt`, urlList: [url],
+  });
+  const configured = list(env.INDEXNOW_ENDPOINT);
+  const endpoints = configured.length ? configured : INDEXNOW_ENDPOINTS;
+  let result = { ok: false, message: 'Could not reach IndexNow.' };
+  // Engines share every ping, so a busy or rate-limited engine is skipped for the next one.
+  for (let i = 0; i < endpoints.length; i += 1) {
+    let resp = null;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      resp = await fetch(endpoints[i], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body,
+      });
+    } catch {
+      // Try the next engine.
+    }
+    if (resp) {
+      result = {
+        ok: resp.status === 200 || resp.status === 202,
+        status: resp.status,
+        engine: new URL(endpoints[i]).host,
+        message: INDEXNOW_STATUS[resp.status] || `IndexNow answered ${resp.status}.`,
+      };
+      if (resp.status !== 429 && resp.status < 500) break;
+    }
   }
-  return {
-    ok: resp.status === 200 || resp.status === 202,
-    status: resp.status,
-    message: INDEXNOW_STATUS[resp.status] || `IndexNow answered ${resp.status}.`,
-  };
+  return result;
 }
 
 function slackText(text) {

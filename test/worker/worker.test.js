@@ -255,6 +255,24 @@ test('sends IndexNow the host, key, key location and URL', async () => {
   assert.match(data.results.indexnow.message, /key file/);
 });
 
+test('tries the next IndexNow engine when one is rate limited or down', async () => {
+  routes[2] = { match: 'https://api.indexnow.org/', respond: () => new Response(null, { status: 429 }) };
+  route('https://www.bing.com/indexnow', () => { throw new TypeError('network'); });
+  route('https://yandex.com/indexnow', () => new Response(null, { status: 202 }));
+  const { data } = await share({ ...PAGE, steps: ['indexnow'] });
+  assert.equal(data.results.indexnow.ok, true);
+  assert.equal(data.results.indexnow.engine, 'yandex.com');
+  assert.deepEqual(
+    calls.filter((c) => /indexnow/.test(c.url)).map((c) => new URL(c.url).host),
+    ['api.indexnow.org', 'www.bing.com', 'yandex.com'],
+  );
+
+  routes[routes.length - 1].respond = () => new Response(null, { status: 429 });
+  const busy = await share({ ...PAGE, steps: ['indexnow'] });
+  assert.equal(busy.data.results.indexnow.ok, false);
+  assert.match(busy.data.results.indexnow.message, /rate limiting/);
+});
+
 test('skips steps that are not set up without failing the request', async () => {
   const { resp, data } = await share(PAGE, {}, { ALLOWED_ORGS: 'northwind' });
   assert.equal(resp.status, 200);
