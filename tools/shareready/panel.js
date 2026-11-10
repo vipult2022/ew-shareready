@@ -139,7 +139,7 @@ export default function createPanel(root, state, actions, { demoPages = {} } = {
       'div',
       { class: 'sr-demo' },
       h('p', {}, state.demoFallback
-        ? 'Demo mode. Open ShareReady from the Library in Experience Workspace to check your own page.'
+        ? 'Demo mode. Open ShareReady from Extensions in Experience Workspace to check your own page.'
         : 'Demo with a fictional bank. Try the Fix on the Spring Savings page.'),
       select,
     ));

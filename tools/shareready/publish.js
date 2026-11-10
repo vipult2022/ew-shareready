@@ -267,7 +267,7 @@ function topIssues() {
       'p',
       { class: 'sr-pub-hint' },
       issues.length > shown.length ? `And ${plural(issues.length - shown.length, 'more issue')}. ` : '',
-      'Fix them with ShareReady in the Library, then come back here.',
+      'Fix them in the ShareReady panel (Extensions), then come back here.',
     ),
   );
 }
