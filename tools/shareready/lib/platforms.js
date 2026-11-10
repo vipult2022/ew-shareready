@@ -3,7 +3,8 @@ import { fitText } from './measure.js';
 const SANS = 'Helvetica, Arial, sans-serif';
 
 /**
- * How each destination renders a shared link. Widths, fonts and line limits are
+ * How each destination renders a shared link. `width` is the preview frame; text
+ * widths are the space inside it. Widths, fonts and line limits are
  * approximations of each platform's desktop UI (checked Nov 2026); they change over
  * time, so treat results as a strong hint rather than a guarantee.
  */
@@ -13,9 +14,9 @@ export const PLATFORMS = [
     label: 'Google',
     short: 'G',
     source: 'html',
-    width: 600,
+    width: 632,
     title: { font: `400 20px Arial, ${SANS}`, maxPx: 600 },
-    description: { font: `400 14px Arial, ${SANS}`, maxPx: 920 },
+    description: { font: `400 14px Arial, ${SANS}`, maxPx: 990 },
   },
   {
     id: 'google-mobile',
@@ -71,7 +72,7 @@ export const PLATFORMS = [
     label: 'Slack',
     short: 'S',
     source: 'og',
-    width: 520,
+    width: 544,
     image: { crop: false, minWidth: 1 },
     title: { font: `700 15px ${SANS}`, width: 460, lines: 2 },
     description: { font: `400 15px ${SANS}`, width: 460, lines: 3 },

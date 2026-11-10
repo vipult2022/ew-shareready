@@ -32,8 +32,15 @@ function clamp(text, lines, className, tag = 'div') {
   return h(tag, { class: `${className} sr-clamp`, style: { '--lines': String(lines) } }, text || '');
 }
 
+let flagged = null;
+
 function cutMark(field) {
-  return field?.truncated ? h('span', { class: 'sr-cut', title: 'Cut off on this platform' }, '✂') : null;
+  if (!field?.truncated) return null;
+  const issue = !flagged || flagged.has(field.name);
+  return h('span', {
+    class: `sr-cut${issue ? '' : ' sr-cut-ok'}`,
+    title: issue ? 'Cut off here' : 'Cut off here, which is normal on this platform',
+  }, '✂');
 }
 
 function google(layout, page) {
@@ -47,12 +54,12 @@ function google(layout, page) {
       h('span', { class: 'sr-favicon' }, initial(siteName)),
       h('div', {}, h('div', { class: 'sr-g-name' }, siteName), h('div', { class: 'sr-g-url' }, breadcrumb(page))),
     ),
-    h('div', { class: 'sr-g-title' }, layout.title.lines.map((l) => h('div', {}, l)), cutMark(layout.title)),
+    h('div', { class: 'sr-g-title' }, layout.title.lines.map((l, i, all) => h('div', {}, l, i === all.length - 1 ? cutMark({ ...layout.title, name: 'title' }) : null))),
     h(
       'div',
       { class: 'sr-g-desc' },
       layout.description.text || h('span', { class: 'sr-empty' }, 'Google will pick text from the page'),
-      cutMark(layout.description),
+      cutMark({ ...layout.description, name: 'description' }),
     ),
   );
 }
@@ -68,7 +75,7 @@ function linkedin(layout, page, opts) {
       'div',
       { class: `sr-li-card${thumb ? ' sr-thumb' : ''}` },
       cardImage(layout, opts, 'sr-li-img'),
-      h('div', { class: 'sr-li-body' }, clamp(layout.values.title, 2, 'sr-li-title'), h('div', { class: 'sr-li-host' }, page.host), cutMark(layout.title)),
+      h('div', { class: 'sr-li-body' }, clamp(layout.values.title, 2, 'sr-li-title'), h('div', { class: 'sr-li-host' }, page.host), cutMark({ ...layout.title, name: 'title' })),
     ),
   );
 }
@@ -90,7 +97,7 @@ function facebook(layout, page, opts) {
         h('div', { class: 'sr-fb-host' }, page.host.toUpperCase()),
         clamp(layout.values.title, 2, 'sr-fb-title'),
         clamp(layout.values.description, 1, 'sr-fb-desc'),
-        cutMark(layout.title),
+        cutMark({ ...layout.title, name: 'title' }),
       ),
     ),
   );
@@ -195,6 +202,7 @@ const RENDERERS = {
  * @param {object} options
  * @param {(url: string) => string} options.src maps an image URL to a displayable one
  * @param {string} options.brand name shown as the poster
+ * @param {Set<string>} [options.flagged] fields with an issue here; other cut marks are muted
  */
 export function renderPreview(layout, page, options = {}) {
   const brand = options.brand || page.og.siteName || page.host;
@@ -207,6 +215,7 @@ export function renderPreview(layout, page, options = {}) {
     brand,
   };
   const render = RENDERERS[layout.platform.id];
+  flagged = options.flagged || null;
   const frame = h(
     'div',
     {

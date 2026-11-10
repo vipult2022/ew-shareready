@@ -148,6 +148,9 @@ test('recognises a selection inside the Metadata table only', async () => {
   const { page } = await load('everyday-checking', '/accounts/everyday-checking');
   const inTable = '<table><tbody><tr><td><p>Monthly</p></td></tr></tbody></table>';
   assert.equal(selectionInMetadata(inTable, page, DOMParser), true);
+  const acrossCells = '<table><tbody><tr><td><p>Title</p></td><td><p>Everyday Checking</p></td></tr>'
+    + '<tr><td><p>Descr</p></td></tr></tbody></table>';
+  assert.equal(selectionInMetadata(acrossCells, page, DOMParser), true);
   assert.equal(selectionInMetadata('<p>Monthly</p>', page, DOMParser), false);
   assert.equal(selectionInMetadata('<table><tr><td>Elsewhere</td></tr></table>', page, DOMParser), false);
 });

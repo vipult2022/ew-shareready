@@ -284,9 +284,12 @@ export function applyToDocument(doc, rows) {
 export function selectionInMetadata(selectionHtml, page, Parser = DOMParser) {
   if (!selectionHtml || !/<t[dh][\s>]/i.test(selectionHtml)) return false;
   const doc = new Parser().parseFromString(selectionHtml, 'text/html');
-  const selected = normalize(doc.documentElement.textContent).toLowerCase();
-  if (!selected) return false;
   const cells = page.rows.flatMap((r) => [r.label, r.value]).map((v) => normalize(v).toLowerCase());
   cells.push('metadata');
-  return cells.some((c) => c && c.includes(selected));
+  // The editor serializes the selection with its parent table, so each selected cell is a <td>.
+  const selected = [...doc.querySelectorAll('td, th')]
+    .map((td) => normalize(td.textContent).toLowerCase())
+    .filter(Boolean);
+  if (!selected.length) return false;
+  return selected.every((s) => cells.some((c) => c && c.includes(s)));
 }

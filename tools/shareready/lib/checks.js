@@ -1,5 +1,5 @@
 import { DEFAULT_IMAGE } from './extract.js';
-import { layoutAll } from './platforms.js';
+import { layoutAll, getPlatform } from './platforms.js';
 import { normalize } from './measure.js';
 
 export const SEVERITY = ['error', 'warning', 'info', 'pass'];
@@ -133,12 +133,14 @@ function descriptionChecks(page, layouts, out) {
   const google = layouts.find((l) => l.platform.id === 'google');
   const len = description.value.length;
   if (google?.description?.truncated) {
+    const cut = layouts.filter((l) => l.description?.truncated).map((l) => l.platform.id);
     out.push({
       id: 'description-long',
       severity: 'warning',
       field: 'description',
-      title: 'Description is too long for Google',
+      title: `Description is cut off on ${cut.length} of ${layouts.filter((l) => l.description).length} platforms`,
       detail: `${len} characters; Google shows about ${google.description.visible.length}. Keep it under 155.`,
+      platforms: cut,
       fix: 'metadata',
     });
   } else if (len < 70) {
@@ -372,6 +374,25 @@ export function runChecks(page, { images = new Map(), index = null } = {}) {
   };
 }
 
+const FIELD_SHOWN = {
+  title: (p) => !!p.title,
+  description: (p) => !!p.description,
+  image: (p) => !!p.image,
+  'image-alt': (p) => !!p.image,
+  robots: (p) => p.source === 'html',
+  content: (p) => p.source === 'html',
+  'og:site_name': (p) => ['facebook', 'slack'].includes(p.id),
+};
+
+/**
+ * Errors and warnings that affect one platform's preview. Checks without an explicit
+ * platform list apply wherever their field is shown.
+ */
 export function platformIssues(checks, platformId) {
-  return checks.filter((c) => c.platforms?.includes(platformId));
+  const platform = getPlatform(platformId);
+  return checks.filter((c) => {
+    if (c.severity !== 'error' && c.severity !== 'warning') return false;
+    if (c.platforms) return c.platforms.includes(platformId);
+    return !!platform && !!FIELD_SHOWN[c.field]?.(platform);
+  });
 }
