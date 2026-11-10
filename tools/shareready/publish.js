@@ -597,7 +597,8 @@ function fromWorker(id, res) {
   if (!r) return { state: 'error', message: res?.error || 'The worker didn’t answer.' };
   if (r.skipped) return { state: 'skipped', message: r.message };
   const link = id === 'facebook' && r.debugger ? { href: r.debugger, label: 'Open Sharing Debugger' } : null;
-  return { state: r.ok ? 'ok' : 'error', message: r.message, link };
+  const message = id === 'indexnow' && r.ok && r.engine ? `${r.message} Accepted by ${r.engine}.` : r.message;
+  return { state: r.ok ? 'ok' : 'error', message, link };
 }
 
 async function demoStep(id) {
