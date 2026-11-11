@@ -438,6 +438,12 @@ This repository is also the demo site. It's based on the [AEM boilerplate](https
 | Owner | vipult2022 |
 | Doc Url | https://github.com/vipult2022/ew-shareready#readme |
 | Try Url | https://main--ew-shareready--vipult2022.aem.live/tools/shareready.html?demo |
+| Image | https://main--ew-shareready--vipult2022.aem.live/tools/shareready/marketplace.png (1200×896) |
+| Logo | https://main--ew-shareready--vipult2022.aem.live/tools/shareready/icon.svg |
+
+<img src="tools/shareready/marketplace.png" width="600" alt="ShareReady Marketplace image: an editor with the ShareReady panel scoring 100, next to a social link card and a Slack card">
+
+The Marketplace image is drawn in HTML and CSS. Its source is in `docs/marketplace.html`.
 
 ## License
 
