@@ -192,8 +192,9 @@ function resultView() {
     h('div', { class: 'rl-result-icon', 'aria-hidden': 'true' }, '✓'),
     h('h2', {}, result.created ? `${result.key} created` : `${result.key} is back in review`),
     h('p', {}, result.created
-      ? `${state.type?.assignee || 'The reviewer'} will see the ${state.compared.firstVersion ? 'whole page' : plural(state.compared.sinceLive.length, 'change')} in Jira.`
+      ? `${result.review?.assignee?.name || state.type?.assignee || 'The reviewer'} will see the ${state.compared.firstVersion ? 'whole page' : plural(state.compared.sinceLive.length, 'change')} in Jira.`
       : `The reviewer will see only the ${plural((state.compared.sinceReview || []).length, 'change')} since the last round.`),
+    result.warnings?.length ? notice('warning', 'Created, with notes', h('ul', {}, result.warnings.map((w) => h('li', {}, w)))) : null,
     h('p', { class: 'rl-muted' }, 'Follow comments and approval in the ReviewLoop panel.'),
     h(
       'div',
@@ -303,7 +304,11 @@ async function send() {
     if (res.ok) state.result = { key: state.review.key, url: state.review.url, created: false };
   } else {
     res = await session.api.create(createPayload({ ...args, type: state.type, due: state.due }));
-    if (res.ok) state.result = { key: res.key, url: res.url, created: true };
+    if (res.ok) {
+      state.result = {
+        key: res.key, url: res.url, created: true, review: res.review, warnings: res.warnings || [],
+      };
+    }
   }
   state.sending = false;
   if (!res.ok) state.sendError = res.error;

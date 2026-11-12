@@ -248,8 +248,9 @@ async function publish() {
         notApproved: g === 'pending' ? review.status || 'In review' : '',
       }),
     });
-    result.jiraOk = jira.ok;
-    result.jiraError = jira.ok ? '' : `The page is live, but Jira could not be updated: ${jira.error}`;
+    result.jiraOk = jira.ok && jira.moved !== false;
+    if (!jira.ok) result.jiraError = `The page is live, but Jira could not be updated: ${jira.error}`;
+    else if (!result.jiraOk) result.jiraError = `The live link was added, but the issue was not closed. ${jira.warnings?.[0] || ''}`.trim();
   }
   state.publishing = false;
   state.result = result;

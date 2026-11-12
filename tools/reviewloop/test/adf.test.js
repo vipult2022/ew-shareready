@@ -122,3 +122,13 @@ test('link and image changes render in the table', () => {
   const cells = table.content.slice(1).map((row) => adfToText(row.content[2]).trim());
   assert.deepEqual(cells, ['link: /old → /new', 'new image: “a”', '(image)']);
 });
+
+test('a very long change list is capped to stay inside Jira limits', () => {
+  const many = Array.from({ length: 400 }, (_, i) => ({
+    type: 'added', kind: 'text', location: `Section ${i}`, text: 'word '.repeat(40),
+  }));
+  const table = changesTable(many);
+  assert.ok(JSON.stringify(table).length < 26000);
+  assert.match(adfToText(table.content.at(-1)), /\d+ more changes: open the preview/);
+  assert.equal(changesTable(many.slice(0, 3)).content.length, 4);
+});

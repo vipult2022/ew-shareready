@@ -1,0 +1,31 @@
+# ReviewLoop worker: keeps the Jira API token out of the browser.
+# Deploy from this folder with:  npx wrangler deploy
+#
+# Secrets (never commit these):
+#   npx wrangler secret put JIRA_EMAIL      # the Atlassian account the API token belongs to
+#   npx wrangler secret put JIRA_API_TOKEN  # https://id.atlassian.com/manage-profile/security/api-tokens
+#
+# Issues are created, commented on and moved as that account. Use a shared or bot account
+# in production so reviews do not depend on one person.
+
+name = "reviewloop"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[vars]
+# Required. Comma-separated orgs ("my-org") or sites ("my-org/my-site") this worker reviews for.
+ALLOWED_ORGS = "vipult2022"
+# Required. Your Jira Cloud site and the project key reviews go to.
+JIRA_BASE_URL = "https://vipult220.atlassian.net"
+JIRA_PROJECT = "NWB"
+# Optional. The issue type for new reviews. Default: Task.
+# JIRA_ISSUE_TYPE = "Task"
+# Optional. Status names on your board, if they differ from these defaults.
+# JIRA_STATUS_REVIEW = "In review"
+# JIRA_STATUS_CHANGES = "Changes requested"
+# JIRA_STATUS_APPROVED = "Approved"
+# JIRA_STATUS_DONE = "Done"
+# Optional. Comma-separated origins allowed to call the worker. Wildcards (*) are allowed.
+# Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
+# http://localhost:3000
+# ALLOWED_ORIGINS = ""

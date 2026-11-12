@@ -44,7 +44,9 @@ export function createApi({ workerUrl, getToken }) {
       } : { signal: ctrl.signal });
       const data = await readJson(resp);
       if (!resp.ok || data.ok === false) {
-        return { ok: false, status: resp.status, error: data.error || `The ReviewLoop worker answered ${resp.status}.` };
+        return {
+          ok: false, status: resp.status, setup: Boolean(data.setup), error: data.error || `The ReviewLoop worker answered ${resp.status}.`,
+        };
       }
       return { ok: true, ...data };
     } catch {

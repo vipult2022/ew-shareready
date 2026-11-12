@@ -57,7 +57,8 @@ function initials(name) {
 
 function commentItem(comment) {
   const author = comment.author || 'Someone';
-  const mine = author === state.session.user;
+  // The worker marks comments it posted for the author; the demo matches by name.
+  const mine = typeof comment.own === 'boolean' ? comment.own : author === state.session.user;
   return h(
     'li',
     { class: `rl-comment${mine ? ' rl-comment-mine' : ''}` },

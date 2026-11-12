@@ -72,21 +72,40 @@ function changeNodes(change) {
   return nodes.length ? nodes : [text('(formatting only)')];
 }
 
-/** A table of changes: Where | What | Change. */
-export function changesTable(changes = []) {
+/**
+ * A table of changes: Where | What | Change. Rows stop at `budget` characters of ADF so the
+ * description stays inside Jira's 32 KB limit; a last row says how many are left out.
+ */
+export function changesTable(changes = [], budget = 24000) {
+  const rows = [];
+  let size = 0;
+  for (let i = 0; i < changes.length; i += 1) {
+    const change = changes[i];
+    const row = {
+      type: 'tableRow',
+      content: [
+        cell([text(change.location || '')]),
+        cell([text(changeTitle(change))]),
+        cell(changeNodes(change)),
+      ],
+    };
+    size += JSON.stringify(row).length;
+    if (size > budget) {
+      const left = changes.length - i;
+      rows.push({
+        type: 'tableRow',
+        content: [cell([text('')]), cell([text('More')]), cell([text(`${left} more change${left === 1 ? '' : 's'}: open the preview to see them.`, [{ type: 'em' }])])],
+      });
+      break;
+    }
+    rows.push(row);
+  }
   return {
     type: 'table',
     attrs: { isNumberColumnEnabled: true, layout: 'default' },
     content: [
       { type: 'tableRow', content: [cell([text('Where')], true), cell([text('What')], true), cell([text('Change')], true)] },
-      ...changes.map((change) => ({
-        type: 'tableRow',
-        content: [
-          cell([text(change.location || '')]),
-          cell([text(changeTitle(change))]),
-          cell(changeNodes(change)),
-        ],
-      })),
+      ...rows,
     ],
   };
 }
