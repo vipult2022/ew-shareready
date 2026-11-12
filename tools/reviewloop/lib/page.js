@@ -36,12 +36,11 @@ export function pageInfo({
   };
 }
 
-/** Previews the page like the toolbar does, so the reviewer sees the current draft. */
-export async function refreshPreview(auth, token, page) {
+async function adminPost(auth, token, page, api) {
   const p = page.path.toLowerCase();
   const urls = [
-    `${HLX_ADMIN}/preview/${page.org}/${page.site}/main${p}`,
-    `${AEM_API}/${page.org}/sites/${page.site}/preview${p}`,
+    `${HLX_ADMIN}/${api}/${page.org}/${page.site}/main${p}`,
+    `${AEM_API}/${page.org}/sites/${page.site}/${api}${p}`,
   ];
   let last = null;
   for (let i = 0; i < urls.length; i += 1) {
@@ -49,17 +48,35 @@ export async function refreshPreview(auth, token, page) {
       // eslint-disable-next-line no-await-in-loop
       last = await auth(urls[i], {
         method: 'POST',
-        headers: { 'x-content-source-authorization': `Bearer ${token}` },
+        headers: { 'x-content-source-authorization': `Bearer ${token()}` },
       });
       if (last.status !== 404) break;
     } catch {
       last = null;
     }
   }
-  if (last?.ok) return { ok: true };
-  const status = last?.status || 0;
-  if (status === 401 || status === 403) return { ok: false, error: `You are not allowed to preview this page (${status}).` };
-  return { ok: false, error: status ? `Could not update the preview (${status}).` : 'Could not reach AEM to update the preview.' };
+  return last;
+}
+
+function adminError(resp, action) {
+  const status = resp?.status || 0;
+  if (status === 401 || status === 403) return `You are not allowed to ${action} this page (${status}).`;
+  return status ? `Could not ${action} the page (${status}).` : 'Could not reach AEM.';
+}
+
+/** Previews the page like the toolbar does, so the reviewer sees the current draft. */
+export async function refreshPreview(auth, token, page) {
+  const resp = await adminPost(auth, token, page, 'preview');
+  return resp?.ok ? { ok: true } : { ok: false, error: adminError(resp, 'preview') };
+}
+
+/** Previews, then publishes, with the author's own permissions. */
+export async function publishPage(auth, token, page) {
+  const preview = await adminPost(auth, token, page, 'preview');
+  if (!preview?.ok) return { ok: false, error: adminError(preview, 'preview') };
+  const live = await adminPost(auth, token, page, 'live');
+  if (!live?.ok) return { ok: false, error: adminError(live, 'publish') };
+  return { ok: true, url: page.liveUrl };
 }
 
 /** The page title a reviewer recognises: metadata Title, else the first H1. */

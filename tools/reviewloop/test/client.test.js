@@ -52,6 +52,7 @@ test('parseConfig: settings, custom review types and safe defaults', () => {
   });
   assert.equal(config.workerUrl, 'https://rl.example.workers.dev');
   assert.equal(config.dueDays, 3);
+  assert.equal(config.requireApproval, false);
   assert.equal(config.types.length, 1);
   assert.deepEqual(config.types[0], {
     name: 'Legal', assignee: 'Arjun', checklist: ['Rates', 'Disclaimers'], dueDays: 3,
@@ -59,6 +60,9 @@ test('parseConfig: settings, custom review types and safe defaults', () => {
   assert.equal(config.custom, true);
   const empty = parseConfig(null);
   assert.equal(empty.workerUrl, '');
+  assert.equal(empty.requireApproval, false);
+  const strict = parseConfig({ reviewloop: { data: [{ key: 'require-approval', value: 'Yes' }] } });
+  assert.equal(strict.requireApproval, true);
   assert.deepEqual(empty.types.map((t) => t.name), ['Legal', 'Brand', 'Copy']);
   assert.deepEqual(splitList('a; b\nc;;'), ['a', 'b', 'c']);
   assert.match(dueDate(2), /^\d{4}-\d{2}-\d{2}$/);

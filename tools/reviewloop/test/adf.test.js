@@ -84,6 +84,9 @@ test('published comment flags edits after approval', () => {
   assert.equal(adfToText(ok).trim(), `Published by Priya Shah: ${page.liveUrl}`);
   const late = publishedComment({ liveUrl: page.liveUrl, editsSinceApproval: 2 });
   assert.match(adfToText(late), /Published with 2 edits made after approval\./);
+  const early = publishedComment({ liveUrl: page.liveUrl, notApproved: 'In review' });
+  assertValid(early);
+  assert.match(adfToText(early), /Published before approval \(status: In review\)/);
 });
 
 test('long unchanged text is trimmed around the edit', () => {

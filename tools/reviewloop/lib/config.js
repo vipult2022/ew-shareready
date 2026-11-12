@@ -1,6 +1,6 @@
 /**
  * ReviewLoop settings from the site config (da.live/config#/{org}/{site}):
- * - sheet `reviewloop`: key/value rows (worker-url, due-days)
+ * - sheet `reviewloop`: key/value rows (worker-url, due-days, require-approval)
  * - sheet `reviewloop-types`: one row per review type (type, assignee, checklist, due-days)
  * Jira itself (site, project, token, statuses) is configured on the worker.
  */
@@ -8,7 +8,7 @@
 export const DA_ADMIN = 'https://admin.da.live';
 export const AEM_API = 'https://api.aem.live';
 
-export const KEYS = ['worker-url', 'due-days'];
+export const KEYS = ['worker-url', 'due-days', 'require-approval'];
 
 export const DEFAULT_TYPES = [
   {
@@ -68,6 +68,7 @@ export function parseConfig(json) {
   })).filter((t) => t.name);
   return {
     workerUrl: settings['worker-url'] || '',
+    requireApproval: /^(true|yes|1|on)$/i.test(settings['require-approval'] || ''),
     dueDays,
     types: types.length
       ? types

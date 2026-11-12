@@ -672,6 +672,38 @@ a {
   gap: 6px;
 }
 
+/* Publish dialog */
+
+.rl-spaced {
+  margin-top: 20px;
+}
+
+.rl-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--rl-warning);
+  border-radius: 8px;
+  background: #fdf2e3;
+  cursor: pointer;
+}
+
+.rl-confirm input {
+  margin-top: 3px;
+}
+
+.rl-btn-warning {
+  border-color: var(--rl-warning-text);
+  color: #fff;
+  background: var(--rl-warning-text);
+}
+
+.rl-btn-warning:hover {
+  background: #8f4b00;
+}
+
 /* Focus */
 
 .rl-btn:focus-visible,

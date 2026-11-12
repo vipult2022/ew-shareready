@@ -159,13 +159,17 @@ export function rereviewComment({
 }
 
 /** The comment added after publishing. */
-export function publishedComment({ liveUrl, publisher, editsSinceApproval = 0 }) {
+export function publishedComment({
+  liveUrl, publisher, editsSinceApproval = 0, notApproved = '',
+}) {
   const content = [paragraph(
     text('Published', [strong]),
     text(` by ${publisher || 'the author'}: `),
     text(liveUrl, [link(liveUrl)]),
   )];
-  if (editsSinceApproval) {
+  if (notApproved) {
+    content.push(paragraph(text(`Published before approval (status: ${notApproved}).`, [strong, red])));
+  } else if (editsSinceApproval) {
     content.push(paragraph(text(`Published with ${editsSinceApproval} edit${editsSinceApproval === 1 ? '' : 's'} made after approval.`, [strong, red])));
   }
   return { type: 'doc', version: 1, content };

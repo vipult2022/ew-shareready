@@ -7,7 +7,7 @@
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 import { loadConfig, withQuery, parseConfig } from './config.js';
 import { createApi, createDemoApi, DEMO_AUTHOR } from './api.js';
-import { pageInfo, refreshPreview } from './page.js';
+import { pageInfo, refreshPreview, publishPage } from './page.js';
 
 const SDK_TIMEOUT = 4000;
 const DEMO = new URL('../demo/', import.meta.url);
@@ -56,6 +56,11 @@ function startDemo() {
     async versions() {
       return this.api.versions(this.page);
     },
+    publish() {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({ ok: true, url: this.page.liveUrl, demo: true }), 1200);
+      });
+    },
   };
 }
 
@@ -90,12 +95,13 @@ function startLive(sdk) {
      */
     async versions({ refresh = true } = {}) {
       if (refresh) {
-        const preview = await refreshPreview(auth, token, page);
+        const preview = await refreshPreview(auth, () => token, page);
         session.previewError = preview.ok ? '' : preview.error;
       }
       return session.api.versions(page);
     },
   };
+  session.publish = () => publishPage(auth, () => token, page);
   return loadConfig(auth, page).then((config) => {
     session.config = withQuery(config, window.location.search);
     session.api = createApi({ workerUrl: session.config.workerUrl, getToken: () => token });
