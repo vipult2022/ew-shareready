@@ -2,13 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DOMParser } from 'linkedom';
-import { parseHtml, readUnits } from '../../tools/reviewloop/lib/blocks.js';
-import { diffUnits } from '../../tools/reviewloop/lib/diff.js';
+import { parseHtml, readUnits } from '../lib/blocks.js';
+import { diffUnits } from '../lib/diff.js';
 import {
   reviewDescription, rereviewComment, publishedComment, changesTable, trimContext, adfToText,
-} from '../../tools/reviewloop/lib/adf.js';
+} from '../lib/adf.js';
 
-const DEMO = new URL('../../tools/reviewloop/demo/', import.meta.url);
+const DEMO = new URL('../demo/', import.meta.url);
 const page = {
   title: 'Spring Savings',
   path: '/offers/spring-savings',
