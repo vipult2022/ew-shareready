@@ -84,10 +84,15 @@ function startLive(sdk) {
     config: null,
     api: null,
     previewError: '',
-    /** Previews the draft, then fetches preview and live through the worker. */
-    async versions() {
-      const preview = await refreshPreview(auth, token, page);
-      session.previewError = preview.ok ? '' : preview.error;
+    /**
+     * Fetches preview and live through the worker. Dialogs first update the preview so
+     * the comparison includes unsaved-to-preview edits; the panel reads the last preview.
+     */
+    async versions({ refresh = true } = {}) {
+      if (refresh) {
+        const preview = await refreshPreview(auth, token, page);
+        session.previewError = preview.ok ? '' : preview.error;
+      }
       return session.api.versions(page);
     },
   };

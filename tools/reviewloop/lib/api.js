@@ -94,6 +94,10 @@ function load(storage) {
  */
 export function createDemoApi({ fixture, storage = null, latency = 600 }) {
   let store = load(storage);
+  // The panel and the dialogs are separate frames: always start from the shared copy.
+  const sync = () => {
+    if (storage) store = load(storage);
+  };
   const save = () => {
     try {
       storage?.setItem(STORE, JSON.stringify(store));
@@ -115,13 +119,20 @@ export function createDemoApi({ fixture, storage = null, latency = 600 }) {
       ok: true,
       jira: { site: DEMO_JIRA, project: 'NWB', projectName: 'Northwind Web' },
     }, 150),
-    versions: async () => later({
-      ok: true,
-      live: await fixture('live'),
-      preview: await fixture(store.draft),
-    }),
-    get: () => later({ ok: true, review: store.review }, 250),
+    versions: async () => {
+      sync();
+      return later({
+        ok: true,
+        live: await fixture('live'),
+        preview: await fixture(store.draft),
+      });
+    },
+    get: () => {
+      sync();
+      return later({ ok: true, review: store.review }, 250);
+    },
     create: (body) => {
+      sync();
       const key = `NWB-${store.next}`;
       store.next += 1;
       store.review = {
@@ -144,6 +155,7 @@ export function createDemoApi({ fixture, storage = null, latency = 600 }) {
       }, latency * 1.5);
     },
     resubmit: (body) => {
+      sync();
       if (!store.review) return later({ ok: false, error: 'There is no review for this page yet.' });
       store.review = {
         ...store.review,
@@ -158,6 +170,7 @@ export function createDemoApi({ fixture, storage = null, latency = 600 }) {
       return later({ ok: true, review: store.review });
     },
     published: () => {
+      sync();
       if (store.review) {
         store.review = { ...store.review, status: 'Done', state: 'done' };
         save();
@@ -166,13 +179,14 @@ export function createDemoApi({ fixture, storage = null, latency = 600 }) {
     },
     /* Demo-only controls: play the reviewer, or make the author's fix. */
     reviewer(action) {
+      sync();
       if (!store.review) return;
       if (action === 'changes') {
         store.review = {
           ...store.review,
           status: 'Changes requested',
           state: 'changes',
-          comments: [...store.review.comments, comment(DEMO_REVIEWER.name, 'Rate claims need the variable-rate wording. Please change “earn 4.50% APY for your first 12 months” to “earn 4.50% APY (variable rate) for your first 12 months”.')],
+          comments: [...store.review.comments, comment(DEMO_REVIEWER.name, 'Rate claims need the variable-rate wording. In the intro, please change “by May 31 and earn 4.50% APY for your first 12 months” to “by May 31 and earn 4.50% APY (variable rate) for your first 12 months”.')],
         };
       } else if (action === 'approve') {
         store.review = {
@@ -187,6 +201,7 @@ export function createDemoApi({ fixture, storage = null, latency = 600 }) {
       save();
     },
     fix() {
+      sync();
       store.draft = 'review2';
       save();
     },
@@ -195,6 +210,7 @@ export function createDemoApi({ fixture, storage = null, latency = 600 }) {
       save();
     },
     get draft() {
+      sync();
       return store.draft;
     },
   };

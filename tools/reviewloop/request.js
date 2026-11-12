@@ -1,7 +1,7 @@
 import { h, clear } from './lib/dom.js';
 import { compare, titleOf } from './lib/page.js';
 import { dueDate } from './lib/config.js';
-import { reviewDescription, rereviewComment } from './lib/adf.js';
+import { createPayload, resubmitPayload } from './lib/requests.js';
 import {
   changeList, statusChip, summarize, loader, notice, plural, ago,
 } from './lib/view.js';
@@ -278,7 +278,6 @@ function render() {
   const { page } = state.session;
   clear(els.head).append(
     h('div', {}, h('h1', {}, 'Request review'), h('p', { class: 'rl-muted' }, state.compared ? `${pageTitle()} · ${page.webPath}` : page.webPath)),
-    state.session.mode === 'demo' ? h('span', { class: 'rl-chip rl-tone-info' }, 'Demo · nothing is sent to Jira') : null,
   );
   renderChanges();
   renderForm();
@@ -288,51 +287,22 @@ function render() {
 
 async function send() {
   const { session } = state;
-  const c = state.compared;
   state.sending = true;
   state.sendError = '';
   renderForm();
-  const page = { ...session.page, title: pageTitle() };
-  const requester = session.user || 'An author';
+  const args = {
+    page: session.page,
+    title: pageTitle(),
+    note: state.note,
+    requester: session.user || 'An author',
+    compared: state.compared,
+  };
   let res;
   if (mode() === 'resubmit') {
-    res = await session.api.resubmit({
-      org: page.org,
-      site: page.site,
-      path: page.path,
-      key: state.review.key,
-      text: state.note,
-      comment: rereviewComment({
-        page,
-        requester,
-        note: state.note,
-        changes: c.sinceReview || [],
-        round: (state.review.round || 1) + 1,
-      }),
-      snapshot: c.snapshot,
-    });
+    res = await session.api.resubmit(resubmitPayload({ ...args, review: state.review }));
     if (res.ok) state.result = { key: state.review.key, url: state.review.url, created: false };
   } else {
-    res = await session.api.create({
-      org: page.org,
-      site: page.site,
-      path: page.path,
-      title: page.title,
-      summary: summary(),
-      reviewType: state.type?.name || '',
-      assignee: state.type?.assignee || '',
-      due: state.due,
-      description: reviewDescription({
-        page,
-        requester,
-        reviewType: state.type?.name,
-        note: state.note,
-        checklist: state.type?.checklist,
-        changes: c.sinceLive,
-        firstVersion: c.firstVersion,
-      }),
-      snapshot: c.snapshot,
-    });
+    res = await session.api.create(createPayload({ ...args, type: state.type, due: state.due }));
     if (res.ok) state.result = { key: res.key, url: res.url, created: true };
   }
   state.sending = false;
@@ -366,6 +336,23 @@ async function load() {
   render();
 }
 
+function demoBar(api) {
+  const reload = () => window.location.reload();
+  return h(
+    'div',
+    { class: 'rl-demo', role: 'note' },
+    h('span', {}, api.draft === 'review2'
+      ? 'Demo: the draft includes the reviewer’s fix.'
+      : 'Demo: Northwind Bank, Spring Savings offer. Nothing is sent to Jira.'),
+    api.draft === 'review2' ? null : h('button', {
+      type: 'button', class: 'rl-btn rl-btn-small', onclick: () => { api.fix(); reload(); },
+    }, 'Make the reviewer’s fix'),
+    h('button', {
+      type: 'button', class: 'rl-btn rl-btn-small', onclick: () => { api.reset(); reload(); },
+    }, 'Reset demo'),
+  );
+}
+
 Object.assign(view, { changes: renderChanges, form: renderForm });
 Object.assign(actions, { send });
 
@@ -377,6 +364,7 @@ async function init() {
   root.append(els.head, h('div', { class: 'rl-grid' }, els.changes, els.form));
   els.changes.append(loader());
   state.session = await startSession();
+  if (state.session.mode === 'demo') root.prepend(demoBar(state.session.api));
   render();
   await load();
 }
