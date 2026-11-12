@@ -92,13 +92,22 @@ function startLive(sdk) {
     /**
      * Fetches preview and live through the worker. Dialogs first update the preview so
      * the comparison includes unsaved-to-preview edits; the panel reads the last preview.
+     * If the CDN still serves an older preview, it previews once more and reads again.
      */
     async versions({ refresh = true } = {}) {
-      if (refresh) {
-        const preview = await refreshPreview(auth, () => token, page);
+      if (!refresh) return session.api.versions(page);
+      const getToken = () => token;
+      let result;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        const preview = await refreshPreview(auth, getToken, page);
         session.previewError = preview.ok ? '' : preview.error;
+        // eslint-disable-next-line no-await-in-loop
+        result = await session.api.versions({ ...page, since: preview.modified || '' });
+        if (!result.ok || !result.stale) return result;
       }
-      return session.api.versions(page);
+      session.previewError = 'AEM is still serving an older preview of this page. Wait a minute, then compare again.';
+      return result;
     },
   };
   session.publish = () => publishPage(auth, () => token, page);

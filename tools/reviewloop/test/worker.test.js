@@ -24,6 +24,7 @@ let jira;
 let calls;
 let daStatus;
 const realFetch = globalThis.fetch;
+const PREVIEWED = 'Thu, 12 Nov 2026 18:00:00 GMT';
 
 function fakeJira() {
   const issues = new Map();
@@ -132,8 +133,12 @@ beforeEach(() => {
     if (url.startsWith('https://admin.da.live/source/')) return new Response(null, { status: daStatus });
     if (url.startsWith('https://api.aem.live/')) return new Response(null, { status: 404 });
     if (url.startsWith('https://ims-na1.adobelogin.com/')) return Response.json({ displayName: 'Priya Shah' });
-    const plain = url.match(/^https:\/\/main--website--northwind\.aem\.(page|live)\/offers\/spring-savings\.plain\.html$/);
-    if (plain) return new Response(`<h1>Spring Savings: earn ${plain[1] === 'page' ? '4.50' : '4.25'}% APY</h1>`);
+    const plain = url.match(/^https:\/\/main--website--northwind\.aem\.(page|live)\/offers\/spring-savings\.plain\.html\?rl=[a-z0-9]+$/);
+    if (plain) {
+      return new Response(`<h1>Spring Savings: earn ${plain[1] === 'page' ? '4.50' : '4.25'}% APY</h1>`, {
+        headers: { 'Last-Modified': PREVIEWED },
+      });
+    }
     if (url.includes('.aem.')) return new Response('', { status: 404 });
     if (url.startsWith(`${JIRA}/rest/api/3`)) {
       assert.equal(init.headers.Authorization, `Basic ${btoa('bot@northwind.example:secret')}`);
@@ -210,6 +215,15 @@ test('page: returns preview and live, live empty for a first version', async () 
   const fresh = await call('/page', { ...PAGE, path: '/offers/new' });
   assert.equal(fresh.status, 404);
   assert.match(fresh.data.error, /no preview yet/);
+});
+
+test('page: flags a preview older than the one the author just made', async () => {
+  const current = await call('/page', { ...PAGE, since: PREVIEWED });
+  assert.equal(current.data.stale, false);
+  const old = await call('/page', { ...PAGE, since: 'Thu, 12 Nov 2026 18:05:00 GMT' });
+  assert.equal(old.data.stale, true);
+  assert.equal(calls.filter((c) => c.url.includes('.aem.page/')).length, 3);
+  assert.ok(calls.every((c) => !c.url.includes('.plain.html') || /[?]rl=/.test(c.url)));
 });
 
 test('full loop: create, reviewer comments, resubmit, approve, publish', async () => {

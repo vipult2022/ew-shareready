@@ -39,21 +39,44 @@ function snapshot(value) {
   return { v: value.v || 1, units: value.units, complete: value.complete !== false };
 }
 
+const PLAIN_TIMEOUT = 8000;
+const STALE_SLACK = 2000;
+const STALE_RETRY = 1500;
+
+const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+async function fetchPlain(url) {
+  // A unique query string skips CDN edges that still hold the copy from before a preview.
+  const fresh = `${url}?rl=${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  return fetch(fresh, {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(PLAIN_TIMEOUT),
+    headers: { 'User-Agent': 'ReviewLoop (+https://www.aem.live)' },
+  });
+}
+
 async function plain(host, page) {
   const web = webPath(page.path);
   const file = web.endsWith('/') ? `${web}index` : web;
+  const url = `https://main--${page.site}--${page.org}.${host}${file}.plain.html`;
   let resp;
   try {
-    resp = await fetch(`https://main--${page.site}--${page.org}.${host}${file}.plain.html`, {
-      cache: 'no-store',
-      headers: { 'User-Agent': 'ReviewLoop (+https://www.aem.live)' },
-    });
+    resp = await fetchPlain(url);
   } catch {
-    throw new HttpError(502, `Could not reach ${host}.`);
+    try {
+      resp = await fetchPlain(url);
+    } catch {
+      throw new HttpError(502, `Could not reach ${host}.`);
+    }
   }
   if (resp.status === 404) return null;
   if (!resp.ok) throw new HttpError(502, `${host} answered ${resp.status} for this page.`);
-  return resp.text();
+  return { text: await resp.text(), modified: Date.parse(resp.headers.get('last-modified') || '') };
+}
+
+/** True when the CDN still serves a copy older than the preview the author just made. */
+function isStale(copy, since) {
+  return Boolean(copy && since && copy.modified && copy.modified < since - STALE_SLACK);
 }
 
 /** The page's issue, checked to belong to this page (so a key from elsewhere is refused). */
@@ -70,10 +93,16 @@ async function current(ctx, key) {
 }
 
 const ROUTES = {
-  '/page': async function versions({ page }) {
-    const [preview, live] = await Promise.all([plain('aem.page', page), plain('aem.live', page)]);
+  '/page': async function versions({ page, body }) {
+    const since = Date.parse(body.since || '') || 0;
+    let [preview, live] = await Promise.all([plain('aem.page', page), plain('aem.live', page)]);
     if (preview === null) throw new HttpError(404, 'This page has no preview yet. Preview it, then try again.');
-    return { preview, live: live || '' };
+    if (isStale(preview, since)) {
+      await wait(STALE_RETRY);
+      preview = await plain('aem.page', page) || preview;
+    }
+    live = live?.text || '';
+    return { preview: preview.text, live, stale: isStale(preview, since) };
   },
 
   '/review/get': async function getReview(ctx) {

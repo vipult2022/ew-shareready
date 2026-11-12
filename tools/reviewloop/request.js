@@ -86,6 +86,14 @@ function renderChanges() {
   root.append(changeList(list, state.tab === 'review'
     ? 'Nothing changed since the last review.'
     : 'The draft matches the live page.'));
+  if (!list.length && !state.session.api.demo) {
+    root.append(h(
+      'p',
+      { class: 'rl-hint' },
+      'Just edited? Edits take a few seconds to save. ',
+      h('button', { type: 'button', class: 'rl-btn rl-btn-small', onclick: () => actions.recompare() }, 'Compare again'),
+    ));
+  }
   if (state.session.previewError) {
     root.append(notice('warning', 'The preview was not updated', h('p', {}, `${state.session.previewError} The comparison uses the last preview.`)));
   }
@@ -341,6 +349,20 @@ async function load() {
   render();
 }
 
+async function recompare() {
+  state.loading = true;
+  view.changes();
+  const versions = await state.session.versions();
+  state.loading = false;
+  if (versions.ok) {
+    const snapshot = state.review && state.review.state !== 'done' ? state.review.snapshot : null;
+    state.compared = compare(versions, snapshot);
+  } else {
+    state.session.previewError = versions.error;
+  }
+  render();
+}
+
 function demoBar(api) {
   const reload = () => window.location.reload();
   return h(
@@ -359,7 +381,7 @@ function demoBar(api) {
 }
 
 Object.assign(view, { changes: renderChanges, form: renderForm });
-Object.assign(actions, { send });
+Object.assign(actions, { send, recompare });
 
 async function init() {
   const root = document.querySelector('main');

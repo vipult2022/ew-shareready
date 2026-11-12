@@ -67,7 +67,14 @@ function adminError(resp, action) {
 /** Previews the page like the toolbar does, so the reviewer sees the current draft. */
 export async function refreshPreview(auth, token, page) {
   const resp = await adminPost(auth, token, page, 'preview');
-  return resp?.ok ? { ok: true } : { ok: false, error: adminError(resp, 'preview') };
+  if (!resp?.ok) return { ok: false, error: adminError(resp, 'preview') };
+  let modified = '';
+  try {
+    modified = (await resp.json())?.preview?.lastModified || '';
+  } catch {
+    // The comparison still works, only without the freshness check.
+  }
+  return { ok: true, modified };
 }
 
 /** Previews, then publishes, with the author's own permissions. */
