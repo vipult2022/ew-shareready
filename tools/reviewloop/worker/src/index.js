@@ -158,7 +158,10 @@ const ROUTES = {
       jira.link(key, urls.previewUrl, 'Preview'),
     ]);
     const warnings = [];
-    if (!moved) warnings.push(`No transition to “${ctx.cfg.statuses.review}”. Check the board’s statuses.`);
+    if (!moved) {
+      const options = (jira.available || []).join(', ');
+      warnings.push(`No transition to “${ctx.cfg.statuses.review}”, so the issue stayed in its first status. Add that status to the board${options ? ` (it can move to: ${options})` : ''}, or set JIRA_STATUS_REVIEW on the worker.`);
+    }
     if (body.assignee && !accountId) warnings.push(`No Jira user called “${text(body.assignee, 100)}”, so the issue is unassigned.`);
     (created.dropped || []).forEach((f) => warnings.push(`The project does not allow ${f === 'duedate' ? 'a due date' : 'an assignee'} on new issues.`));
     const review = await current(ctx, key);
@@ -212,7 +215,16 @@ const ROUTES = {
 async function status(env) {
   const cfg = jiraConfig(env);
   if (cfg.missing.length) throw setupError(cfg);
-  return { name: 'reviewloop', jira: await createJira(cfg).project() };
+  const jira = createJira(cfg);
+  const [project, names] = await Promise.all([jira.project(), jira.statuses().catch(() => null)]);
+  const known = (names || []).map((n) => n.toLowerCase());
+  const missingStatuses = names
+    ? Object.values(cfg.statuses).filter((n) => !known.includes(n.toLowerCase()))
+    : [];
+  return {
+    name: 'reviewloop',
+    jira: missingStatuses.length ? { ...project, statuses: names, missingStatuses } : project,
+  };
 }
 
 async function handle(request, env, pathname) {

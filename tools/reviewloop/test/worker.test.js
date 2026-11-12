@@ -55,6 +55,9 @@ function fakeJira() {
     },
     handle(method, path, body) {
       if (method === 'GET' && path === '/project/NWB') return { name: 'Northwind Web' };
+      if (method === 'GET' && path === '/project/NWB/statuses') {
+        return [{ name: 'Task', statuses: STATUSES.map((name) => ({ name })) }];
+      }
       if (method === 'POST' && path === '/search/jql') {
         const label = body.jql.match(/labels = "([^"]+)"/)[1];
         const found = [...issues.values()]
@@ -192,6 +195,9 @@ test('status: names the Jira project, or says what to set up', async () => {
   assert.equal(ok.status, 200);
   assert.deepEqual(ok.data.jira, { site: JIRA, project: 'NWB', projectName: 'Northwind Web' });
   assert.equal(ok.headers.get('Access-Control-Allow-Origin'), 'https://main--website--northwind.aem.page');
+  const renamed = await call('/status', null, { env: { ...ENV, JIRA_STATUS_REVIEW: 'Legal review' } });
+  assert.deepEqual(renamed.data.jira.missingStatuses, ['Legal review']);
+  assert.ok(renamed.data.jira.statuses.includes('In review'));
   const missing = await call('/status', null, { env: { ...ENV, JIRA_API_TOKEN: '' } });
   assert.equal(missing.status, 500);
   assert.equal(missing.data.setup, true);

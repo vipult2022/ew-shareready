@@ -187,6 +187,13 @@ export function createJira(cfg) {
       }
       return { site: cfg.base, project: cfg.project, projectName: projectNames.get(id) };
     },
+    /** Status names used by the project's workflows, to spot a missing column early. */
+    async statuses() {
+      const data = await call('GET', `/project/${cfg.project}/statuses`);
+      const types = Array.isArray(data) ? data : [];
+      const names = types.flatMap((t) => (t.statuses || []).map((st) => st.name));
+      return [...new Set(names.filter(Boolean))];
+    },
     async findKey(label) {
       const data = await call('POST', '/search/jql', {
         jql: `project = "${cfg.project}" AND labels = "${label}" ORDER BY created DESC`,
@@ -212,7 +219,10 @@ export function createJira(cfg) {
       const target = statusName.toLowerCase();
       const t = (data.transitions || []).find((tr) => String(tr.to?.name || '').toLowerCase() === target)
         || (data.transitions || []).find((tr) => String(tr.name || '').toLowerCase() === target);
-      if (!t) return false;
+      if (!t) {
+        jira.available = [...new Set((data.transitions || []).map((tr) => tr.to?.name || tr.name))];
+        return false;
+      }
       await call('POST', `/issue/${key}/transitions`, { transition: { id: t.id } });
       return true;
     },
