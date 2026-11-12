@@ -20,11 +20,13 @@ JIRA_BASE_URL = "https://vipult220.atlassian.net"
 JIRA_PROJECT = "NWB"
 # Optional. The issue type for new reviews. Default: Task.
 # JIRA_ISSUE_TYPE = "Task"
-# Optional. Status names on your board, if they differ from these defaults.
-# JIRA_STATUS_REVIEW = "In review"
-# JIRA_STATUS_CHANGES = "Changes requested"
-# JIRA_STATUS_APPROVED = "Approved"
-# JIRA_STATUS_DONE = "Done"
+# Optional. Jira status names, if they differ from the defaults shown in brackets.
+# Board columns can have any name; use the status mapped to each column.
+# The Northwind board maps its columns to Jira's built-in statuses:
+JIRA_STATUS_REVIEW = "In Progress"     # column "In review" (default "In review")
+JIRA_STATUS_CHANGES = "Open"           # column "Changes requested" (default "Changes requested")
+JIRA_STATUS_APPROVED = "Resolved"      # column "Approved" (default "Approved")
+JIRA_STATUS_DONE = "Done"              # column "Done" (default "Done")
 # Optional. Comma-separated origins allowed to call the worker. Wildcards (*) are allowed.
 # Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
 # http://localhost:3000

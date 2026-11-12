@@ -2,7 +2,7 @@ import { h, clear } from './lib/dom.js';
 import { compare, titleOf } from './lib/page.js';
 import { publishedComment } from './lib/adf.js';
 import {
-  changeList, statusChip, summarize, loader, notice, plural, ago,
+  changeList, statusChip, summarize, loader, notice, plural, ago, STATES,
 } from './lib/view.js';
 import { startSession, closeDialog, DOCS_URL } from './lib/session.js';
 
@@ -66,7 +66,7 @@ function gateNotice(g) {
     return notice('warning', 'Edited after approval', h('p', {}, `${plural(edits.length, 'change')} since ${review.approvedBy || 'the reviewer'} approved. These have not been reviewed.`));
   }
   if (g === 'pending') {
-    return notice('warning', `Not approved yet: ${review.status || 'in review'}`, h('p', {}, `${review.key} is waiting for ${review.assignee?.name || 'the reviewer'}.`));
+    return notice('warning', `Not approved yet: ${(STATES[review.state]?.label || review.status || 'In review').toLowerCase()}`, h('p', {}, `${review.key} is waiting for ${review.assignee?.name || 'the reviewer'}.`));
   }
   if (g === 'same') {
     return notice('info', 'Nothing new to publish', h('p', {}, 'The draft matches the live page.'));
@@ -245,7 +245,7 @@ async function publish() {
         liveUrl: res.url,
         publisher: session.user,
         editsSinceApproval: g === 'edited' ? state.compared.sinceReview.length : 0,
-        notApproved: g === 'pending' ? review.status || 'In review' : '',
+        notApproved: g === 'pending' ? STATES[review.state]?.label || review.status || 'In review' : '',
       }),
     });
     result.jiraOk = jira.ok && jira.moved !== false;

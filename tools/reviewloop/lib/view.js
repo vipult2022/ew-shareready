@@ -43,8 +43,12 @@ export const STATES = {
 
 export function statusChip(review) {
   const state = STATES[review?.state || 'none'] || STATES.other;
-  const label = review?.status || state.label;
-  return h('span', { class: `rl-chip rl-tone-${state.tone}` }, h('span', { 'aria-hidden': 'true' }, state.icon), label);
+  // Boards name statuses freely ("In Progress" may mean "In review"), so show ReviewLoop's
+  // state and keep the Jira status as a tooltip.
+  const known = STATES[review?.state || 'none'] && review?.state !== 'other';
+  const label = known ? state.label : review?.status || state.label;
+  const title = review?.status ? `Jira status: ${review.status}` : undefined;
+  return h('span', { class: `rl-chip rl-tone-${state.tone}`, title }, h('span', { 'aria-hidden': 'true' }, state.icon), label);
 }
 
 function words(segments) {
