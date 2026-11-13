@@ -142,7 +142,7 @@ function openReview(review) {
       parts.push(notice('warning', 'Approved, then edited', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} ${plural(edits.length, 'change')} made since then ${edits.length === 1 ? 'has' : 'have'} not been reviewed. Send ${edits.length === 1 ? 'it' : 'them'} back, or publish anyway.`)));
       parts.push(sendBack('Only these changes go to the reviewer.'));
     } else {
-      parts.push(notice('pass', 'Approved: ready to publish', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} Nothing changed since. Use Prepare › Publish (reviewed).`)));
+      parts.push(notice('pass', 'Approved: ready to publish', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} Nothing changed since. Open the ⋯ menu (top right) › Publish (reviewed).`)));
     }
   } else if (review.state === 'changes') {
     parts.push(notice('warning', 'Changes requested', h('p', {}, 'Edit the page, then send it back. The reviewer sees only what you changed.')));
@@ -170,7 +170,7 @@ function noReview(review) {
       : `${summarize(changes)} since live.`),
     state.compared.firstVersion ? null : changeList(changes, 'The draft matches the live page.'),
     changes.length || state.compared.firstVersion
-      ? notice('info', 'Ready for review?', h('p', {}, 'Open Prepare › Request review to send these changes to Jira.'))
+      ? notice('info', 'Ready for review?', h('p', {}, 'Open the ⋯ menu (top right) › Request review to send these changes to Jira.'))
       : null,
   ];
 }

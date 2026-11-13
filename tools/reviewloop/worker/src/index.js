@@ -55,19 +55,38 @@ async function fetchPlain(url) {
   });
 }
 
+const MAIN = /<main[^>]*>([\s\S]*)<\/main>/i;
+
+async function fetchOnce(url) {
+  try {
+    return await fetchPlain(url);
+  } catch {
+    return fetchPlain(url);
+  }
+}
+
+/**
+ * The page as .plain.html would give it. Read from the full page's <main>, because some
+ * CDN nodes keep serving an old .plain.html for minutes after a preview, while the page
+ * itself is fresh. Falls back to .plain.html if the page has no <main>.
+ */
 async function plain(host, page) {
   const web = webPath(page.path);
-  const file = web.endsWith('/') ? `${web}index` : web;
-  const url = `https://main--${page.site}--${page.org}.${host}${file}.plain.html`;
+  const origin = `https://main--${page.site}--${page.org}.${host}`;
   let resp;
   try {
-    resp = await fetchPlain(url);
-  } catch {
-    try {
-      resp = await fetchPlain(url);
-    } catch {
-      throw new HttpError(502, `Could not reach ${host}.`);
+    resp = await fetchOnce(`${origin}${web}`);
+    if (resp.ok) {
+      const html = await resp.text();
+      const main = html.match(MAIN);
+      if (main) return { text: main[1].trim(), modified: Date.parse(resp.headers.get('last-modified') || '') };
     }
+    if (resp.status !== 404) {
+      const file = web.endsWith('/') ? `${web}index` : web;
+      resp = await fetchOnce(`${origin}${file}.plain.html`);
+    }
+  } catch {
+    throw new HttpError(502, `Could not reach ${host}.`);
   }
   if (resp.status === 404) return null;
   if (!resp.ok) throw new HttpError(502, `${host} answered ${resp.status} for this page.`);

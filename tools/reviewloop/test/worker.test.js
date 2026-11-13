@@ -136,11 +136,14 @@ beforeEach(() => {
     if (url.startsWith('https://admin.da.live/source/')) return new Response(null, { status: daStatus });
     if (url.startsWith('https://api.aem.live/')) return new Response(null, { status: 404 });
     if (url.startsWith('https://ims-na1.adobelogin.com/')) return Response.json({ displayName: 'Priya Shah' });
-    const plain = url.match(/^https:\/\/main--website--northwind\.aem\.(page|live)\/offers\/spring-savings\.plain\.html\?rl=[a-z0-9]+$/);
-    if (plain) {
-      return new Response(`<h1>Spring Savings: earn ${plain[1] === 'page' ? '4.50' : '4.25'}% APY</h1>`, {
-        headers: { 'Last-Modified': PREVIEWED },
-      });
+    const page = url.match(/^https:\/\/main--website--northwind\.aem\.(page|live)\/offers\/(spring-savings|bare)(\.plain\.html)?\?rl=[a-z0-9]+$/);
+    if (page) {
+      const [, host, name, isPlain] = page;
+      const h1 = `<h1>Spring Savings: earn ${host === 'page' ? '4.50' : '4.25'}% APY</h1>`;
+      // Like the real CDN: the full page is fresh, a cached .plain.html may lag behind.
+      let text = isPlain ? '<h1>Spring Savings: earn 4.00% APY</h1>' : `<html><head></head><body><main>\n${h1}\n</main></body></html>`;
+      if (name === 'bare') text = isPlain ? h1 : '<html><body>no main</body></html>';
+      return new Response(text, { headers: { 'Last-Modified': PREVIEWED } });
     }
     if (url.includes('.aem.')) return new Response('', { status: 404 });
     if (url.startsWith(`${JIRA}/rest/api/3`)) {
@@ -218,6 +221,9 @@ test('page: returns preview and live, live empty for a first version', async () 
   const both = await call('/page', PAGE);
   assert.match(both.data.preview, /4\.50%/);
   assert.match(both.data.live, /4\.25%/);
+  assert.equal(both.data.preview, '<h1>Spring Savings: earn 4.50% APY</h1>', 'from the page, not a stale .plain.html');
+  const bare = await call('/page', { ...PAGE, path: '/offers/bare' });
+  assert.match(bare.data.preview, /4\.50%/, 'falls back to .plain.html without <main>');
   const fresh = await call('/page', { ...PAGE, path: '/offers/new' });
   assert.equal(fresh.status, 404);
   assert.match(fresh.data.error, /no preview yet/);
@@ -229,7 +235,7 @@ test('page: flags a preview older than the one the author just made', async () =
   const old = await call('/page', { ...PAGE, since: 'Thu, 12 Nov 2026 18:05:00 GMT' });
   assert.equal(old.data.stale, true);
   assert.equal(calls.filter((c) => c.url.includes('.aem.page/')).length, 3);
-  assert.ok(calls.every((c) => !c.url.includes('.plain.html') || /[?]rl=/.test(c.url)));
+  assert.ok(calls.filter((c) => c.url.includes('.aem.')).every((c) => /[?]rl=/.test(c.url)));
 });
 
 test('full loop: create, reviewer comments, resubmit, approve, publish', async () => {

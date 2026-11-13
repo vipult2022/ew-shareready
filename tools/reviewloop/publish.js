@@ -169,7 +169,7 @@ function renderRight() {
   if (blocked(g)) {
     root.append(notice('error', 'Approval required', h('p', {}, open(review)
       ? `This site only publishes approved pages. ${g === 'edited' ? 'Send the new changes back for review from the ReviewLoop panel.' : `Wait for ${review.assignee?.name || 'the reviewer'} to approve ${review.key}.`}`
-      : 'This site only publishes approved pages. Use Prepare › Request review first.')));
+      : 'This site only publishes approved pages. Use ⋯ menu (top right) › Request review first.')));
     return;
   }
   if (needsConfirm(g)) {
