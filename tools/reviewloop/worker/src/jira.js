@@ -85,8 +85,16 @@ export function toReview(issue, cfg) {
   const f = issue.fields || {};
   const prop = issue.properties?.[PROPERTY] || {};
   const own = prop.own || {};
-  const state = stateOf(f.status, cfg.statuses);
-  const approval = state === 'approved' ? lastMoveTo(issue.changelog, cfg.statuses.approved) : null;
+  let state = stateOf(f.status, cfg.statuses);
+  // A reviewer who closes the issue instead of approving it has still signed it off.
+  // It only counts as "done" once ReviewLoop published the page.
+  const closedByReviewer = state === 'done' && !prop.publishedAt;
+  if (closedByReviewer) state = 'approved';
+  const closedTo = f.status?.name || cfg.statuses.done;
+  const approval = state === 'approved'
+    ? lastMoveTo(issue.changelog, cfg.statuses.approved)
+      || (closedByReviewer ? lastMoveTo(issue.changelog, closedTo) : null)
+    : null;
   return {
     key: issue.key,
     url: `${cfg.base}/browse/${issue.key}`,
@@ -101,6 +109,8 @@ export function toReview(issue, cfg) {
     requestedAt: prop.requestedAt || f.created || '',
     approvedAt: approval?.created || '',
     approvedBy: approval?.author?.displayName || '',
+    publishedAt: prop.publishedAt || '',
+    closedInJira: closedByReviewer,
     comments: (f.comment?.comments || []).map((c) => {
       const mine = own[c.id];
       return {

@@ -3,7 +3,7 @@ import { compare, titleOf } from './lib/page.js';
 import { locate } from './lib/comments.js';
 import { resubmitPayload } from './lib/requests.js';
 import {
-  changeList, statusChip, summarize, loader, notice, plural, ago, formatDate,
+  changeList, statusChip, summarize, loader, notice, plural, ago, formatDate, approvedLine,
 } from './lib/view.js';
 import { startSession, DOCS_URL } from './lib/session.js';
 import { DEMO_REVIEWER } from './lib/api.js';
@@ -139,10 +139,10 @@ function openReview(review) {
   const parts = [reviewCard(review)];
   if (review.state === 'approved') {
     if (edits.length) {
-      parts.push(notice('warning', 'Edited after approval', h('p', {}, `${plural(edits.length, 'change')} since ${review.approvedBy || 'the reviewer'} approved. Publishing now would ship text nobody reviewed.`)));
+      parts.push(notice('warning', 'Approved, then edited', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} ${plural(edits.length, 'change')} made since then ${edits.length === 1 ? 'has' : 'have'} not been reviewed. Send ${edits.length === 1 ? 'it' : 'them'} back, or publish anyway.`)));
       parts.push(sendBack('Only these changes go to the reviewer.'));
     } else {
-      parts.push(notice('pass', 'Approved: ready to publish', h('p', {}, `${review.approvedBy || 'The reviewer'} approved ${review.approvedAt ? ago(review.approvedAt) : ''}. Use Prepare › Publish (reviewed).`)));
+      parts.push(notice('pass', 'Approved: ready to publish', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} Nothing changed since. Use Prepare › Publish (reviewed).`)));
     }
   } else if (review.state === 'changes') {
     parts.push(notice('warning', 'Changes requested', h('p', {}, 'Edit the page, then send it back. The reviewer sees only what you changed.')));

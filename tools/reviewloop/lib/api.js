@@ -8,6 +8,7 @@
  */
 
 const TIMEOUT = 15000;
+const RETRY_DELAY = 1000;
 
 export function workerBase(url) {
   try {
@@ -31,7 +32,7 @@ async function readJson(resp) {
 export function createApi({ workerUrl, getToken }) {
   const base = workerBase(workerUrl);
 
-  async function call(path, body) {
+  async function attempt(path, body) {
     if (!base) return { ok: false, error: 'Set worker-url in the reviewloop sheet of the site config.', setup: true };
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT);
@@ -50,17 +51,28 @@ export function createApi({ workerUrl, getToken }) {
       }
       return { ok: true, ...data };
     } catch {
-      return { ok: false, error: 'Could not reach the ReviewLoop worker. Check worker-url and the worker’s ALLOWED_ORIGINS.' };
+      return {
+        ok: false, unreachable: true, error: 'Could not reach the ReviewLoop worker. Check worker-url and the worker’s ALLOWED_ORIGINS.',
+      };
     } finally {
       clearTimeout(timer);
     }
   }
 
+  // Reads retry once after a dropped connection or timeout. Writes never do,
+  // so a slow create cannot open a second Jira issue.
+  async function call(path, body, { retry = false } = {}) {
+    const first = await attempt(path, body);
+    if (!retry || !first.unreachable) return first;
+    await new Promise((resolve) => { setTimeout(resolve, RETRY_DELAY); });
+    return attempt(path, body);
+  }
+
   return {
     demo: false,
-    status: () => call('/status'),
-    versions: (page) => call('/page', page),
-    get: (page) => call('/review/get', page),
+    status: () => call('/status', null, { retry: true }),
+    versions: (page) => call('/page', page, { retry: true }),
+    get: (page) => call('/review/get', page, { retry: true }),
     create: (body) => call('/review/create', body),
     resubmit: (body) => call('/review/resubmit', body),
     published: (body) => call('/review/published', body),

@@ -301,6 +301,21 @@ test('full loop: create, reviewer comments, resubmit, approve, publish', async (
   assert.equal(next.data.key, 'NWB-2', 'a new review once the last one is done');
 });
 
+test('a reviewer who closes the issue to Done has approved it, until it is published', async () => {
+  await call('/review/create', createBody());
+  const issue = jira.issues.get('NWB-1');
+  jira.move(issue, 'Done');
+  const closed = (await call('/review/get', PAGE)).data.review;
+  assert.equal(closed.state, 'approved');
+  assert.equal(closed.approvedBy, 'Arjun Mehta');
+  assert.ok(closed.approvedAt);
+  assert.equal(closed.closedInJira, true);
+  await call('/review/published', {
+    ...PAGE, key: 'NWB-1', comment: publishedComment({ liveUrl: 'https://x.aem.live/', publisher: 'Priya Shah' }),
+  });
+  assert.equal((await call('/review/get', PAGE)).data.review.state, 'done');
+});
+
 test('unknown assignee leaves the issue unassigned with a warning', async () => {
   const created = await call('/review/create', createBody({ assignee: 'Nobody Here' }));
   assert.equal(created.status, 200);

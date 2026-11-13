@@ -110,3 +110,10 @@ export function loader(label = 'Loading') {
 export function notice(tone, title, ...rest) {
   return h('div', { class: `rl-notice rl-tone-${tone}`, role: tone === 'error' ? 'alert' : 'status' }, h('strong', {}, title), ...rest);
 }
+
+/** "Maximus approved round 2 by closing NWB-1 in Jira, 5 min ago" */
+export function approvedLine(review, when = '') {
+  const who = review.approvedBy || 'The reviewer';
+  const how = review.closedInJira ? ` by closing ${review.key} in Jira` : ` ${review.key}`;
+  return `${who} approved round ${review.round || 1}${how}${when ? `, ${when}` : ''}.`;
+}

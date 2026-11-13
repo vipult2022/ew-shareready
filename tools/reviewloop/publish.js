@@ -2,7 +2,7 @@ import { h, clear } from './lib/dom.js';
 import { compare, titleOf } from './lib/page.js';
 import { publishedComment } from './lib/adf.js';
 import {
-  changeList, statusChip, summarize, loader, notice, plural, ago, STATES,
+  changeList, statusChip, summarize, loader, notice, plural, ago, STATES, approvedLine,
 } from './lib/view.js';
 import { startSession, closeDialog, DOCS_URL } from './lib/session.js';
 
@@ -60,10 +60,10 @@ function gateNotice(g) {
   const { review, compared } = state;
   const edits = compared.sinceReview || [];
   if (g === 'approved') {
-    return notice('pass', 'Approved: ready to publish', h('p', {}, `${review.approvedBy || 'The reviewer'} approved round ${review.round || 1}${review.approvedAt ? ` ${ago(review.approvedAt)}` : ''}. Nothing changed since.`));
+    return notice('pass', 'Approved: ready to publish', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} Nothing changed since.`));
   }
   if (g === 'edited') {
-    return notice('warning', 'Edited after approval', h('p', {}, `${plural(edits.length, 'change')} since ${review.approvedBy || 'the reviewer'} approved. These have not been reviewed.`));
+    return notice('warning', 'Approved, then edited', h('p', {}, `${approvedLine(review, review.approvedAt ? ago(review.approvedAt) : '')} ${plural(edits.length, 'change')} made since then ${edits.length === 1 ? 'has' : 'have'} not been reviewed.`));
   }
   if (g === 'pending') {
     return notice('warning', `Not approved yet: ${(STATES[review.state]?.label || review.status || 'In review').toLowerCase()}`, h('p', {}, `${review.key} is waiting for ${review.assignee?.name || 'the reviewer'}.`));

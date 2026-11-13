@@ -5,7 +5,7 @@ import { DOMParser } from 'linkedom';
 import { compare } from '../lib/page.js';
 import { locate, quotes } from '../lib/comments.js';
 import { parseConfig, splitList, dueDate } from '../lib/config.js';
-import { createDemoApi, workerBase } from '../lib/api.js';
+import { createApi, createDemoApi, workerBase } from '../lib/api.js';
 import { createPayload, resubmitPayload } from '../lib/requests.js';
 import { adfToText } from '../lib/adf.js';
 
@@ -119,4 +119,29 @@ test('createPayload: Jira summary and description from the comparison', async ()
   assert.match(text, /Tone/);
   assert.match(text, /4\.50%/);
   assert.equal(body.snapshot.complete, true);
+});
+
+test('api: reads retry once after a dropped connection, writes never do', async () => {
+  /* global globalThis */
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    if (calls.length === 1) throw new TypeError('Failed to fetch');
+    return new Response(JSON.stringify({ review: null }), { status: 200 });
+  };
+  try {
+    const api = createApi({ workerUrl: 'https://rl.example.workers.dev', getToken: () => 't' });
+    const got = await api.get({ path: '/x' });
+    assert.equal(got.ok, true);
+    assert.equal(calls.length, 2);
+
+    calls.length = 0;
+    const made = await api.create({ path: '/x' });
+    assert.equal(made.ok, false);
+    assert.match(made.error, /Could not reach/);
+    assert.equal(calls.length, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
