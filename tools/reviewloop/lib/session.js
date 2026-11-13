@@ -7,7 +7,9 @@
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 import { loadConfig, withQuery, parseConfig } from './config.js';
 import { createApi, createDemoApi, DEMO_AUTHOR } from './api.js';
-import { pageInfo, refreshPreview, publishPage } from './page.js';
+import {
+  pageInfo, refreshPreview, publishPage, readDraft,
+} from './page.js';
 
 const SDK_TIMEOUT = 4000;
 const DEMO = new URL('../demo/', import.meta.url);
@@ -90,24 +92,22 @@ function startLive(sdk) {
     api: null,
     previewError: '',
     /**
-     * Fetches preview and live through the worker. Dialogs first update the preview so
-     * the comparison includes unsaved-to-preview edits; the panel reads the last preview.
-     * If the CDN still serves an older preview, it previews once more and reads again.
+     * The draft straight from DA (so edits count as soon as the editor saves them) and
+     * live through the worker. Dialogs also preview the page, so the reviewer's preview
+     * link shows the same draft; the comparison does not depend on it.
      */
     async versions({ refresh = true } = {}) {
-      if (!refresh) return session.api.versions(page);
-      const getToken = () => token;
-      let result;
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        // eslint-disable-next-line no-await-in-loop
-        const preview = await refreshPreview(auth, getToken, page);
-        session.previewError = preview.ok ? '' : preview.error;
-        // eslint-disable-next-line no-await-in-loop
-        result = await session.api.versions({ ...page, since: preview.modified || '' });
-        if (!result.ok || !result.stale) return result;
-      }
-      session.previewError = 'AEM is still serving an older preview of this page. Wait a minute, then compare again.';
-      return result;
+      const [draft, live, preview] = await Promise.all([
+        readDraft(auth, page),
+        session.api.versions({ ...page, liveOnly: true }),
+        refresh ? refreshPreview(auth, () => token, page) : null,
+      ]);
+      if (preview) session.previewError = preview.ok ? '' : preview.error;
+      if (!draft.ok) return draft;
+      if (!live.ok) return live;
+      return {
+        ok: true, preview: draft.html, live: live.live, liveHead: live.liveHead, source: 'da',
+      };
     },
   };
   session.publish = () => publishPage(auth, () => token, page);

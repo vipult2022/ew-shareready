@@ -95,7 +95,7 @@ function renderChanges() {
     ));
   }
   if (state.session.previewError) {
-    root.append(notice('warning', 'The preview was not updated', h('p', {}, `${state.session.previewError} The comparison uses the last preview.`)));
+    root.append(notice('warning', 'The preview was not updated', h('p', {}, `${state.session.previewError} The reviewer’s preview link may show an older version until it is previewed again.`)));
   }
 }
 

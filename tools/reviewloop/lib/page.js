@@ -3,11 +3,14 @@
  * since the last review.
  */
 
-import { parseHtml, readUnits } from './blocks.js';
+import {
+  parseHtml, readUnits, headMetaUnits, crossComparable,
+} from './blocks.js';
 import { diffUnits, toSnapshot, fromSnapshot } from './diff.js';
 
 export const HLX_ADMIN = 'https://admin.hlx.page';
 export const AEM_API = 'https://api.aem.live';
+export const DA_SOURCE = 'https://admin.da.live/source';
 
 /** The DA document path: "/" is "/index", ".html" is dropped. */
 export function docPath(path) {
@@ -64,6 +67,22 @@ function adminError(resp, action) {
   return status ? `Could not ${action} the page (${status}).` : 'Could not reach AEM.';
 }
 
+/**
+ * The draft exactly as the editor saved it, straight from DA. Unlike the preview, it does
+ * not wait for anyone to preview the page or for a CDN to catch up.
+ */
+export async function readDraft(auth, page) {
+  let resp;
+  try {
+    resp = await auth(`${DA_SOURCE}/${page.org}/${page.site}${page.path}.html`, { cache: 'no-store' });
+  } catch {
+    return { ok: false, error: 'Could not read the draft from DA.' };
+  }
+  if (resp.status === 404) return { ok: false, error: 'This page is not saved in DA yet.' };
+  if (!resp.ok) return { ok: false, error: `Could not read the draft from DA (${resp.status}).` };
+  return { ok: true, html: await resp.text() };
+}
+
 /** Previews the page like the toolbar does, so the reviewer sees the current draft. */
 export async function refreshPreview(auth, token, page) {
   const resp = await adminPost(auth, token, page, 'preview');
@@ -94,21 +113,28 @@ export function titleOf(units, fallback = '') {
 }
 
 /**
- * Compares the preview with live and, when there is one, with the last review.
- * @param {{preview: string, live?: string|null}} versions .plain.html of each version
+ * Compares the draft with live and, when there is one, with the last review.
+ * @param {{preview: string, live?: string|null, liveHead?: string, source?: string}} versions
+ *   the draft (.plain.html, or DA source when source is 'da') and live .plain.html
  * @param {object} [snapshot] the snapshot stored with the last review request
  * @param {Function} [Parser] DOMParser (tests pass linkedom's)
  */
 export function compare(versions, snapshot, Parser) {
   const parse = (html) => readUnits(parseHtml(html, Parser));
   const units = parse(versions.preview);
-  const live = versions.live ? parse(versions.live) : null;
+  let live = versions.live ? parse(versions.live) : null;
+  const fromDa = versions.source === 'da';
+  if (live && fromDa) {
+    const labels = units.filter((u) => u.kind === 'meta' && u.location === 'Page metadata').map((u) => u.label);
+    live = [...live, ...headMetaUnits(versions.liveHead, labels, Parser)];
+  }
   const current = toSnapshot(units);
   const result = {
     units,
     snapshot: current,
     firstVersion: !live,
-    sinceLive: live ? diffUnits(live, units) : diffUnits([], units),
+    sinceLive: (live && fromDa ? diffUnits(crossComparable(live), crossComparable(units))
+      : diffUnits(live || [], units)),
     sinceReview: null,
   };
   if (snapshot?.units) {

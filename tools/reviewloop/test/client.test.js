@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DOMParser } from 'linkedom';
 import { compare } from '../lib/page.js';
+import { headMetaUnits, crossComparable } from '../lib/blocks.js';
 import { locate, quotes } from '../lib/comments.js';
 import { parseConfig, splitList, dueDate } from '../lib/config.js';
 import { createApi, createDemoApi, workerBase } from '../lib/api.js';
@@ -144,4 +145,33 @@ test('api: reads retry once after a dropped connection, writes never do', async 
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+const DA_DRAFT = `<body><header></header><main><div><h1>Summer CD: 5.25% APY</h1>
+<picture><img src="https://content.da.live/nw/site/media/sun.jpg" alt="Sun"></picture>
+<p>See <a href="https://main--site--nw.aem.page/rates">rates</a>.</p>
+<div class="metadata"><div><div><p>Title</p></div><div><p>Summer CD</p></div></div>
+<div><div><p>Description</p></div><div><p>Lock in 5.25%.</p></div></div>
+<div><div><p>Image</p></div><div><picture><img src="https://content.da.live/nw/site/media/sun.jpg" alt="Sun"></picture></div></div>
+</div></div></main><footer></footer></body>`;
+const LIVE_MAIN = `<div><h1 id="x">Summer CD: 5.00% APY</h1>
+<p><picture><img src="./media_1abcdef0123456789abcdef.jpg?width=750" alt="Sun"></picture></p>
+<p>See <a href="/rates">rates</a>.</p></div>`;
+const LIVE_HEAD = `<title>Summer CD</title><meta name="description" content="Lock in 5.00%.">
+<meta property="og:image" content="https://main--site--nw.aem.live/media_1abcdef0123456789abcdef.jpg?width=1200">`;
+
+test('compare: a DA draft against live finds only real edits, metadata included', () => {
+  const r = compare({
+    preview: DA_DRAFT, live: LIVE_MAIN, liveHead: LIVE_HEAD, source: 'da',
+  }, null, DOMParser);
+  const what = r.sinceLive.map((c) => `${c.type} ${c.location}${c.label ? ` ${c.label}` : ''}`);
+  assert.deepEqual(what, ['changed Page title (H1)', 'changed Page metadata Description']);
+  assert.equal(r.units.find((u) => u.kind === 'image').src, 'https://content.da.live/nw/site/media/sun.jpg', 'snapshots keep the real file');
+});
+
+test('headMetaUnits and crossComparable', () => {
+  const meta = headMetaUnits(LIVE_HEAD, ['Title', 'Description', 'Image', 'Robots'], DOMParser);
+  assert.deepEqual(meta.map((m) => [m.label, m.text]), [['Title', 'Summer CD'], ['Description', 'Lock in 5.00%.'], ['Image', '']]);
+  const [link] = crossComparable([{ kind: 'text', text: 'x', links: ['https://main--a--b.aem.live/rates', 'https://example.com/'] }]);
+  assert.deepEqual(link.links, ['/rates', 'https://example.com/']);
 });

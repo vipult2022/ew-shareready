@@ -56,6 +56,7 @@ async function fetchPlain(url) {
 }
 
 const MAIN = /<main[^>]*>([\s\S]*)<\/main>/i;
+const HEAD = /<head[^>]*>([\s\S]*?)<\/head>/i;
 
 async function fetchOnce(url) {
   try {
@@ -79,7 +80,13 @@ async function plain(host, page) {
     if (resp.ok) {
       const html = await resp.text();
       const main = html.match(MAIN);
-      if (main) return { text: main[1].trim(), modified: Date.parse(resp.headers.get('last-modified') || '') };
+      if (main) {
+        return {
+          text: main[1].trim(),
+          head: html.match(HEAD)?.[1].trim() || '',
+          modified: Date.parse(resp.headers.get('last-modified') || ''),
+        };
+      }
     }
     if (resp.status !== 404) {
       const file = web.endsWith('/') ? `${web}index` : web;
@@ -90,7 +97,7 @@ async function plain(host, page) {
   }
   if (resp.status === 404) return null;
   if (!resp.ok) throw new HttpError(502, `${host} answered ${resp.status} for this page.`);
-  return { text: await resp.text(), modified: Date.parse(resp.headers.get('last-modified') || '') };
+  return { text: await resp.text(), head: '', modified: Date.parse(resp.headers.get('last-modified') || '') };
 }
 
 /** True when the CDN still serves a copy older than the preview the author just made. */
@@ -113,15 +120,23 @@ async function current(ctx, key) {
 
 const ROUTES = {
   '/page': async function versions({ page, body }) {
+    // The panel reads the draft from DA itself and only needs live (with its <head>, for
+    // the published metadata).
+    if (body.liveOnly) {
+      const live = await plain('aem.live', page);
+      return { live: live?.text || '', liveHead: live?.head || '' };
+    }
     const since = Date.parse(body.since || '') || 0;
-    let [preview, live] = await Promise.all([plain('aem.page', page), plain('aem.live', page)]);
+    const [first, live] = await Promise.all([plain('aem.page', page), plain('aem.live', page)]);
+    let preview = first;
     if (preview === null) throw new HttpError(404, 'This page has no preview yet. Preview it, then try again.');
     if (isStale(preview, since)) {
       await wait(STALE_RETRY);
       preview = await plain('aem.page', page) || preview;
     }
-    live = live?.text || '';
-    return { preview: preview.text, live, stale: isStale(preview, since) };
+    return {
+      preview: preview.text, live: live?.text || '', liveHead: live?.head || '', stale: isStale(preview, since),
+    };
   },
 
   '/review/get': async function getReview(ctx) {

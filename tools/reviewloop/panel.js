@@ -8,7 +8,7 @@ import {
 import { startSession, DOCS_URL } from './lib/session.js';
 import { DEMO_REVIEWER } from './lib/api.js';
 
-const POLL = 30000;
+const POLL = 15000;
 
 const state = {
   session: null,
@@ -149,7 +149,7 @@ function openReview(review) {
   } else {
     parts.push(h('p', { class: 'rl-small rl-muted' }, edits.length
       ? `${plural(edits.length, 'change')} since you sent it. Send them so the reviewer sees the latest.`
-      : `Waiting for ${review.assignee?.name || 'the reviewer'}. This panel checks Jira every 30 seconds.`));
+      : `Waiting for ${review.assignee?.name || 'the reviewer'}. This panel checks Jira every 15 seconds.`));
   }
   parts.push(comments(review));
   if (review.state !== 'approved' && (review.state === 'changes' || edits.length)) {
@@ -282,9 +282,13 @@ async function init() {
   els.root.append(loader());
   state.session = await startSession();
   await refresh();
-  setInterval(() => {
+  const recheck = () => {
     if (document.visibilityState === 'visible' && !state.loading && !state.sending) refresh();
-  }, POLL);
+  };
+  setInterval(recheck, POLL);
+  // Back from the editor: show the latest edits straight away.
+  window.addEventListener('focus', recheck);
+  document.addEventListener('visibilitychange', recheck);
 }
 
 init();

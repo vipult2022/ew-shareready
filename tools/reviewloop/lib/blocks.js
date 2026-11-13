@@ -188,3 +188,51 @@ export function readUnits(doc) {
   });
   return units;
 }
+
+/**
+ * The published metadata, read from the live page's <head>, as "Page metadata" units for
+ * the labels the draft uses (live .plain.html has no metadata block to compare with).
+ * @param {string} headHtml the live page's <head> content
+ * @param {string[]} labels metadata labels in the draft, e.g. ["Title", "Description"]
+ */
+export function headMetaUnits(headHtml, labels, Parser = DOMParser) {
+  if (!headHtml || !labels.length) return [];
+  const doc = new Parser().parseFromString(`<html><head>${headHtml}</head><body></body></html>`, 'text/html');
+  const meta = (name) => [...doc.querySelectorAll('meta')]
+    .find((m) => (m.getAttribute('name') || m.getAttribute('property') || '').toLowerCase() === name);
+  return labels.map((label) => {
+    const key = clean(label).toLowerCase().replace(/\s+/g, '-');
+    if (key === 'title') {
+      const title = doc.querySelector('title');
+      return title ? { text: clean(title.textContent) } : null;
+    }
+    const tag = meta(key === 'image' ? 'og:image' : key);
+    if (!tag) return null;
+    return key === 'image'
+      ? { text: '', src: imageKey(tag.getAttribute('content')) }
+      : { text: clean(tag.getAttribute('content')) };
+  }).map((found, i) => (found ? {
+    kind: 'meta', location: META_BLOCKS.metadata, label: labels[i], ...found,
+  } : null)).filter(Boolean);
+}
+
+const SITE_ORIGIN = /^https?:\/\/[^/]+\.aem\.(page|live)(?=\/|$)/i;
+
+/**
+ * Makes a DA draft and a published page comparable. Image files have different URLs on
+ * each side (content.da.live vs media_<hash>), so pictures compare by alt text; links to
+ * the site itself compare by path; section settings are not in .plain.html.
+ */
+export function crossComparable(units) {
+  return units
+    .filter((u) => !(u.kind === 'meta' && u.location === META_BLOCKS['section-metadata']))
+    .map((u) => {
+      const out = { ...u };
+      if (out.links) out.links = out.links.map((href) => href.replace(SITE_ORIGIN, '') || '/');
+      if (out.src) {
+        delete out.src;
+        if (out.kind === 'meta') out.text = '';
+      }
+      return out;
+    });
+}
