@@ -4,6 +4,23 @@
 
 ReviewLoop is an Experience Workspace (EW) extension for AEM Edge Delivery Services. An author picks **Request review** from the Prepare menu. ReviewLoop compares the draft with the live page and opens a Jira issue that holds only the changes, each with before and after and the removed words struck through, plus a checklist, a due date, an assignee and links back to the page. The reviewer works in Jira as usual. The ReviewLoop panel in EW shows their status and comments next to the page and points at the text each comment quotes. When the author makes the fix and sends it back, the reviewer gets *only the changes since the last round*. **Publish (reviewed)** then checks the approval, publishes the page, and closes the Jira issue with a link to the live page.
 
+![Request review dialog for the Spring Savings page: eight changes since live with removed words struck through, the Legal review type assigned to Arjun Mehta, a due date, a note, the Legal checklist and a summary of what Jira will get](docs/request.png)
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/panel-changes.png" alt="ReviewLoop panel: NWB-42 changes requested; Arjun Mehta's comment quotes a sentence and the panel shows it is at the top of the page"></td>
+    <td width="33%"><img src="docs/panel-resubmit.png" alt="ReviewLoop panel after the fix: the quoted text is no longer on the page, and only the one change since round 1 is ready to send back"></td>
+    <td width="33%"><img src="docs/panel-approved.png" alt="ReviewLoop panel: NWB-42 approved in round 2, ready to publish, with the comment thread"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>1. Feedback</b>: the reviewer's comment, located on the page</td>
+    <td align="center"><b>2. Resubmit</b>: only the change since round 1</td>
+    <td align="center"><b>3. Approved</b>: ready to publish</td>
+  </tr>
+</table>
+
+![Publish (reviewed) dialog: approved, nothing changed since, the list of what goes live and a Publish button that closes NWB-42 with a link to the live page](docs/publish.png)
+
 - **Try it now, no setup:** [panel demo](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1) · [Request review demo](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html?demo=1) · [Publish (reviewed) demo](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html?demo=1)
 - **Third party:** Atlassian Jira Cloud (REST API v3)
 - **Cost:** free. Jira Cloud Free (up to 10 users) and the Cloudflare Workers free tier are enough.
@@ -69,7 +86,7 @@ If the page already has an open review, the dialog switches to **Send back for r
 Open **Extensions › ReviewLoop**. The panel sits next to the page and shows:
 
 - **Status** of the page's review: *Not sent for review*, *In review*, *Changes requested*, *Approved* or *Done*, with the Jira key, assignee, round and due date, and a link to the issue.
-- **Clear next step.** For example "Changes requested: edit the page, then send it back. The reviewer sees only what you changed." or "Approved: ready to publish. Maximus (Legal) approved round 2, 5 min ago. Nothing changed since. Open the ⋯ menu (top right) › Publish (reviewed)."
+- **Clear next step.** For example "Changes requested: edit the page, then send it back. The reviewer sees only what you changed." or "Approved: ready to publish. Maximus (Legal) approved round 2 of NWB-1, 5 min ago. Nothing changed since. Open the ⋯ menu (top right) › Publish (reviewed)."
 - **The reviewer's comments.** When a comment quotes text from the page (`change “5.25% APY” to …`), ReviewLoop finds that text in the draft and shows where it is (*On the page: Hero › paragraph*), or *✓ The quoted text is no longer on the page* once it's fixed.
 - **Changes since the last round**, and a **Send back for review** button with a note. Jira gets a comment with only those changes, and the issue moves back to "in review" as round N+1.
 - **Approved, then edited.** If the page changes after approval, the panel says so and lists the unreviewed edits.
