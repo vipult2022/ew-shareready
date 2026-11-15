@@ -6,7 +6,7 @@ import {
   plural, verdict, worst, ring, fitFrames as fitStages,
 } from './lib/ui.js';
 
-const DOCS_URL = 'https://github.com/vipult2022/ew-shareready#readme';
+const DOCS_URL = 'https://github.com/vipult2022/ew-shareready/tree/main/tools/shareready#readme';
 
 const SOURCE_LABEL = {
   metadata: 'Metadata block',

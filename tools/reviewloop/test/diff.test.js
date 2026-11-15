@@ -4,12 +4,12 @@ import { readFile } from 'node:fs/promises';
 import { DOMParser } from 'linkedom';
 import {
   parseHtml, readUnits, imageKey, blockTitle,
-} from '../../tools/reviewloop/lib/blocks.js';
+} from '../lib/blocks.js';
 import {
   diffUnits, diffWords, wordEdits, summarize, changeTitle, toSnapshot, fromSnapshot,
-} from '../../tools/reviewloop/lib/diff.js';
+} from '../lib/diff.js';
 
-const DEMO = new URL('../../tools/reviewloop/demo/', import.meta.url);
+const DEMO = new URL('../demo/', import.meta.url);
 
 async function units(name) {
   const html = await readFile(new URL(`spring-savings.${name}.plain.html`, DEMO), 'utf8');
@@ -41,12 +41,12 @@ test('reads a .plain.html page into located units', async () => {
 });
 
 test('reads a DA source document the same way', async () => {
-  const html = await readFile(new URL('../../tools/shareready/demo/spring-savings.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('./fixtures/spring-savings.source.html', import.meta.url), 'utf8');
   const doc = unitsOf(html);
   assert.equal(doc[0].kind, 'heading');
   assert.equal(doc[0].level, 1);
   assert.ok(doc.some((u) => u.location === 'Columns › Pay nothing'));
-  assert.ok(doc.some((u) => u.kind === 'image' && u.src === '/tools/shareready/demo/media/spring-banner.jpg'));
+  assert.ok(doc.some((u) => u.kind === 'image' && u.src === '/media/spring-banner.jpg'));
 });
 
 test('image keys use the media hash, so preview and live compare', () => {

@@ -2,13 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DOMParser } from 'linkedom';
-import { parseHtml, readUnits } from '../../tools/reviewloop/lib/blocks.js';
-import { diffUnits } from '../../tools/reviewloop/lib/diff.js';
+import { parseHtml, readUnits } from '../lib/blocks.js';
+import { diffUnits } from '../lib/diff.js';
 import {
   reviewDescription, rereviewComment, publishedComment, changesTable, trimContext, adfToText,
-} from '../../tools/reviewloop/lib/adf.js';
+} from '../lib/adf.js';
 
-const DEMO = new URL('../../tools/reviewloop/demo/', import.meta.url);
+const DEMO = new URL('../demo/', import.meta.url);
 const page = {
   title: 'Spring Savings',
   path: '/offers/spring-savings',
@@ -84,6 +84,9 @@ test('published comment flags edits after approval', () => {
   assert.equal(adfToText(ok).trim(), `Published by Priya Shah: ${page.liveUrl}`);
   const late = publishedComment({ liveUrl: page.liveUrl, editsSinceApproval: 2 });
   assert.match(adfToText(late), /Published with 2 edits made after approval\./);
+  const early = publishedComment({ liveUrl: page.liveUrl, notApproved: 'In review' });
+  assertValid(early);
+  assert.match(adfToText(early), /Published before approval \(status: In review\)/);
 });
 
 test('long unchanged text is trimmed around the edit', () => {
@@ -118,4 +121,14 @@ test('link and image changes render in the table', () => {
   assertValid({ type: 'doc', content: [table] });
   const cells = table.content.slice(1).map((row) => adfToText(row.content[2]).trim());
   assert.deepEqual(cells, ['link: /old → /new', 'new image: “a”', '(image)']);
+});
+
+test('a very long change list is capped to stay inside Jira limits', () => {
+  const many = Array.from({ length: 400 }, (_, i) => ({
+    type: 'added', kind: 'text', location: `Section ${i}`, text: 'word '.repeat(40),
+  }));
+  const table = changesTable(many);
+  assert.ok(JSON.stringify(table).length < 26000);
+  assert.match(adfToText(table.content.at(-1)), /\d+ more changes: open the preview/);
+  assert.equal(changesTable(many.slice(0, 3)).content.length, 4);
 });

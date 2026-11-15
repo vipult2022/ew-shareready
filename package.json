@@ -8,7 +8,7 @@
     "lint:css": "stylelint \"blocks/**/*.css\" \"styles/*.css\" \"tools/**/*.css\"",
     "lint": "npm run lint:js && npm run lint:css",
     "lint:fix": "npm run lint:js -- --fix && npm run lint:css -- --fix",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/ tools/reviewloop/test/"
   },
   "repository": {
     "type": "git",
