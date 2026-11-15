@@ -114,6 +114,6 @@ export function notice(tone, title, ...rest) {
 /** "Maximus approved round 2 by closing NWB-1 in Jira, 5 min ago" */
 export function approvedLine(review, when = '') {
   const who = review.approvedBy || 'The reviewer';
-  const how = review.closedInJira ? ` by closing ${review.key} in Jira` : ` ${review.key}`;
+  const how = review.closedInJira ? ` by closing ${review.key} in Jira` : ` of ${review.key}`;
   return `${who} approved round ${review.round || 1}${how}${when ? `, ${when}` : ''}.`;
 }
