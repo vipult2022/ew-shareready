@@ -21,12 +21,9 @@ ReviewLoop is an Experience Workspace (EW) extension for AEM Edge Delivery Servi
 
 ![Publish (reviewed) dialog: approved, nothing changed since, the list of what goes live and a Publish button that closes NWB-42 with a link to the live page](docs/publish.png)
 
-- **Try it now, no setup:** [panel demo](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1) · [Request review demo](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html?demo=1) · [Publish (reviewed) demo](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html?demo=1)
+- **Try it now, no setup:** [panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1) · [Request review demo](https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html?demo=1) · [Publish (reviewed) demo](https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html?demo=1)
 - **Third party:** Atlassian Jira Cloud (REST API v3)
 - **Cost:** free. Jira Cloud Free (up to 10 users) and the Cloudflare Workers free tier are enough.
-
-> [!NOTE]
-> ReviewLoop is developed on the `reviewloop` branch, so the hosted URLs in this README use `reviewloop--ew-shareready--vipult2022`. Once it's merged, swap that for `main--ew-shareready--vipult2022`.
 
 ## Contents
 
@@ -119,15 +116,15 @@ The demos use a sample Northwind Bank page (a fictional brand). They need no EW,
 
 | Step | Demo | What to do |
 | --- | --- | --- |
-| 1 | [Request review](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html?demo=1) | See the changes to *Spring Savings* since live. Pick **Legal**, add a note, **Send to Jira**. |
-| 2 | [Panel](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1) | The demo bar lets you play the reviewer, Arjun Mehta. Click **Request changes**: his comment quotes the APY sentence and the panel shows where it is on the page. |
+| 1 | [Request review](https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html?demo=1) | See the changes to *Spring Savings* since live. Pick **Legal**, add a note, **Send to Jira**. |
+| 2 | [Panel](https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1) | The demo bar lets you play the reviewer, Arjun Mehta. Click **Request changes**: his comment quotes the APY sentence and the panel shows where it is on the page. |
 | 3 | Panel | Click **Make the fix**. The comment shows *✓ The quoted text is no longer on the page*, and the panel lists only the fix "since round 1". **Send back for review**. |
 | 4 | Panel | Click **Approve**. The panel says *Approved: ready to publish*. |
-| 5 | [Publish (reviewed)](https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html?demo=1) | Shows the approval and **Publish**. Use **Reset** in the panel to start again. |
+| 5 | [Publish (reviewed)](https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html?demo=1) | Shows the approval and **Publish**. Use **Reset** in the panel to start again. |
 
 The live demo site, with a real Jira project behind it:
 
-- Page: https://reviewloop--ew-shareready--vipult2022.aem.page/offers/summer-savings
+- Page: https://main--ew-shareready--vipult2022.aem.page/offers/summer-savings
 - Edit (needs access to the `vipult2022` org): https://da.live/canvas#/vipult2022/ew-shareready/offers/summer-savings
 
 ## Install
@@ -148,14 +145,14 @@ Open your site config at `https://da.live/config#/{org}/{site}/` and add the row
 
 | title | path | icon | experience |
 | --- | --- | --- | --- |
-| ReviewLoop | `https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html` | `https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg` | `inline` |
+| ReviewLoop | `https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html` | `https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg` | `inline` |
 
 **`prepare` sheet:** adds the two dialogs to the Prepare menu (the **⋯** button next to Publish).
 
 | title | path | icon | experience |
 | --- | --- | --- | --- |
-| Request review | `https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html` | `https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg` | `fullsize-dialog` |
-| Publish (reviewed) | `https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html` | `https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg` | `fullsize-dialog` |
+| Request review | `https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/request.html` | `https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg` | `fullsize-dialog` |
+| Publish (reviewed) | `https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/publish.html` | `https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg` | `fullsize-dialog` |
 
 **`reviewloop` and `reviewloop-types` sheets:** point at your worker and describe your review types. See [Configuration](#configuration).
 
@@ -408,8 +405,8 @@ npx -y @adobe/aem-cli up             # serves the repo on localhost:3000
 | Status | Early Access |
 | Owner | vipult2022 |
 | Doc Url | https://github.com/vipult2022/ew-shareready/tree/main/tools/reviewloop#readme |
-| Try Url | https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1 |
-| Logo | https://reviewloop--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg |
+| Try Url | https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/panel.html?demo=1 |
+| Logo | https://main--ew-shareready--vipult2022.aem.page/tools/reviewloop/icon.svg |
 
 ## License
 
