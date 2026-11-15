@@ -7,6 +7,7 @@ package-lock.json
 test/*
 worker/*
 docs/*
+tools/shareready/docs/*
 tools/reviewloop/test/*
 tools/reviewloop/worker/*
 tools/reviewloop/docs/*
