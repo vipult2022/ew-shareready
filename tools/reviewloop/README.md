@@ -4,6 +4,12 @@
 
 ReviewLoop is an Experience Workspace (EW) extension for AEM Edge Delivery Services. An author picks **Request review** from the Prepare menu. ReviewLoop compares the draft with the live page and opens a Jira issue that holds only the changes, each with before and after and the removed words struck through, plus a checklist, a due date, an assignee and links back to the page. The reviewer works in Jira as usual. The ReviewLoop panel in EW shows their status and comments next to the page and points at the text each comment quotes. When the author makes the fix and sends it back, the reviewer gets *only the changes since the last round*. **Publish (reviewed)** then checks the approval, publishes the page, and closes the Jira issue with a link to the live page.
 
+
+
+https://github.com/user-attachments/assets/621f4787-b844-43c7-bf3e-fb0925e5c864
+
+
+
 ![Request review dialog for the Spring Savings page: eight changes since live with removed words struck through, the Legal review type assigned to Arjun Mehta, a due date, a note, the Legal checklist and a summary of what Jira will get](docs/request.png)
 
 <table>
