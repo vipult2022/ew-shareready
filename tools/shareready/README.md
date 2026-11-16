@@ -4,6 +4,12 @@
 
 ShareReady is an Experience Workspace (EW) extension for AEM Edge Delivery Services. While you write, it shows live link previews for Google, LinkedIn, Facebook, X, WhatsApp, Slack and Teams. It checks the title, description and share image against each platform's real limits, and writes the Metadata block for you. When the page is ready, **Publish & Share** publishes it and refreshes Facebook's cached card. It also notifies search engines through IndexNow and posts a share card to your team's Slack channel.
 
+
+
+https://github.com/user-attachments/assets/35ef827e-7cf5-47ca-b465-31658d1b803e
+
+
+
 ![ShareReady open in Experience Workspace next to the Spring Savings page: a score of 58, a Fix 4 fields button, and Google previews with the title and description cut off](docs/ew-panel.png)
 
 <table>
