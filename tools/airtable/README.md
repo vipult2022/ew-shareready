@@ -4,6 +4,12 @@
 
 Teams already keep rates, products, store locations, events, team bios and FAQs in Airtable. Getting them onto a page usually means copying cell by cell, re-typing currency and dates, and downloading and uploading every photo. This Experience Workspace (EW) extension for AEM Edge Delivery Services does it in a few clicks. An author opens **Extensions › Airtable**, picks a source (for example *Savings rates*), ticks the records and fields they want, chooses how to show them and presses **Insert**. The content lands at the cursor as a normal block that the author can edit like anything else on the page.
 
+
+
+https://github.com/user-attachments/assets/b481b417-31ab-453f-a071-597d7b5329a2
+
+
+
 <table>
   <tr>
     <td width="25%"><img src="docs/panel-table.png" alt="Airtable panel: the Savings rates source with five records selected, inserted as a Table with a header row; the preview shows Product, APY, Minimum deposit, Term and Rate updated"></td>
