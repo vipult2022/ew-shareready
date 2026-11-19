@@ -1,0 +1,28 @@
+# Figma worker: the inbox between the Figma plugin and Experience Workspace.
+# Deploy from this folder with:
+#   npx wrangler kv namespace create HANDOFFS      (paste the id below)
+#   npx wrangler secret put HANDOFF_KEY            (any long random text; designers paste it
+#                                                    into the plugin settings)
+#   npx wrangler deploy
+# Free plan limits that matter: 1,000 KV writes a day (a send is 1 write per picture + 2).
+
+name = "figma-handoff"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[[kv_namespaces]]
+binding = "HANDOFFS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+# Required. Comma-separated orgs ("my-org") or sites ("my-org/my-site") this worker serves.
+ALLOWED_ORGS = "vipult2022"
+# Optional. Comma-separated origins allowed to call the EW routes. Wildcards (*) are allowed.
+# Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
+# http://localhost:3000
+# ALLOWED_ORIGINS = ""
+# Optional, for "Paste a Figma link": first run
+#   npx wrangler secret put FIGMA_TOKEN   (a Figma personal access token, file_content:read only)
+# Then, to read only some Figma files, list their file keys (the part after /design/ in a link).
+# Default: any file the token can open.
+# FIGMA_FILES = ""

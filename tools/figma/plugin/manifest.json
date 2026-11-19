@@ -1,0 +1,15 @@
+{
+  "name": "Send to Experience Workspace",
+  "id": "ew-figma-handoff",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "permissions": ["currentuser"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Each team runs its own handoff worker (a Cloudflare Workers URL set in the plugin settings), and the sample design loads its pictures from the team's aem.page site.",
+    "devAllowedDomains": ["http://localhost:8787", "http://localhost:3000"]
+  }
+}

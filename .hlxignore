@@ -19,3 +19,8 @@ tools/notion/test/*
 tools/notion/worker/*
 tools/notion/docs/*
 tools/notion/demo/*.mjs
+tools/figma/test/*
+tools/figma/worker/*
+tools/figma/docs/*
+tools/figma/demo/*.mjs
+tools/figma/plugin/*
