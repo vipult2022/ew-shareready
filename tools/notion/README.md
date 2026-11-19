@@ -4,6 +4,12 @@
 
 Many teams write briefs and first drafts in Notion, then rebuild them by hand in the CMS. They copy each paragraph, redo every heading and list, download and upload every image, and retype the title, description and keywords into a metadata block. This Experience Workspace (EW) extension for AEM Edge Delivery Services does that in a few clicks. An author opens **Extensions › Notion**, picks a brief from the team's *Content briefs* database and checks the preview. Then they press **Insert** to put it at the cursor, or **Create page** to get a new page with the content, the images copied into the site and a `Metadata` block. The new page's link is written back to the brief in Notion, so the team can see which briefs are done.
 
+
+
+https://github.com/user-attachments/assets/1589db45-57fa-4ec4-8a5f-301e9d77db42
+
+
+
 <table>
   <tr>
     <td width="33%"><img src="docs/panel-list.png" alt="Notion panel: the Content briefs database with three briefs, each with its icon, a coloured status pill and when it was last edited"></td>
