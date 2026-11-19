@@ -1,9 +1,11 @@
-# ReviewLoop worker: keeps the Jira API token out of the browser.
+# ReviewLoop worker: keeps the Jira and Airtable tokens out of the browser.
 # Deploy from this folder with:  npx wrangler deploy
+# Connect Jira, Airtable or both. Each review type picks one (see the README).
 #
 # Secrets (never commit these):
 #   npx wrangler secret put JIRA_EMAIL      # the Atlassian account the API token belongs to
 #   npx wrangler secret put JIRA_API_TOKEN  # https://id.atlassian.com/manage-profile/security/api-tokens
+#   npx wrangler secret put AIRTABLE_TOKEN  # https://airtable.com/create/tokens (scopes in the README)
 #
 # Issues are created, commented on and moved as that account. Use a shared or bot account
 # in production so reviews do not depend on one person.
@@ -31,3 +33,16 @@ JIRA_STATUS_DONE = "Done"              # column "Done" (default "Done")
 # Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
 # http://localhost:3000
 # ALLOWED_ORIGINS = ""
+# Optional. The tracker for review types that do not name one: jira or airtable.
+# Default: the first one connected (Jira, then Airtable).
+# DEFAULT_TRACKER = "jira"
+
+# Optional. Airtable: the base (app… id from its URL) and table that hold reviews.
+# Create the table with:  AIRTABLE_TOKEN=pat... AIRTABLE_BASE_ID=app... node setup-airtable.mjs
+# The Northwind demo base:
+AIRTABLE_BASE_ID = "app5eAg9WToHjn2hs"
+AIRTABLE_TABLE = "tblvi4GGo8fPeAlFr"     # the table name or its tbl… id (default "Reviews")
+# AIRTABLE_STATUS_REVIEW = "In review"  # Status options, if you renamed them (defaults shown)
+# AIRTABLE_STATUS_CHANGES = "Changes requested"
+# AIRTABLE_STATUS_APPROVED = "Approved"
+# AIRTABLE_STATUS_DONE = "Done"

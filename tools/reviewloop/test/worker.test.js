@@ -6,6 +6,7 @@ import { resetState, allowedOrigin, validatePage } from '../worker/src/http.js';
 import {
   resetJira, stateOf, fitProperty, jiraConfig, pageLabel,
 } from '../worker/src/jira.js';
+import { resetAirtable, displayKey } from '../worker/src/airtable.js';
 import { reviewDescription, rereviewComment, publishedComment } from '../lib/adf.js';
 
 const JIRA = 'https://northwind.atlassian.net';
@@ -21,6 +22,7 @@ const SNAPSHOT = { v: 1, units: [['heading', 'Page title (H1)', 'Spring Savings'
 const STATUSES = ['To Do', 'In review', 'Changes requested', 'Approved', 'Done'];
 
 let jira;
+let airtable;
 let calls;
 let daStatus;
 const realFetch = globalThis.fetch;
@@ -123,10 +125,102 @@ function fakeJira() {
   };
 }
 
+const AT_BASE = 'appNorthwindBank1';
+const AT_TABLE = 'tblReviews0000001';
+const AT_ENV = {
+  ALLOWED_ORGS: 'northwind', AIRTABLE_BASE_ID: AT_BASE, AIRTABLE_TOKEN: 'pat-secret',
+};
+const AT_FIELDS = ['Review', 'Status', 'Review type', 'Reviewer', 'Due', 'Page', 'Page key',
+  'Preview', 'Edit in EW', 'Live page', 'Description', 'ReviewLoop data'];
+
+function fakeAirtable() {
+  const records = new Map();
+  let next = 1;
+  let commentId = 1;
+  let clock = Date.parse('2026-11-12T10:00:00Z');
+  const tick = () => {
+    clock += 1000;
+    return new Date(clock).toISOString();
+  };
+  const fields = AT_FIELDS.map((name) => (name === 'Status'
+    ? { name, options: { choices: ['In review', 'Changes requested', 'Approved', 'Done'].map((n) => ({ name: n })) } }
+    : { name }));
+  const self = {
+    records,
+    fields,
+    calls: 0,
+    limit: false,
+    /** The reviewer changes Status in Airtable; the optional "Status changed" fields follow. */
+    move(id, to, by = 'Arjun Mehta') {
+      const record = records.get(id);
+      record.fields.Status = to;
+      record.fields['Status changed'] = tick();
+      record.fields['Status changed by'] = { id: 'usrArjun', name: by };
+    },
+    reviewerComment(id, text) {
+      commentId += 1;
+      records.get(id).comments.push({
+        id: `com${commentId}`,
+        author: { id: 'usrArjun', name: 'Arjun Mehta' },
+        createdTime: tick(),
+        text,
+        mentioned: { usrPriya: { displayName: 'Priya Shah' } },
+      });
+    },
+    handle(method, path, body) {
+      self.calls += 1;
+      if (self.limit) return { status: 429, data: { errors: [{ error: 'PUBLIC_API_BILLING_LIMIT_EXCEEDED' }], error: { type: 'PUBLIC_API_BILLING_LIMIT_EXCEEDED' } } };
+      if (method === 'GET' && path === `meta/bases/${AT_BASE}/tables`) {
+        return { tables: [{ id: AT_TABLE, name: 'Reviews', fields }] };
+      }
+      const url = new URL(`https://x/${path}`);
+      const [base, table, id, sub] = url.pathname.slice(1).split('/');
+      if (base !== AT_BASE || decodeURIComponent(table) !== 'Reviews') return { status: 404, data: { error: 'NOT_FOUND' } };
+      const copy = (r) => ({ id: r.id, createdTime: r.createdTime, fields: { ...r.fields } });
+      if (method === 'GET' && !id) {
+        const label = url.searchParams.get('filterByFormula').match(/\{Page key\}='([^']+)'/)[1];
+        return { records: [...records.values()].filter((r) => r.fields['Page key'] === label).map(copy) };
+      }
+      if (method === 'POST' && !id) {
+        const unknown = Object.keys(body.fields).find((n) => !fields.some((f) => f.name === n));
+        if (unknown) return { status: 422, data: { error: { type: 'UNKNOWN_FIELD_NAME', message: `Unknown field name: "${unknown}"` } } };
+        const rid = `recNorthwind${String(next).padStart(5, '0')}`;
+        next += 1;
+        records.set(rid, {
+          id: rid, createdTime: tick(), fields: { ...body.fields }, comments: [],
+        });
+        return copy(records.get(rid));
+      }
+      const record = records.get(id);
+      if (!record) return { status: 404, data: { error: 'NOT_FOUND' } };
+      if (method === 'PATCH' && !sub) {
+        if (body.fields.Status && body.fields.Status !== record.fields.Status) {
+          self.move(id, body.fields.Status, 'ReviewLoop bot');
+        }
+        Object.assign(record.fields, body.fields);
+        return copy(record);
+      }
+      if (method === 'GET' && sub === 'comments') return { comments: [...record.comments].reverse(), offset: null };
+      if (method === 'POST' && sub === 'comments') {
+        commentId += 1;
+        const comment = {
+          id: `com${commentId}`, author: { id: 'usrBot', name: 'ReviewLoop bot' }, createdTime: tick(), text: body.text,
+        };
+        record.comments.push(comment);
+        return comment;
+      }
+      return { status: 404, data: { error: 'NOT_FOUND' } };
+    },
+  };
+  return self;
+}
+
 beforeEach(() => {
   resetState();
   resetJira();
+  resetAirtable();
   jira = fakeJira();
+  airtable = fakeAirtable();
   calls = [];
   daStatus = 200;
   globalThis.fetch = async (input, init = {}) => {
@@ -146,6 +240,12 @@ beforeEach(() => {
       return new Response(text, { headers: { 'Last-Modified': PREVIEWED } });
     }
     if (url.includes('.aem.')) return new Response('', { status: 404 });
+    if (url.startsWith('https://api.airtable.com/v0/')) {
+      assert.equal(init.headers.Authorization, 'Bearer pat-secret');
+      const out = airtable.handle(method, url.slice('https://api.airtable.com/v0/'.length), init.body ? JSON.parse(init.body) : null);
+      if (out?.status) return Response.json(out.data, { status: out.status });
+      return Response.json(out);
+    }
     if (url.startsWith(`${JIRA}/rest/api/3`)) {
       assert.equal(init.headers.Authorization, `Basic ${btoa('bot@northwind.example:secret')}`);
       const out = jira.handle(method, url.slice(`${JIRA}/rest/api/3`.length), init.body ? JSON.parse(init.body) : null);
@@ -315,7 +415,7 @@ test('a reviewer who closes the issue to Done has approved it, until it is publi
   assert.equal(closed.state, 'approved');
   assert.equal(closed.approvedBy, 'Arjun Mehta');
   assert.ok(closed.approvedAt);
-  assert.equal(closed.closedInJira, true);
+  assert.equal(closed.closedInTracker, true);
   await call('/review/published', {
     ...PAGE, key: 'NWB-1', comment: publishedComment({ liveUrl: 'https://x.aem.live/', publisher: 'Priya Shah' }),
   });
@@ -356,4 +456,159 @@ test('helpers: status mapping, config and property size', () => {
   assert.equal(fitted.snapshot.complete, false);
   assert.equal(Object.keys(fitted.own).length, 40);
   assert.equal(big.snapshot.units.length, 200, 'input untouched');
+});
+
+/* Airtable */
+
+const BOTH = { ...ENV, ...AT_ENV };
+const reviewOf = async (body = PAGE, env = AT_ENV) => (await call('/review/get', body, { env })).data;
+
+test('airtable status: base and table, missing fields, and both trackers listed', async () => {
+  const ok = await call('/status', null, { env: BOTH });
+  assert.equal(ok.status, 200, ok.data.error);
+  assert.equal(ok.data.default, 'jira');
+  assert.deepEqual(ok.data.trackers.map((t) => [t.id, t.ready]), [['jira', true], ['airtable', true]]);
+  assert.deepEqual(ok.data.airtable, {
+    base: AT_BASE, table: 'Reviews', tableId: AT_TABLE, url: `https://airtable.com/${AT_BASE}/${AT_TABLE}`,
+  });
+  assert.equal(ok.data.jira.project, 'NWB');
+
+  const preferred = await call('/status', null, { env: { ...BOTH, DEFAULT_TRACKER: 'Airtable' } });
+  assert.equal(preferred.data.default, 'airtable');
+
+  airtable.fields.splice(airtable.fields.findIndex((f) => f.name === 'Page key'), 1);
+  resetAirtable();
+  const missing = await call('/status', null, { env: AT_ENV });
+  assert.deepEqual(missing.data.airtable.missingFields, ['Page key']);
+
+  const half = await call('/status', null, { env: { ALLOWED_ORGS: 'northwind', AIRTABLE_BASE_ID: AT_BASE } });
+  assert.equal(half.status, 500);
+  assert.equal(half.data.setup, true);
+  assert.match(half.data.error, /AIRTABLE_TOKEN/);
+});
+
+test('airtable full loop: create, comments, changes, resubmit, approve, publish', async () => {
+  const none = await reviewOf();
+  assert.equal(none.review, null);
+  assert.equal(none.poll, 60, 'Airtable is checked less often');
+
+  const created = await call('/review/create', createBody(), { env: AT_ENV });
+  assert.equal(created.status, 200, created.data.error);
+  const [record] = [...airtable.records.values()];
+  assert.equal(created.data.key, displayKey(record.id));
+  assert.match(created.data.key, /^RL-[A-Z0-9]{6}$/);
+  assert.equal(created.data.url, `https://airtable.com/${AT_BASE}/${AT_TABLE}/${record.id}`);
+  const f = record.fields;
+  assert.equal(f.Status, 'In review');
+  assert.equal(f.Reviewer, 'Arjun Mehta');
+  assert.equal(f['Page key'], await pageLabel(PAGE));
+  assert.equal(f.Page, 'northwind/website/offers/spring-savings');
+  assert.equal(f['Edit in EW'], 'https://da.live/canvas#/northwind/website/offers/spring-savings');
+  assert.equal(f.Due, '2026-11-14');
+  assert.match(f.Description, /Spring Savings/);
+  assert.equal(JSON.parse(f['ReviewLoop data']).requester, 'Priya Shah');
+  const { review } = created.data;
+  assert.deepEqual([review.tracker, review.trackerName, review.state, review.round], ['airtable', 'Airtable', 'review', 1]);
+  assert.deepEqual(review.snapshot, SNAPSHOT);
+
+  assert.equal((await call('/review/create', createBody(), { env: AT_ENV })).status, 409);
+
+  airtable.reviewerComment(record.id, 'Please add “(variable rate)”, @[usrPriya].');
+  airtable.move(record.id, 'Changes requested');
+  const cached = airtable.calls;
+  await reviewOf();
+  assert.equal(airtable.calls, cached, 'a second check within seconds is served from the cache');
+  resetAirtable();
+  const changes = (await reviewOf()).review;
+  assert.equal(changes.state, 'changes');
+  assert.deepEqual(changes.comments.map((c) => [c.author, c.text, c.own]), [['Arjun Mehta', 'Please add “(variable rate)”, @Priya Shah.', false]]);
+
+  const resent = await call('/review/resubmit', {
+    ...PAGE,
+    tracker: 'airtable',
+    key: created.data.key,
+    text: 'Added the variable-rate wording.',
+    comment: rereviewComment({
+      page, requester: 'Priya Shah', changes: [], round: 2,
+    }),
+    snapshot: { ...SNAPSHOT, units: [...SNAPSHOT.units, ['text', 'Top of page', 'variable rate', '', '', '']] },
+  }, { env: AT_ENV });
+  assert.equal(resent.status, 200, resent.data.error);
+  assert.equal(record.fields.Status, 'In review');
+  assert.equal(resent.data.review.round, 2);
+  assert.equal(resent.data.review.snapshot.units.length, 2);
+  const mine = resent.data.review.comments.at(-1);
+  assert.deepEqual([mine.author, mine.text, mine.own], ['Priya Shah', 'Added the variable-rate wording.', true]);
+  assert.doesNotMatch(record.comments.at(-1).text, /[{}]|"type"/, 'Airtable gets plain text, not ADF');
+
+  airtable.move(record.id, 'Approved');
+  const approved = (await reviewOf()).review;
+  assert.equal(approved.state, 'approved');
+  assert.equal(approved.approvedBy, 'Arjun Mehta');
+  assert.ok(approved.approvedAt);
+
+  const published = await call('/review/published', {
+    ...PAGE, key: created.data.key, comment: publishedComment({ liveUrl: page.liveUrl, publisher: 'Priya Shah' }),
+  }, { env: AT_ENV });
+  assert.equal(published.status, 200, published.data.error);
+  assert.equal(record.fields.Status, 'Done');
+  assert.equal(record.fields['Live page'], page.liveUrl);
+  const before = airtable.calls;
+  const done = (await reviewOf()).review;
+  assert.equal(done.state, 'done');
+  assert.equal(airtable.calls - before, 1, 'a published review is one call: no comments');
+
+  const next = await call('/review/create', createBody(), { env: AT_ENV });
+  assert.notEqual(next.data.key, created.data.key, 'a new record once the last review is done');
+});
+
+test('airtable: a record closed to Done by the reviewer counts as approved', async () => {
+  const created = await call('/review/create', createBody(), { env: AT_ENV });
+  airtable.move(created.data.review.id, 'Done');
+  resetAirtable();
+  const closed = (await reviewOf()).review;
+  assert.deepEqual([closed.state, closed.closedInTracker, closed.approvedBy], ['approved', true, 'Arjun Mehta']);
+});
+
+test('airtable: a review key from another page is refused', async () => {
+  const other = { ...PAGE, path: '/offers/summer-savings' };
+  const created = await call('/review/create', createBody(other), { env: AT_ENV });
+  assert.equal(created.status, 200, created.data.error);
+  const res = await call('/review/published', {
+    ...PAGE, key: created.data.key, comment: publishedComment({ liveUrl: page.liveUrl, publisher: 'Priya Shah' }),
+  }, { env: AT_ENV });
+  assert.equal(res.status, 403);
+  assert.equal(airtable.records.get(created.data.review.id).fields.Status, 'In review');
+});
+
+test('both trackers: the type picks one, the hint limits where the worker looks', async () => {
+  const jiraOnly = await call('/review/get', { ...PAGE, trackers: ['jira'] }, { env: BOTH });
+  assert.equal(jiraOnly.status, 200, jiraOnly.data.error);
+  assert.equal(jiraOnly.data.poll, 15);
+  assert.equal(airtable.calls, 0, 'a Jira-only site never spends Airtable calls');
+
+  const created = await call('/review/create', createBody({ tracker: 'airtable', trackers: ['jira'] }), { env: BOTH });
+  assert.equal(created.status, 200, created.data.error);
+  assert.equal(created.data.review.tracker, 'airtable');
+  assert.equal(jira.issues.size, 0);
+
+  const found = await call('/review/get', { ...PAGE, trackers: ['', 'airtable'] }, { env: BOTH });
+  assert.equal(found.data.review.key, created.data.key);
+  assert.equal(found.data.poll, 60);
+
+  const dupe = await call('/review/create', createBody({ tracker: 'jira' }), { env: BOTH });
+  assert.equal(dupe.status, 409, 'one open review per page, whatever the tracker');
+
+  const unknown = await call('/review/create', createBody({ tracker: 'trello' }), { env: BOTH });
+  assert.equal(unknown.status, 400);
+  const absent = await call('/review/create', createBody({ tracker: 'airtable' }), { env: ENV });
+  assert.equal(absent.status, 400);
+  assert.match(absent.data.error, /not connected to Airtable/);
+});
+
+test('airtable: the monthly API limit gets a clear message', async () => {
+  airtable.limit = true;
+  const res = await call('/review/get', PAGE, { env: AT_ENV });
+  assert.equal(res.status, 429);
+  assert.match(res.data.error, /1,000 on the free plan/);
 });

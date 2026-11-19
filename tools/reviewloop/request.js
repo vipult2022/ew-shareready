@@ -1,6 +1,6 @@
 import { h, clear } from './lib/dom.js';
 import { compare, titleOf } from './lib/page.js';
-import { dueDate } from './lib/config.js';
+import { dueDate, trackerName } from './lib/config.js';
 import { createPayload, resubmitPayload } from './lib/requests.js';
 import {
   changeList, statusChip, summarize, loader, notice, plural, ago,
@@ -11,7 +11,7 @@ const state = {
   session: null,
   loading: true,
   error: '',
-  jira: null,
+  status: null,
   review: null,
   result: null,
   compared: null,
@@ -31,6 +31,30 @@ const actions = {};
 function mode() {
   const { review } = state;
   return review && review.state !== 'done' ? 'resubmit' : 'create';
+}
+
+/** Where this request goes: the open review's tracker, else the type's, else the default. */
+function tracker() {
+  const id = (mode() === 'resubmit' ? state.review?.tracker : state.type?.tracker)
+    || state.status?.default || 'jira';
+  const info = state.status?.trackers?.find((t) => t.id === id);
+  const detail = state.status?.[id] || {};
+  const where = detail.project || detail.table;
+  const name = info?.name || trackerName(id, 'Jira');
+  return {
+    id, name, info, detail, label: where ? `${name} (${where})` : name,
+  };
+}
+
+function trackerWarning() {
+  const t = tracker();
+  if (t.info && !t.info.ready) {
+    return notice('warning', `${t.name} is not connected`, h('p', {}, t.info.error || `The worker cannot reach ${t.name}.`), h('p', {}, h('a', { href: DOCS_URL, target: '_blank', rel: 'noopener' }, 'How to set it up')));
+  }
+  if (t.detail.missingFields?.length) {
+    return notice('warning', `The ${t.label} table is missing fields`, h('p', {}, `Add ${t.detail.missingFields.join(', ')}, or run the setup script in the README.`));
+  }
+  return null;
 }
 
 function pageTitle() {
@@ -158,7 +182,7 @@ function sendsList() {
   const items = mode() === 'resubmit'
     ? [
       `A comment on ${state.review.key} with ${list.length ? `only the ${plural(list.length, 'change')} since round ${state.review.round || 1}` : 'your note (nothing changed since the last round)'}`,
-      'The issue moves back to In review',
+      `The ${tracker().id === 'airtable' ? 'record' : 'issue'} moves back to In review`,
     ]
     : [
       `Summary: “${summary()}”`,
@@ -170,7 +194,7 @@ function sendsList() {
   return h(
     'div',
     { class: 'rl-sends' },
-    h('span', { class: 'rl-label' }, `What ${state.jira?.project ? `Jira (${state.jira.project})` : 'Jira'} gets`),
+    h('span', { class: 'rl-label' }, `What ${tracker().label} gets`),
     h('ul', {}, items.filter(Boolean).map((item) => h('li', {}, item))),
   );
 }
@@ -200,7 +224,7 @@ function resultView() {
     h('div', { class: 'rl-result-icon', 'aria-hidden': 'true' }, '✓'),
     h('h2', {}, result.created ? `${result.key} created` : `${result.key} is back in review`),
     h('p', {}, result.created
-      ? `${result.review?.assignee?.name || state.type?.assignee || 'The reviewer'} will see the ${state.compared.firstVersion ? 'whole page' : plural(state.compared.sinceLive.length, 'change')} in Jira.`
+      ? `${result.review?.assignee?.name || state.type?.assignee || 'The reviewer'} will see the ${state.compared.firstVersion ? 'whole page' : plural(state.compared.sinceLive.length, 'change')} in ${tracker().name}.`
       : `The reviewer will see only the ${plural((state.compared.sinceReview || []).length, 'change')} since the last round.`),
     result.warnings?.length ? notice('warning', 'Created, with notes', h('ul', {}, result.warnings.map((w) => h('li', {}, w)))) : null,
     h('p', { class: 'rl-muted' }, 'Follow comments and approval in the ReviewLoop panel.'),
@@ -209,7 +233,7 @@ function resultView() {
       { class: 'rl-actions' },
       h('a', {
         class: 'rl-btn rl-btn-primary', href: result.url, target: '_blank', rel: 'noopener',
-      }, 'Open in Jira'),
+      }, `Open in ${tracker().name}`),
       state.session.sdk ? h('button', { type: 'button', class: 'rl-btn', onclick: () => closeDialog(state.session) }, 'Close') : null,
     ),
   );
@@ -226,7 +250,7 @@ function setupView(error) {
 
 function buttonLabel(resubmit) {
   if (state.sending) return 'Sending…';
-  return resubmit ? 'Send back for review' : 'Send to Jira';
+  return resubmit ? 'Send back for review' : `Send to ${tracker().name}`;
 }
 
 function renderForm() {
@@ -270,6 +294,8 @@ function renderForm() {
     );
   }
   root.append(sendsList());
+  const warning = trackerWarning();
+  if (warning) root.append(warning);
   if (state.sendError) root.append(notice('error', 'Not sent', h('p', {}, state.sendError)));
   root.append(h(
     'div',
@@ -277,7 +303,7 @@ function renderForm() {
     h('button', {
       type: 'button',
       class: 'rl-btn rl-btn-primary',
-      disabled: state.sending,
+      disabled: state.sending || tracker().info?.ready === false,
       onclick: () => actions.send(),
     }, buttonLabel(resubmit)),
   ));
@@ -340,7 +366,7 @@ async function load() {
     render();
     return;
   }
-  state.jira = status.jira || null;
+  state.status = status;
   state.review = found.review || null;
   if (found.user) session.user = found.user;
   const snapshot = state.review && state.review.state !== 'done' ? state.review.snapshot : null;

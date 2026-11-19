@@ -13,6 +13,7 @@ export function createPayload({
     org: page.org,
     site: page.site,
     path: page.path,
+    tracker: type?.tracker || '',
     title,
     summary: `${reviewType || 'Content'} review: ${title}`.slice(0, 200),
     reviewType,
@@ -38,6 +39,7 @@ export function resubmitPayload({
     org: page.org,
     site: page.site,
     path: page.path,
+    tracker: review.tracker || '',
     key: review.key,
     text: note,
     comment: rereviewComment({

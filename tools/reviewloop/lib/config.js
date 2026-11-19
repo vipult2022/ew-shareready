@@ -1,14 +1,17 @@
 /**
  * ReviewLoop settings from the site config (da.live/config#/{org}/{site}):
- * - sheet `reviewloop`: key/value rows (worker-url, due-days, require-approval)
- * - sheet `reviewloop-types`: one row per review type (type, assignee, checklist, due-days)
- * Jira itself (site, project, token, statuses) is configured on the worker.
+ * - sheet `reviewloop`: key/value rows (worker-url, due-days, require-approval, tracker)
+ * - sheet `reviewloop-types`: one row per review type (type, assignee, checklist, due-days,
+ *   tracker)
+ * Jira and Airtable themselves (site, project, base, tokens, statuses) are configured on the
+ * worker. `tracker` (jira or airtable) picks one of them; empty means the worker's default.
  */
 
 export const DA_ADMIN = 'https://admin.da.live';
 export const AEM_API = 'https://api.aem.live';
 
-export const KEYS = ['worker-url', 'due-days', 'require-approval'];
+export const KEYS = ['worker-url', 'due-days', 'require-approval', 'tracker'];
+export const TRACKERS = { jira: 'Jira', airtable: 'Airtable' };
 
 export const DEFAULT_TYPES = [
   {
@@ -41,6 +44,16 @@ function pick(row, ...names) {
   return key === undefined ? '' : String(row[key] ?? '').trim();
 }
 
+/** "Airtable" → "airtable"; anything unknown → '' (the worker's default). */
+export function trackerId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return Object.hasOwn(TRACKERS, id) ? id : '';
+}
+
+export function trackerName(id, fallback = 'the tracker') {
+  return TRACKERS[id] || fallback;
+}
+
 function days(value, fallback) {
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n >= 0 && n <= 60 ? n : fallback;
@@ -60,21 +73,32 @@ export function parseConfig(json) {
     return acc;
   }, {});
   const dueDays = days(settings['due-days'], 2);
+  const tracker = trackerId(settings.tracker);
   const types = (sheet(json, 'reviewloop-types') || []).map((row) => ({
     name: pick(row, 'type', 'name'),
     assignee: pick(row, 'assignee', 'reviewer'),
     checklist: splitList(pick(row, 'checklist')),
     dueDays: days(pick(row, 'due-days', 'due'), dueDays),
+    tracker: trackerId(pick(row, 'tracker')) || tracker,
   })).filter((t) => t.name);
   return {
     workerUrl: settings['worker-url'] || '',
     requireApproval: /^(true|yes|1|on)$/i.test(settings['require-approval'] || ''),
     dueDays,
+    tracker,
     types: types.length
       ? types
-      : DEFAULT_TYPES.map((t) => ({ ...t, dueDays: t.dueDays ?? dueDays })),
+      : DEFAULT_TYPES.map((t) => ({ ...t, dueDays: t.dueDays ?? dueDays, tracker })),
     custom: types.length > 0,
   };
+}
+
+/**
+ * The trackers this site's reviews can be in ('' is the worker's default), so the worker
+ * only looks where it needs to. Airtable's free plan counts every call.
+ */
+export function trackersOf(config) {
+  return [...new Set((config?.types || []).map((t) => t.tracker || ''))];
 }
 
 /** Lets ?worker-url=… override the sheet while testing. */

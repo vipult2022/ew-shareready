@@ -5,24 +5,25 @@
  */
 
 import { adfToText } from '../../lib/adf.js';
-import { HttpError, sha256 } from './http.js';
+import { HttpError } from './http.js';
+import {
+  STATUS_DEFAULTS, statusNames, stateByName, settle, fitProperty, newProp, resubmitProp,
+  publishedProp, withOwn, pageLabel,
+} from './review.js';
+
+export {
+  STATUS_DEFAULTS, fitProperty, pageLabel,
+};
 
 export const PROPERTY = 'reviewloop';
-const PROPERTY_BUDGET = 32000;
-const OWN_LIMIT = 40;
 const ISSUE_KEY = /^[A-Z][A-Z0-9_]{0,30}-\d{1,9}$/;
 const PROJECT_KEY = /^[A-Z][A-Z0-9_]{0,30}$/;
 const FIELDS = ['summary', 'status', 'assignee', 'duedate', 'labels', 'comment', 'created'];
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export const STATUS_DEFAULTS = {
-  review: 'In review',
-  changes: 'Changes requested',
-  approved: 'Approved',
-  done: 'Done',
-};
-
-function utf8Length(value) {
-  return new TextEncoder().encode(JSON.stringify(value)).length;
+/** True when the worker has any Jira settings, so it should offer Jira at all. */
+export function jiraConfigured(env = {}) {
+  return ['JIRA_BASE_URL', 'JIRA_PROJECT', 'JIRA_EMAIL', 'JIRA_API_TOKEN'].some((k) => env[k]);
 }
 
 export function jiraConfig(env = {}) {
@@ -40,12 +41,7 @@ export function jiraConfig(env = {}) {
     base,
     project,
     issueType: String(env.JIRA_ISSUE_TYPE || 'Task').trim(),
-    statuses: {
-      review: env.JIRA_STATUS_REVIEW || STATUS_DEFAULTS.review,
-      changes: env.JIRA_STATUS_CHANGES || STATUS_DEFAULTS.changes,
-      approved: env.JIRA_STATUS_APPROVED || STATUS_DEFAULTS.approved,
-      done: env.JIRA_STATUS_DONE || STATUS_DEFAULTS.done,
-    },
+    statuses: statusNames(env, 'JIRA'),
     missing,
     auth: missing.length ? '' : btoa(`${env.JIRA_EMAIL}:${env.JIRA_API_TOKEN}`),
   };
@@ -55,20 +51,18 @@ export function setupError(cfg) {
   return new HttpError(500, `The ReviewLoop worker is not connected to Jira yet. Set ${cfg.missing.join(', ')}.`, { setup: true });
 }
 
-/** The label that ties a Jira issue to one page. */
-export async function pageLabel({ org, site, path }) {
-  return `rl-${(await sha256(`${org}/${site}${path}`)).slice(0, 16)}`;
+export function isJiraKey(key) {
+  return ISSUE_KEY.test(key || '');
 }
 
 export function checkKey(key) {
-  if (!ISSUE_KEY.test(key || '')) throw new HttpError(400, 'The request is missing a valid Jira issue key.');
+  if (!isJiraKey(key)) throw new HttpError(400, 'The request is missing a valid Jira issue key.');
   return key;
 }
 
 /** Which ReviewLoop state a Jira status means: review, changes, approved or done. */
 export function stateOf(status, statuses = STATUS_DEFAULTS) {
-  const name = String(status?.name || '').toLowerCase();
-  const match = ['approved', 'changes', 'done', 'review'].find((s) => statuses[s].toLowerCase() === name);
+  const match = stateByName(status?.name, statuses);
   if (match) return match;
   return status?.statusCategory?.key === 'done' ? 'done' : 'review';
 }
@@ -84,18 +78,15 @@ function lastMoveTo(changelog, statusName) {
 export function toReview(issue, cfg) {
   const f = issue.fields || {};
   const prop = issue.properties?.[PROPERTY] || {};
-  const own = prop.own || {};
-  let state = stateOf(f.status, cfg.statuses);
-  // A reviewer who closes the issue instead of approving it has still signed it off.
-  // It only counts as "done" once ReviewLoop published the page.
-  const closedByReviewer = state === 'done' && !prop.publishedAt;
-  if (closedByReviewer) state = 'approved';
+  const { state, closedInTracker } = settle(stateOf(f.status, cfg.statuses), prop);
   const closedTo = f.status?.name || cfg.statuses.done;
   const approval = state === 'approved'
     ? lastMoveTo(issue.changelog, cfg.statuses.approved)
-      || (closedByReviewer ? lastMoveTo(issue.changelog, closedTo) : null)
+      || (closedInTracker ? lastMoveTo(issue.changelog, closedTo) : null)
     : null;
   return {
+    tracker: 'jira',
+    trackerName: 'Jira',
     key: issue.key,
     url: `${cfg.base}/browse/${issue.key}`,
     summary: f.summary || '',
@@ -106,37 +97,21 @@ export function toReview(issue, cfg) {
     assignee: f.assignee ? { name: f.assignee.displayName || 'Assigned' } : null,
     round: prop.round || 1,
     snapshot: prop.snapshot || null,
+    createdAt: f.created || '',
     requestedAt: prop.requestedAt || f.created || '',
     approvedAt: approval?.created || '',
     approvedBy: approval?.author?.displayName || '',
     publishedAt: prop.publishedAt || '',
-    closedInJira: closedByReviewer,
-    comments: (f.comment?.comments || []).map((c) => {
-      const mine = own[c.id];
-      return {
-        id: String(c.id),
-        author: mine?.by || c.author?.displayName || 'Someone',
-        created: c.created,
-        text: mine ? mine.text : adfToText(c.body).trim(),
-        own: Boolean(mine),
-      };
-    }),
+    closedInTracker,
+    // Older panels read this name.
+    closedInJira: closedInTracker,
+    comments: withOwn((f.comment?.comments || []).map((c) => ({
+      id: String(c.id),
+      author: c.author?.displayName || 'Someone',
+      created: c.created,
+      text: adfToText(c.body).trim(),
+    })), prop.own),
   };
-}
-
-/** Keeps the property under Jira's 32 KB limit: drop the oldest own comments, then trim. */
-export function fitProperty(value) {
-  const fitted = { ...value, own: { ...(value.own || {}) } };
-  const ownIds = Object.keys(fitted.own);
-  ownIds.slice(0, Math.max(0, ownIds.length - OWN_LIMIT)).forEach((id) => delete fitted.own[id]);
-  if (fitted.snapshot?.units) {
-    fitted.snapshot = { ...fitted.snapshot, units: [...fitted.snapshot.units] };
-    while (fitted.snapshot.units.length && utf8Length(fitted) > PROPERTY_BUDGET) {
-      fitted.snapshot.units.pop();
-      fitted.snapshot.complete = false;
-    }
-  }
-  return fitted;
 }
 
 function jiraMessage(data) {
@@ -265,4 +240,114 @@ export function createJira(cfg) {
     },
   };
   return jira;
+}
+
+/**
+ * Jira as a ReviewLoop tracker. Every tracker has the same methods, which take plain
+ * values and return reviews as the panel sees them.
+ */
+export function jiraTracker(env) {
+  const cfg = jiraConfig(env);
+  let client;
+  const jira = () => {
+    client = client || createJira(cfg);
+    return client;
+  };
+  const review = async (key) => toReview(await jira().getIssue(key), cfg);
+
+  /** The page's issue, checked to belong to this page (so a key from elsewhere is refused). */
+  async function ownIssue(label, key) {
+    const issue = await jira().getIssue(checkKey(key));
+    if (!(issue.fields?.labels || []).includes(label)) {
+      throw new HttpError(403, `${key} is not the review for this page.`);
+    }
+    return issue;
+  }
+
+  return {
+    id: 'jira',
+    name: 'Jira',
+    poll: 15,
+    missing: cfg.missing,
+    setupError: () => setupError(cfg),
+    owns: isJiraKey,
+
+    async status() {
+      const [project, names] = await Promise.all([
+        jira().project(),
+        jira().statuses().catch(() => null),
+      ]);
+      const known = (names || []).map((n) => n.toLowerCase());
+      const missingStatuses = names
+        ? Object.values(cfg.statuses).filter((n) => !known.includes(n.toLowerCase()))
+        : [];
+      return missingStatuses.length ? { ...project, statuses: names, missingStatuses } : project;
+    },
+
+    async latest(label) {
+      const key = await jira().findKey(label);
+      return key ? review(key) : null;
+    },
+
+    async create({
+      label, page, urls, summary, description, due, assignee, reviewType, user, snapshot,
+    }) {
+      const accountId = await jira().findAssignee(assignee).catch(() => null);
+      const fields = {
+        project: { key: cfg.project },
+        issuetype: { name: cfg.issueType },
+        summary,
+        description,
+        labels: ['reviewloop', label],
+      };
+      if (DATE.test(due || '')) fields.duedate = due;
+      if (accountId) fields.assignee = { accountId };
+      const created = await jira().createIssue(fields);
+      const { key } = created;
+      await jira().setProperty(key, newProp({
+        page, reviewType, user, snapshot,
+      }));
+      const moved = await jira().moveTo(key, cfg.statuses.review);
+      await Promise.allSettled([
+        jira().link(key, urls.editUrl, 'Edit in Experience Workspace'),
+        jira().link(key, urls.previewUrl, 'Preview'),
+      ]);
+      const warnings = [];
+      if (!moved) {
+        const options = (jira().available || []).join(', ');
+        warnings.push(`No transition to “${cfg.statuses.review}”, so the issue stayed in its first status. Add that status to the board${options ? ` (it can move to: ${options})` : ''}, or set JIRA_STATUS_REVIEW on the worker.`);
+      }
+      if (assignee && !accountId) warnings.push(`No Jira user called “${assignee}”, so the issue is unassigned.`);
+      (created.dropped || []).forEach((f) => warnings.push(`The project does not allow ${f === 'duedate' ? 'a due date' : 'an assignee'} on new issues.`));
+      const result = await review(key);
+      return {
+        key, url: result.url, review: result, warnings,
+      };
+    },
+
+    async resubmit({
+      label, key, comment, text, user, snapshot,
+    }) {
+      const issue = await ownIssue(label, key);
+      const prop = issue.properties?.[PROPERTY] || {};
+      const id = await jira().addComment(issue.key, comment);
+      await jira().setProperty(issue.key, resubmitProp(prop, {
+        id, user, text, snapshot,
+      }));
+      await jira().moveTo(issue.key, cfg.statuses.review, issue.fields?.status?.name);
+      return review(issue.key);
+    },
+
+    async published({
+      label, key, comment, user, liveUrl,
+    }) {
+      const issue = await ownIssue(label, key);
+      const prop = issue.properties?.[PROPERTY] || {};
+      const id = await jira().addComment(issue.key, comment);
+      await jira().setProperty(issue.key, publishedProp(prop, { id, user, liveUrl }));
+      await jira().link(issue.key, liveUrl, 'Live page').catch(() => null);
+      const moved = await jira().moveTo(issue.key, cfg.statuses.done, issue.fields?.status?.name);
+      return { moved, warnings: moved ? [] : [`No transition to “${cfg.statuses.done}”.`] };
+    },
+  };
 }

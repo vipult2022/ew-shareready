@@ -5,7 +5,9 @@ import { DOMParser } from 'linkedom';
 import { compare } from '../lib/page.js';
 import { headMetaUnits, crossComparable } from '../lib/blocks.js';
 import { locate, quotes } from '../lib/comments.js';
-import { parseConfig, splitList, dueDate } from '../lib/config.js';
+import {
+  parseConfig, splitList, dueDate, trackersOf, trackerId, trackerName,
+} from '../lib/config.js';
 import { createApi, createDemoApi, workerBase } from '../lib/api.js';
 import { createPayload, resubmitPayload } from '../lib/requests.js';
 import { adfToText } from '../lib/adf.js';
@@ -56,7 +58,7 @@ test('parseConfig: settings, custom review types and safe defaults', () => {
   assert.equal(config.requireApproval, false);
   assert.equal(config.types.length, 1);
   assert.deepEqual(config.types[0], {
-    name: 'Legal', assignee: 'Arjun', checklist: ['Rates', 'Disclaimers'], dueDays: 3,
+    name: 'Legal', assignee: 'Arjun', checklist: ['Rates', 'Disclaimers'], dueDays: 3, tracker: '',
   });
   assert.equal(config.custom, true);
   const empty = parseConfig(null);
@@ -67,6 +69,29 @@ test('parseConfig: settings, custom review types and safe defaults', () => {
   assert.deepEqual(empty.types.map((t) => t.name), ['Legal', 'Brand', 'Copy']);
   assert.deepEqual(splitList('a; b\nc;;'), ['a', 'b', 'c']);
   assert.match(dueDate(2), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('parseConfig: tracker per site and per review type', () => {
+  const config = parseConfig({
+    ':names': ['reviewloop', 'reviewloop-types'],
+    reviewloop: { data: [{ key: 'tracker', value: 'Jira' }] },
+    'reviewloop-types': {
+      data: [
+        { Type: 'Legal' },
+        { Type: 'Brand', Tracker: ' Airtable ' },
+        { Type: 'Copy', Tracker: 'trello' },
+      ],
+    },
+  });
+  assert.equal(config.tracker, 'jira');
+  assert.deepEqual(config.types.map((t) => t.tracker), ['jira', 'airtable', 'jira']);
+  assert.deepEqual(trackersOf(config), ['jira', 'airtable']);
+  const fallback = parseConfig({ reviewloop: { data: [{ key: 'tracker', value: 'airtable' }] } });
+  assert.deepEqual(fallback.types.map((t) => t.tracker), ['airtable', 'airtable', 'airtable']);
+  assert.deepEqual(trackersOf(parseConfig(null)), ['']);
+  assert.equal(trackerId('AIRTABLE'), 'airtable');
+  assert.equal(trackerName('airtable'), 'Airtable');
+  assert.equal(trackerName('', 'Jira'), 'Jira');
 });
 
 test('workerBase: only https (or localhost) worker URLs are used', () => {

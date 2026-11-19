@@ -5,7 +5,9 @@
 
 // eslint-disable-next-line import/no-unresolved
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
-import { loadConfig, withQuery, parseConfig } from './config.js';
+import {
+  loadConfig, withQuery, parseConfig, trackersOf,
+} from './config.js';
 import { createApi, createDemoApi, DEMO_AUTHOR } from './api.js';
 import {
   pageInfo, refreshPreview, publishPage, readDraft,
@@ -113,7 +115,11 @@ function startLive(sdk) {
   session.publish = () => publishPage(auth, () => token, page);
   return loadConfig(auth, page).then((config) => {
     session.config = withQuery(config, window.location.search);
-    session.api = createApi({ workerUrl: session.config.workerUrl, getToken: () => token });
+    session.api = createApi({
+      workerUrl: session.config.workerUrl,
+      getToken: () => token,
+      trackers: trackersOf(session.config),
+    });
     return session;
   });
 }

@@ -1,5 +1,5 @@
 /**
- * Talks to the ReviewLoop worker, which holds the Jira credentials. Every call sends
+ * Talks to the ReviewLoop worker, which holds the Jira and Airtable credentials. Every call sends
  * the author's IMS token so the worker can confirm they can read the page. Never throws:
  * results are { ok: true, ... } or { ok: false, error }.
  *
@@ -29,8 +29,10 @@ async function readJson(resp) {
   }
 }
 
-export function createApi({ workerUrl, getToken }) {
+export function createApi({ workerUrl, getToken, trackers = [] }) {
   const base = workerBase(workerUrl);
+  // Where this site's reviews can be, so the worker does not search other trackers.
+  const hint = trackers.length ? { trackers } : {};
 
   async function attempt(path, body) {
     if (!base) return { ok: false, error: 'Set worker-url in the reviewloop sheet of the site config.', setup: true };
@@ -60,7 +62,7 @@ export function createApi({ workerUrl, getToken }) {
   }
 
   // Reads retry once after a dropped connection or timeout. Writes never do,
-  // so a slow create cannot open a second Jira issue.
+  // so a slow create cannot open a second review.
   async function call(path, body, { retry = false } = {}) {
     const first = await attempt(path, body);
     if (!retry || !first.unreachable) return first;
@@ -72,8 +74,8 @@ export function createApi({ workerUrl, getToken }) {
     demo: false,
     status: () => call('/status', null, { retry: true }),
     versions: (page) => call('/page', page, { retry: true }),
-    get: (page) => call('/review/get', page, { retry: true }),
-    create: (body) => call('/review/create', body),
+    get: (page) => call('/review/get', { ...page, ...hint }, { retry: true }),
+    create: (body) => call('/review/create', { ...hint, ...body }),
     resubmit: (body) => call('/review/resubmit', body),
     published: (body) => call('/review/published', body),
   };

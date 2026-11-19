@@ -44,10 +44,10 @@ export const STATES = {
 export function statusChip(review) {
   const state = STATES[review?.state || 'none'] || STATES.other;
   // Boards name statuses freely ("In Progress" may mean "In review"), so show ReviewLoop's
-  // state and keep the Jira status as a tooltip.
+  // state and keep the tracker's status as a tooltip.
   const known = STATES[review?.state || 'none'] && review?.state !== 'other';
   const label = known ? state.label : review?.status || state.label;
-  const title = review?.status ? `Jira status: ${review.status}` : undefined;
+  const title = review?.status ? `${review.trackerName || 'Jira'} status: ${review.status}` : undefined;
   return h('span', { class: `rl-chip rl-tone-${state.tone}`, title }, h('span', { 'aria-hidden': 'true' }, state.icon), label);
 }
 
@@ -114,6 +114,7 @@ export function notice(tone, title, ...rest) {
 /** "Maximus approved round 2 by closing NWB-1 in Jira, 5 min ago" */
 export function approvedLine(review, when = '') {
   const who = review.approvedBy || 'The reviewer';
-  const how = review.closedInJira ? ` by closing ${review.key} in Jira` : ` of ${review.key}`;
+  const closed = review.closedInTracker || review.closedInJira;
+  const how = closed ? ` by closing ${review.key} in ${review.trackerName || 'Jira'}` : ` of ${review.key}`;
   return `${who} approved round ${review.round || 1}${how}${when ? `, ${when}` : ''}.`;
 }

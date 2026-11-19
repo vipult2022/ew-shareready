@@ -6,6 +6,7 @@ import { parseHtml, readUnits } from '../lib/blocks.js';
 import { diffUnits } from '../lib/diff.js';
 import {
   reviewDescription, rereviewComment, publishedComment, changesTable, trimContext, adfToText,
+  adfToMarkdown,
 } from '../lib/adf.js';
 
 const DEMO = new URL('../demo/', import.meta.url);
@@ -131,4 +132,26 @@ test('a very long change list is capped to stay inside Jira limits', () => {
   assert.ok(JSON.stringify(table).length < 26000);
   assert.match(adfToText(table.content.at(-1)), /\d+ more changes: open the preview/);
   assert.equal(changesTable(many.slice(0, 3)).content.length, 4);
+});
+
+test('adfToMarkdown: Airtable rich text and plain comments', async () => {
+  const changes = diffUnits(await units('live'), await units('review1'));
+  const doc = reviewDescription({
+    page, requester: 'Priya Shah', reviewType: 'Legal', checklist: ['Disclaimer present'], changes,
+  });
+  const md = adfToMarkdown(doc);
+  assert.match(md, /\[Preview\]\(https:\/\/main--site--org\.aem\.page\/offers\/spring-savings\)/);
+  assert.match(md, /^### What changed since the live page/m);
+  assert.match(md, /^- Page title \(H1\) · Heading changed: Spring Savings: earn ~~4\.25%~~ \*\*4\.50%\*\* APY$/m);
+  assert.doesNotMatch(md, /Where · What/, 'the table header row is left out');
+  assert.match(md, /Approve this review when the page can go live\./);
+
+  const comment = rereviewComment({
+    page, requester: 'Priya Shah', changes: changes.slice(0, 1), round: 2,
+  });
+  const plain = adfToMarkdown(comment, { plain: true });
+  assert.doesNotMatch(plain, /\*\*|~~|\]\(/, 'no Markdown in plain comments');
+  assert.match(plain, /\[−4\.25%\] \[\+4\.50%\]/);
+  assert.match(plain, /Preview \(https:\/\/main--site--org\.aem\.page\/offers\/spring-savings\)/);
+  assert.equal(adfToMarkdown(null), '');
 });

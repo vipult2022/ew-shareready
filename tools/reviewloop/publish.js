@@ -79,7 +79,7 @@ function gateNotice(g) {
 function renderLeft() {
   const root = clear(els.left);
   if (state.loading) {
-    root.append(loader('Checking the review'), h('p', { class: 'rl-muted rl-center' }, 'Checking the Jira review and comparing the draft with live…'));
+    root.append(loader('Checking the review'), h('p', { class: 'rl-muted rl-center' }, 'Checking the review and comparing the draft with live…'));
     return;
   }
   if (state.error) return;
@@ -117,8 +117,8 @@ function reviewCard(review) {
 }
 
 function confirmText(g) {
-  if (g === 'edited') return 'Publish the unreviewed changes anyway. Jira will record it.';
-  if (g === 'pending') return 'Publish before approval. Jira will record it.';
+  if (g === 'edited') return 'Publish the unreviewed changes anyway. The review will record it.';
+  if (g === 'pending') return 'Publish before approval. The review will record it.';
   return 'This change does not need a review. Publish without one.';
 }
 
@@ -240,6 +240,7 @@ async function publish() {
       org: session.page.org,
       site: session.page.site,
       path: session.page.path,
+      tracker: review.tracker || '',
       key: review.key,
       comment: publishedComment({
         liveUrl: res.url,
@@ -249,8 +250,8 @@ async function publish() {
       }),
     });
     result.jiraOk = jira.ok && jira.moved !== false;
-    if (!jira.ok) result.jiraError = `The page is live, but Jira could not be updated: ${jira.error}`;
-    else if (!result.jiraOk) result.jiraError = `The live link was added, but the issue was not closed. ${jira.warnings?.[0] || ''}`.trim();
+    if (!jira.ok) result.jiraError = `The page is live, but ${review.trackerName || 'Jira'} could not be updated: ${jira.error}`;
+    else if (!result.jiraOk) result.jiraError = `The live link was added, but the review was not closed. ${jira.warnings?.[0] || ''}`.trim();
   }
   state.publishing = false;
   state.result = result;

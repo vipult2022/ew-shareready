@@ -22,6 +22,7 @@ const state = {
   sendError: '',
   sent: '',
   checkedAt: 0,
+  poll: 0,
 };
 
 const els = {};
@@ -77,7 +78,7 @@ function commentItem(comment) {
 function comments(review) {
   const list = review.comments || [];
   if (!list.length) {
-    return h('p', { class: 'rl-muted rl-small' }, `No comments yet. They appear here when ${review.assignee?.name || 'the reviewer'} replies in Jira.`);
+    return h('p', { class: 'rl-muted rl-small' }, `No comments yet. They appear here when ${review.assignee?.name || 'the reviewer'} replies in ${review.trackerName || 'Jira'}.`);
   }
   return h(
     'section',
@@ -149,7 +150,7 @@ function openReview(review) {
   } else {
     parts.push(h('p', { class: 'rl-small rl-muted' }, edits.length
       ? `${plural(edits.length, 'change')} since you sent it. Send them so the reviewer sees the latest.`
-      : `Waiting for ${review.assignee?.name || 'the reviewer'}. This panel checks Jira every 15 seconds.`));
+      : `Waiting for ${review.assignee?.name || 'the reviewer'}. This panel checks ${review.trackerName || 'Jira'} every ${Math.round(Math.max(POLL, state.poll) / 1000)} seconds.`));
   }
   parts.push(comments(review));
   if (review.state !== 'approved' && (review.state === 'changes' || edits.length)) {
@@ -170,7 +171,7 @@ function noReview(review) {
       : `${summarize(changes)} since live.`),
     state.compared.firstVersion ? null : changeList(changes, 'The draft matches the live page.'),
     changes.length || state.compared.firstVersion
-      ? notice('info', 'Ready for review?', h('p', {}, 'Open the ⋯ menu (top right) › Request review to send these changes to Jira.'))
+      ? notice('info', 'Ready for review?', h('p', {}, 'Open the ⋯ menu (top right) › Request review to send these changes for review.'))
       : null,
   ];
 }
@@ -213,7 +214,7 @@ function render() {
   const body = h('div', { class: 'rl-panel-body' });
   root.append(body);
   if (state.loading && !state.compared) {
-    body.append(loader('Checking Jira'));
+    body.append(loader('Checking the review'));
     return;
   }
   if (state.error) {
@@ -243,6 +244,7 @@ async function refresh() {
   state.setup = Boolean(failed?.setup);
   if (!failed) {
     if (found.user) session.user = found.user;
+    state.poll = (found.poll || 0) * 1000;
     const before = state.review;
     state.review = found.review || null;
     if (before?.round !== state.review?.round || before?.key !== state.review?.key) state.sent = '';
@@ -285,7 +287,10 @@ async function init() {
   const recheck = () => {
     if (document.visibilityState === 'visible' && !state.loading && !state.sending) refresh();
   };
-  setInterval(recheck, POLL);
+  // Airtable's free plan counts calls, so the worker can ask for a slower poll.
+  setInterval(() => {
+    if (Date.now() - state.checkedAt >= state.poll - 1000) recheck();
+  }, POLL);
   // Back from the editor: show the latest edits straight away.
   window.addEventListener('focus', recheck);
   document.addEventListener('visibilitychange', recheck);

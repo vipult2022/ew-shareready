@@ -156,7 +156,7 @@ export function reviewDescription(req) {
   if (req.checklist?.length) {
     content.push(heading(3, 'Checklist'), bullets(req.checklist.map((item) => [text(`☐ ${item}`)])));
   }
-  content.push(paragraph(text('Sent from Experience Workspace by ReviewLoop. Move this issue to the approved status when the page can go live.', [{ type: 'em' }])));
+  content.push(paragraph(text('Sent from Experience Workspace by ReviewLoop. Approve this review when the page can go live.', [{ type: 'em' }])));
   return { type: 'doc', version: 1, content };
 }
 
@@ -192,6 +192,63 @@ export function publishedComment({
     content.push(paragraph(text(`Published with ${editsSinceApproval} edit${editsSinceApproval === 1 ? '' : 's'} made after approval.`, [strong, red])));
   }
   return { type: 'doc', version: 1, content };
+}
+
+function inlineMarkdown(node, plain) {
+  if (node.type === 'hardBreak') return '\n';
+  if (node.type !== 'text') return (node.content || []).map((n) => inlineMarkdown(n, plain)).join('');
+  const value = node.text || '';
+  if (!value.trim()) return value;
+  const marks = (node.marks || []).map((m) => m.type);
+  const href = (node.marks || []).find((m) => m.type === 'link')?.attrs?.href;
+  if (plain) {
+    if (marks.includes('strike')) return `[−${value}]`;
+    if (marks.includes('strong') && marks.includes('textColor')) return `[+${value}]`;
+    return href && href !== value ? `${value} (${href})` : value;
+  }
+  const pad = value.match(/^\s*/)[0];
+  const end = value.match(/\s*$/)[0];
+  let out = value.trim();
+  if (marks.includes('strike')) out = `~~${out}~~`;
+  if (marks.includes('strong')) out = `**${out}**`;
+  if (marks.includes('em')) out = `_${out}_`;
+  if (href) out = `[${out}](${href})`;
+  return `${pad}${out}${end}`;
+}
+
+function blockMarkdown(node, plain) {
+  const inline = (n) => inlineMarkdown(n, plain);
+  const children = (n) => (n.content || []).flatMap((c) => blockMarkdown(c, plain));
+  switch (node.type) {
+    case 'doc': return children(node);
+    case 'paragraph': return [inline(node)];
+    case 'heading': return [plain ? inline(node) : `${'#'.repeat(Math.min(node.attrs?.level || 3, 3))} ${inline(node)}`];
+    case 'bulletList':
+    case 'orderedList':
+      return (node.content || []).map((item) => `- ${children(item).join(' ')}`);
+    case 'panel':
+    case 'blockquote':
+      return children(node).map((line) => (plain ? line : `> ${line}`));
+    case 'table':
+      return (node.content || [])
+        .filter((row) => (row.content || []).every((c) => c.type !== 'tableHeader'))
+        .map((row) => {
+          const [where, what, ...rest] = (row.content || []).map((c) => children(c).join(' ').trim());
+          const change = rest.join(' ');
+          return `- ${[where, what].filter(Boolean).join(' · ')}${change ? `: ${change}` : ''}`;
+        });
+    default: return node.content ? children(node) : [inline(node)];
+  }
+}
+
+/**
+ * An ADF document as Markdown for Airtable's rich text, which has no tables or colours:
+ * table rows become bullets, removed words are struck through and added words bold.
+ * With `plain`, for Airtable comments (plain text): [−removed] [+added], links in brackets.
+ */
+export function adfToMarkdown(doc, { plain = false } = {}) {
+  if (!doc) return '';
+  return blockMarkdown(doc, plain).filter((line) => line.trim()).join(plain ? '\n' : '\n\n');
 }
 
 /** Plain text of an ADF document (for comments shown in the panel). */
