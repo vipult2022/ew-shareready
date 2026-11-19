@@ -21,3 +21,8 @@ ALLOWED_ORGS = "vipult2022"
 # Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
 # http://localhost:3000
 # ALLOWED_ORIGINS = ""
+# Optional, for "Paste a Figma link": first run
+#   npx wrangler secret put FIGMA_TOKEN   (a Figma personal access token, file_content:read only)
+# Then, to read only some Figma files, list their file keys (the part after /design/ in a link).
+# Default: any file the token can open.
+# FIGMA_FILES = ""

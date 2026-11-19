@@ -52,6 +52,13 @@ function ago(iso) {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const person = (sender) => String(sender || '').replace(/\s*\(.*\)$/, '');
+const FIGMA_LINK = /^https:\/\/www\.figma\.com\/design\/[A-Za-z0-9]+\/\?node-id=[A-Za-z0-9;-]+$/;
+
+/** “Maya Chen · sent 2 hours ago”, or “Imported from a Figma link 5 minutes ago”. */
+function sentLine(item, from = '') {
+  if (item.source === 'link') return `Imported from a Figma link ${ago(item.sent)}`;
+  return [item.sender && `${from}${person(item.sender)} · `, `sent ${ago(item.sent)}`];
+}
 
 function badge(status) {
   const [label, tone] = STATUS[status] || STATUS.new;
@@ -107,6 +114,7 @@ export default function createPanel(root, state, actions) {
         h('li', {}, 'Deploy the small free Cloudflare worker from this repo. It is the inbox between Figma and the site.'),
         h('li', {}, 'In the site config, add a ', h('code', {}, 'figma'), ' sheet with ', h('code', {}, 'worker-url'), '.'),
         h('li', {}, 'Designers import the plugin in Figma and paste the worker address and team key.'),
+        h('li', {}, 'Optional: give the worker a Figma token so authors can also paste a link to a frame.'),
       ),
       h('a', {
         class: 'fg-link', href: DOCS_URL, target: '_blank', rel: 'noopener',
@@ -123,20 +131,49 @@ export default function createPanel(root, state, actions) {
     return box;
   }
 
+  function linkForm() {
+    if (!state.figmaApi) return null;
+    return h(
+      'form',
+      { class: 'fg-card fg-link-form', onsubmit: (e) => { e.preventDefault(); actions.importLink(); } },
+      h('label', { class: 'fg-label', for: 'fg-figma-link' }, 'Paste a Figma link'),
+      h(
+        'div',
+        { class: 'fg-inline' },
+        h('input', {
+          id: 'fg-figma-link',
+          class: 'fg-input',
+          type: 'text',
+          inputmode: 'url',
+          placeholder: 'https://www.figma.com/design/…?node-id=…',
+          value: state.link,
+          spellcheck: 'false',
+          autocomplete: 'off',
+          oninput: (e) => actions.setLink(e.target.value),
+        }),
+        h('button', { class: 'fg-btn fg-primary', type: 'submit', disabled: !!state.busy }, 'Get design'),
+      ),
+      h('p', { class: 'fg-muted fg-small' }, 'In Figma, right-click a frame and choose Copy/Paste as › Copy link to selection.'),
+    );
+  }
+
   function listView() {
     if (!state.list.length) {
-      return state.busy ? null : h(
+      return state.busy ? null : [linkForm(), h(
         'div',
         { class: 'fg-empty' },
         h('span', { class: 'fg-empty-art' }, icon('frame')),
         h('h2', {}, 'No designs yet'),
-        h('p', {}, 'When a designer sends a frame from Figma with “Send to Experience Workspace”, it shows up here for everyone on the site.'),
+        h('p', {}, state.figmaApi
+          ? 'Paste a link to a frame above, or ask a designer to send it from Figma with “Send to Experience Workspace”. Designs show up here for everyone on the site.'
+          : 'When a designer sends a frame from Figma with “Send to Experience Workspace”, it shows up here for everyone on the site.'),
         h('a', {
           class: 'fg-link', href: DOCS_URL, target: '_blank', rel: 'noopener',
         }, 'How designers send frames ', icon('out')),
-      );
+      )];
     }
     return [
+      linkForm(),
       h('div', { class: 'fg-section-head' }, h('h2', {}, 'Designs for this site'), h('span', { class: 'fg-count' }, String(state.list.length))),
       h('ul', { class: 'fg-list' }, state.list.map((item) => h(
         'li',
@@ -150,10 +187,7 @@ export default function createPanel(root, state, actions) {
             { class: 'fg-row-text' },
             h('span', { class: 'fg-row-top' }, h('strong', {}, item.name || 'Untitled frame'), badge(item.status)),
             item.path && h('span', { class: 'fg-mono' }, item.path),
-            h('span', { class: 'fg-muted' }, [
-              item.sender && `${person(item.sender)} · `,
-              `sent ${ago(item.sent)}`,
-            ]),
+            h('span', { class: 'fg-muted' }, sentLine(item)),
           ),
           icon('chevron', 'fg-i fg-chevron'),
         ),
@@ -163,6 +197,7 @@ export default function createPanel(root, state, actions) {
 
   function designCard(handoff, model) {
     const meta = [handoff.file, handoff.page].filter(Boolean).join(' / ');
+    const figmaLink = FIGMA_LINK.test(handoff.link || '');
     const stats = [
       plural(model.stats.sections, 'section'),
       plural(model.stats.texts, 'text'),
@@ -182,11 +217,14 @@ export default function createPanel(root, state, actions) {
         'div',
         { class: 'fg-design-body' },
         h('div', { class: 'fg-row-top' }, h('h2', {}, handoff.name || 'Untitled frame'), badge(handoff.status)),
-        h('p', { class: 'fg-muted' }, [
-          handoff.sender && `From ${person(handoff.sender)} · `,
-          `sent ${ago(handoff.sent)}`,
+        h('p', { class: 'fg-muted' }, sentLine(handoff, 'From ')),
+        (meta || figmaLink) && h('p', { class: 'fg-muted fg-small' }, [
+          meta,
+          meta && figmaLink && ' · ',
+          figmaLink && h('a', {
+            class: 'fg-link', href: handoff.link, target: '_blank', rel: 'noopener',
+          }, 'Open in Figma ', icon('out')),
         ]),
-        meta && h('p', { class: 'fg-muted fg-small' }, meta),
         h('ul', { class: 'fg-chips' }, stats.map((s) => h('li', {}, s))),
       ),
     );
@@ -353,7 +391,7 @@ export default function createPanel(root, state, actions) {
             class: `fg-btn ${check.score >= 90 ? 'fg-positive-btn' : ''}`, type: 'button', disabled: !!state.busy, onclick: actions.markBuilt,
           }, `Mark built${current.handoff.sender ? ` and tell ${person(current.handoff.sender).split(' ')[0]}` : ''}`),
       ),
-      built && h('p', { class: 'fg-muted fg-small fg-right' }, 'The designer sees “Built” and a link to the page in Figma.'),
+      built && current.handoff.sender && h('p', { class: 'fg-muted fg-small fg-right' }, 'The designer sees “Built” and a link to the page in Figma.'),
     ];
   }
 

@@ -292,3 +292,34 @@ test('workerConnection posts the site and IMS token and surfaces errors', async 
   const down = workerConnection('https://w', async () => 'ims', {}, async () => { throw new Error('net'); });
   await assert.rejects(down.list(), /Could not reach the Figma worker/);
 });
+
+test('demoConnection brings in the sample for any frame link', async () => {
+  const conn = demoConnection(structuredClone([SAMPLE]), { delay: 0 });
+  assert.deepEqual(await conn.info(), { figmaApi: true });
+  const { handoff } = await conn.importLink('https://www.figma.com/design/AbCdEf1234567890/Web?node-id=1-2');
+  assert.equal(handoff.id, SAMPLE.id);
+  assert.equal(handoff.tree, undefined);
+  await assert.rejects(conn.importLink('https://example.com/x'), (e) => e.status === 400 && /figma\.com/.test(e.message));
+});
+
+test('workerConnection imports links and reads what the worker can do', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/status')) return { ok: true, json: async () => ({ figmaApi: true }) };
+    return { ok: true, json: async () => ({ ok: true, handoff: { id: 'b' } }) };
+  };
+  const conn = workerConnection('https://w', async () => 'ims', { org: 'o', site: 's' }, fetchImpl);
+  assert.deepEqual(await conn.info(), { figmaApi: true });
+  assert.equal(calls[0].init, undefined);
+  assert.equal((await conn.importLink('https://www.figma.com/design/k/x?node-id=1-2')).handoff.id, 'b');
+  assert.equal(calls[1].url, 'https://w/import');
+  assert.deepEqual(JSON.parse(calls[1].init.body), { org: 'o', site: 's', url: 'https://www.figma.com/design/k/x?node-id=1-2' });
+  const down = workerConnection('https://w', async () => 'ims', {}, async () => { throw new Error('net'); });
+  assert.deepEqual(await down.info(), {});
+});
+
+test('analyze warns about pictures left out of a link import', () => {
+  const model = analyze({ name: 'x', dropped: 2, tree: F('Page', [T('Hello', 40)]) });
+  assert.ok(model.warnings.some((w) => w.kind === 'dropped' && /2 pictures/.test(w.text)));
+});

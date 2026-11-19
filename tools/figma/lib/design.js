@@ -324,6 +324,9 @@ export function analyze(handoff) {
   if (handoff.skipped > 0) {
     warnings.push({ kind: 'skipped', text: `${handoff.skipped} vector or icon layer${handoff.skipped === 1 ? ' was' : 's were'} left out.` });
   }
+  if (handoff.dropped > 0) {
+    warnings.push({ kind: 'dropped', text: `${handoff.dropped} picture${handoff.dropped === 1 ? '' : 's'} could not be brought in from Figma (over 10 MB, not JPEG or PNG, or more than 30), so ${handoff.dropped === 1 ? 'it is' : 'they are'} left out.` });
+  }
 
   return {
     title,

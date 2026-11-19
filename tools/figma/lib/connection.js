@@ -1,11 +1,14 @@
 /**
  * How the panel reaches the designs:
- *   worker  the site's worker, where the Figma plugin drops each handoff
+ *   worker  the site's worker, where the Figma plugin drops each handoff (and which can read
+ *           a pasted Figma link, when it has a Figma token)
  *   demo    a sample Northwind handoff, for trying the panel without Figma
  * Both return the same shapes, so the panel does not care which one it has.
  */
+import { parseFigmaLink } from './rest.js';
 
 const CACHE_TTL = 30000;
+const DEMO_DELAY = 900;
 
 export class ConnectionError extends Error {
   constructor(status, message, code = '') {
@@ -55,11 +58,21 @@ export function workerConnection(workerUrl, getIms, site, fetchImpl = fetch) {
       return resp.blob();
     },
     status: (id, status, url = '') => post('status', { id, status, url }),
+    importLink: (url) => post('import', { url }),
+    /** What the worker can do, from GET /status. Never throws. */
+    async info() {
+      try {
+        const resp = await fetchImpl(`${workerUrl}/status`);
+        return resp.ok ? await resp.json() : {};
+      } catch {
+        return {};
+      }
+    },
   };
 }
 
 /** Sample data with the worker's shapes. `base` is where the sample pictures live. */
-export function demoConnection(handoffs, { base = '', fetchImpl = fetch } = {}) {
+export function demoConnection(handoffs, { base = '', fetchImpl = fetch, delay = DEMO_DELAY } = {}) {
   const list = handoffs.map((h) => ({ ...h, status: h.status || 'new' }));
   const find = (id) => {
     const found = list.find((h) => h.id === id);
@@ -83,5 +96,18 @@ export function demoConnection(handoffs, { base = '', fetchImpl = fetch } = {}) 
       Object.assign(find(id), { status, url, updated: new Date().toISOString() });
       return { ok: true, demo: true };
     },
+    /** Any frame link brings in the sample design, as if read from Figma. */
+    async importLink(url) {
+      try {
+        parseFigmaLink(url);
+      } catch (error) {
+        throw new ConnectionError(400, error.message);
+      }
+      await new Promise((resolve) => { setTimeout(resolve, delay); });
+      const [first] = list;
+      Object.assign(first, { status: first.status === 'built' ? 'updated' : first.status, sent: new Date().toISOString() });
+      return { ok: true, demo: true, handoff: summary(first) };
+    },
+    info: async () => ({ figmaApi: true }),
   };
 }

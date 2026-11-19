@@ -623,6 +623,15 @@ body {
   gap: 8px;
 }
 
+.fg-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.fg-link-form .fg-small { margin: 0; }
+
 .fg-missing ul {
   display: flex;
   flex-direction: column;

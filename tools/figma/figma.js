@@ -32,6 +32,8 @@ const state = {
   html: '',
   check: null,
   path: '',
+  link: '',
+  figmaApi: false,
   created: null,
   live: { blockIndex: null, editable: true },
   aiPending: false,
@@ -225,6 +227,29 @@ async function openDesign(id, fresh = false) {
   }
 }
 
+/* Paste a Figma link */
+
+async function importLink() {
+  const url = state.link.trim();
+  if (!url) {
+    panel.toast('Paste a link to a Figma frame first.');
+    return;
+  }
+  state.busy = 'Getting the design from Figma…';
+  state.error = null;
+  panel.render();
+  try {
+    const { handoff, dropped } = await state.conn.importLink(url);
+    state.link = '';
+    state.list = [handoff, ...state.list.filter((h) => h.id !== handoff.id)];
+    await openDesign(handoff.id, true);
+    if (state.mode === 'demo') panel.toast('Sample mode: every Figma link opens the sample design.');
+    else if (dropped) panel.toast(`${dropped} picture${dropped === 1 ? '' : 's'} could not be brought in. See the note on the design.`);
+  } catch (error) {
+    fail(error);
+  }
+}
+
 function back() {
   state.current = null;
   state.created = null;
@@ -347,15 +372,20 @@ async function setStatus(status) {
   const { handoff } = state.current;
   const url = state.created?.url || (state.context ? editorUrl(state.context.path) : '');
   try {
-    state.busy = status === 'built' ? 'Telling the designer…' : 'Updating…';
+    state.busy = status === 'built' && handoff.sender ? 'Telling the designer…' : 'Updating…';
     panel.render();
     await state.conn.status(handoff.id, status, status === 'built' ? url : '');
     handoff.status = status;
     if (status === 'built') handoff.url = url;
     const row = state.list.find((h) => h.id === handoff.id);
     if (row) Object.assign(row, { status, url: handoff.url });
-    const who = handoff.sender ? handoff.sender.replace(/\s*\(.*\)$/, '') : 'The designer';
-    done(status === 'built' ? `Marked built. ${who} sees it in Figma under Sent.` : 'Marked as not built yet.');
+    let message = 'Marked as not built yet.';
+    if (status === 'built') {
+      message = handoff.sender
+        ? `Marked built. ${handoff.sender.replace(/\s*\(.*\)$/, '')} sees it in Figma under Sent.`
+        : 'Marked built for everyone on this site.';
+    }
+    done(message);
   } catch (error) {
     done(error.message || String(error));
   }
@@ -387,6 +417,7 @@ async function startDemo() {
   const sent = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
   handoffs.forEach((item) => { item.sent = sent; });
   state.conn = demoConnection(handoffs, { base: DEMO_URL.href });
+  state.figmaApi = true;
   await loadList();
   const wanted = params.get('design');
   if (wanted && state.list.some((h) => h.id === wanted)) openDesign(wanted);
@@ -441,6 +472,10 @@ async function startLive(sdk) {
   const { org, repo: site, path } = state.context;
   state.conn = workerConnection(worker, () => state.ims, { org, site, path });
   state.view = 'main';
+  state.conn.info().then((info) => {
+    state.figmaApi = !!info.figmaApi;
+    if (state.figmaApi && !state.current && !state.busy) panel.render();
+  });
   loadList();
 }
 
@@ -453,6 +488,8 @@ function init() {
     insert,
     createPage,
     setPath: (value) => { state.path = value; },
+    setLink: (value) => { state.link = value; },
+    importLink,
     markBuilt: () => setStatus('built'),
     reopen: () => setStatus('new'),
     checkAgain: () => (state.mode === 'da' ? readSavedPage() : runCheck()),

@@ -12,6 +12,70 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]).toS
 const realFetch = globalThis.fetch;
 let daStatus;
 let daCalls;
+let figmaCalls;
+let figmaReply;
+
+/* A fake Figma: the REST API, its image storage, and one picture on a host it must not fetch. */
+const FILE = 'AbCdEf1234567890xyz';
+const LINK = `https://www.figma.com/design/${FILE}/Northwind-web?node-id=1-2&t=x`;
+const GIF = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
+const S3 = 'https://s3-alpha-sig.figma.com/img/';
+let frameDoc;
+
+const restFrame = () => ({
+  id: '1:2',
+  name: 'Home loans landing',
+  type: 'FRAME',
+  layoutMode: 'VERTICAL',
+  absoluteBoundingBox: {
+    x: 0, y: 0, width: 1440, height: 1200,
+  },
+  children: [
+    {
+      id: '1:3',
+      name: 'Hero',
+      type: 'FRAME',
+      fills: [{ type: 'IMAGE', imageRef: 'hero' }],
+      children: [{
+        id: '1:4', type: 'TEXT', name: 'Title', characters: 'Home loans made simple', style: { fontSize: 56, fontWeight: 700 },
+      }],
+    },
+    {
+      id: '1:5', name: 'Family at home', type: 'RECTANGLE', fills: [{ type: 'IMAGE', imageRef: 'family' }],
+    },
+    {
+      id: '1:6', name: 'Same photo again', type: 'RECTANGLE', fills: [{ type: 'IMAGE', imageRef: 'family' }],
+    },
+    {
+      id: '1:7', name: 'Animated', type: 'RECTANGLE', fills: [{ type: 'IMAGE', imageRef: 'gif' }],
+    },
+    {
+      id: '1:8', name: 'Elsewhere', type: 'RECTANGLE', fills: [{ type: 'IMAGE', imageRef: 'evil' }],
+    },
+  ],
+});
+
+const jsonResponse = (data) => new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+
+function figmaFetch(url) {
+  if (url.startsWith('https://api.figma.com/v1/')) {
+    if (figmaReply) return new Response('{}', figmaReply);
+    if (url.includes('/nodes?')) return jsonResponse({ name: 'Northwind web', nodes: { '1:2': { document: frameDoc } } });
+    if (url.endsWith('/images')) {
+      return jsonResponse({
+        meta: {
+          images: {
+            hero: `${S3}hero`, family: `${S3}family`, gif: `${S3}gif`, evil: 'https://evil.example/pic.jpg',
+          },
+        },
+      });
+    }
+    if (url.includes('/images/')) return jsonResponse({ images: { '1:2': 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/thumb' } });
+  }
+  if (url === `${S3}gif`) return new Response(GIF);
+  if (url.startsWith(S3) || url.includes('amazonaws.com/images/')) return new Response(Buffer.from(JPEG, 'base64'));
+  return new Response(null, { status: 404 });
+}
 
 function memoryKv() {
   const data = new Map();
@@ -49,8 +113,16 @@ beforeEach(() => {
   daStatus = 200;
   daCalls = [];
   env = { ALLOWED_ORGS: 'northwind', HANDOFF_KEY: KEY, HANDOFFS: memoryKv() };
+  frameDoc = restFrame();
+  figmaCalls = [];
+  figmaReply = null;
   globalThis.fetch = async (url, init = {}) => {
-    daCalls.push({ url: String(url), auth: init.headers?.Authorization });
+    const u = String(url);
+    if (!u.startsWith('https://admin.da.live/') && !u.startsWith('https://api.aem.live/')) {
+      figmaCalls.push({ url: u, token: init.headers?.['X-Figma-Token'] });
+      return figmaFetch(u);
+    }
+    daCalls.push({ url: u, auth: init.headers?.Authorization });
     return new Response(null, { status: daStatus });
   };
 });
@@ -195,5 +267,94 @@ test('siteLink accepts only this site', () => {
 
 test('GET /status reports setup', async () => {
   const resp = await worker.fetch(new Request('https://figma.test/status'), env);
-  assert.deepEqual(await resp.json(), { ok: true, service: 'figma', configured: true });
+  assert.deepEqual(await resp.json(), {
+    ok: true, service: 'figma', configured: true, figmaApi: false,
+  });
+  env.FIGMA_TOKEN = 'figd_test';
+  const withToken = await worker.fetch(new Request('https://figma.test/status'), env);
+  assert.equal((await withToken.json()).figmaApi, true);
+});
+
+/* Paste a Figma link */
+
+test('import: reads a frame from a Figma link, with its pictures', async () => {
+  env.FIGMA_TOKEN = 'figd_test';
+  const resp = await panel('import', { url: LINK });
+  assert.equal(resp.status, 200);
+  const body = await resp.json();
+  assert.equal(body.dropped, 2);
+  assert.equal(body.handoff.source, 'link');
+  assert.equal(body.handoff.status, 'new');
+  assert.equal(body.handoff.thumbnail, 'thumbnail');
+  assert.equal(body.handoff.file, 'Northwind web');
+
+  const api = figmaCalls.filter((c) => c.url.startsWith('https://api.figma.com/'));
+  assert.deepEqual(api.map((c) => c.url), [
+    `https://api.figma.com/v1/files/${FILE}/nodes?ids=1%3A2`,
+    `https://api.figma.com/v1/files/${FILE}/images`,
+    `https://api.figma.com/v1/images/${FILE}?ids=1%3A2&format=jpg&scale=0.556`,
+  ]);
+  assert.ok(api.every((c) => c.token === 'figd_test'));
+  assert.equal(figmaCalls.filter((c) => c.url === `${S3}family`).length, 1);
+  assert.ok(!figmaCalls.some((c) => c.url.includes('evil.example')));
+
+  const { id } = body.handoff;
+  const full = (await (await panel('handoff', { id })).json()).handoff;
+  assert.equal(full.link, `https://www.figma.com/design/${FILE}/?node-id=1-2`);
+  assert.equal(full.dropped, 2);
+  assert.deepEqual(full.images.map((i) => i.id), ['n1-3', 'n1-5', 'n1-6']);
+  assert.deepEqual(full.tree.children.map((c) => c.image), ['n1-3', 'n1-5', 'n1-6']);
+  assert.equal(full.tree.children[0].children[0].size, 56);
+  assert.equal((await panel('image', { id, image: 'n1-6' })).status, 200);
+  assert.equal((await panel('image', { id, image: 'thumbnail' })).headers.get('Content-Type'), 'image/jpeg');
+  assert.equal((await panel('image', { id, image: 'n1-7' })).status, 404);
+});
+
+test('import: the same frame sent from the plugin is updated, keeping the designer', async () => {
+  env.FIGMA_TOKEN = 'figd_test';
+  const sent = (await (await send({ handoff: { fileKey: FILE, frame: '1:2', note: 'Use the new rates' } })).json()).handoff;
+  const imported = (await (await panel('import', { url: LINK })).json()).handoff;
+  assert.equal(imported.id, sent.id);
+  assert.equal(imported.status, 'updated');
+  assert.equal(imported.sender, 'Maya Chen');
+  const full = (await (await panel('handoff', { id: sent.id })).json()).handoff;
+  assert.equal(full.note, 'Use the new rates');
+  assert.equal(full.path, '/loans/home-loans');
+});
+
+test('import: needs a token, a frame link, an allowed file and page access', async () => {
+  const none = await panel('import', { url: LINK });
+  assert.equal(none.status, 501);
+  assert.equal((await none.json()).code, 'no-token');
+  env.FIGMA_TOKEN = 'figd_test';
+  assert.equal((await panel('import', { url: 'https://example.com' })).status, 400);
+  assert.equal((await panel('import', { url: `https://www.figma.com/design/${FILE}/Web` })).status, 400);
+  env.FIGMA_FILES = 'OtherFile123456';
+  assert.equal((await panel('import', { url: LINK })).status, 403);
+  env.FIGMA_FILES = FILE;
+  frameDoc = { id: '0:1', type: 'CANVAS', name: 'Page 1' };
+  const page = await panel('import', { url: LINK });
+  assert.equal(page.status, 400);
+  assert.match((await page.json()).error, /whole Figma page/);
+  daStatus = 403;
+  figmaCalls = [];
+  assert.equal((await panel('import', { url: LINK }, { token: 'no-access' })).status, 403);
+  assert.equal(figmaCalls.length, 0);
+});
+
+test('import: explains Figma rate limits and refusals', async () => {
+  env.FIGMA_TOKEN = 'figd_test';
+  figmaReply = { status: 429, headers: { 'Retry-After': '2592000', 'X-Figma-Rate-Limit-Type': 'low' } };
+  const monthly = await panel('import', { url: LINK });
+  assert.equal(monthly.status, 429);
+  const monthlyBody = await monthly.json();
+  assert.equal(monthlyBody.code, 'figma-limit');
+  assert.match(monthlyBody.error, /few API reads a month.*Figma plugin/);
+  figmaReply = { status: 429, headers: { 'Retry-After': '90', 'X-Figma-Rate-Limit-Type': 'high' } };
+  assert.match((await (await panel('import', { url: LINK })).json()).error, /Try again in 2 min/);
+  figmaReply = { status: 403 };
+  assert.match((await (await panel('import', { url: LINK })).json()).error, /FIGMA_TOKEN/);
+  figmaReply = { status: 404 };
+  assert.equal((await panel('import', { url: LINK })).status, 404);
+  assert.equal(env.HANDOFFS.data.size, 0);
 });
