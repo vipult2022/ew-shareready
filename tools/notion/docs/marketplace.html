@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Marketplace image for the Notion extension (1200×896). Screenshot at 1×: see README. -->
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 896px; overflow: hidden; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #ebe5fc 0%, #e0e6fd 50%, #dcecfb 100%);
+    position: relative;
+  }
+  .stage {
+    position: absolute; left: 70px; top: 70px; width: 1060px; height: 756px;
+    border-radius: 36px; background: rgba(255,255,255,.42);
+    border: 1px solid rgba(255,255,255,.8);
+    box-shadow: 0 30px 60px rgba(60,70,160,.12);
+  }
+  .win {
+    position: absolute; background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 18px 40px rgba(40,50,120,.18), 0 2px 6px rgba(40,50,120,.08);
+  }
+  .bar { height: 40px; display: flex; align-items: center; gap: 7px; padding: 0 16px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: #fff; opacity: .55; }
+  .bar .title { margin-left: 14px; height: 10px; width: 130px; border-radius: 6px; background: rgba(255,255,255,.35); }
+  .line { height: 9px; border-radius: 5px; background: #e4e7f2; }
+
+  /* Notion page */
+  .np { left: 112px; top: 176px; width: 470px; height: 600px; }
+  .np .bar { background: #f7f6f3; }
+  .np .dot { background: #d3d1cb; opacity: 1; }
+  .np .bar .title { background: #e3e2de; }
+  .nd { padding: 22px 30px; }
+  .emoji { font-size: 40px; line-height: 1; margin-bottom: 12px; }
+  .nt { height: 20px; width: 72%; border-radius: 8px; background: #37352f; opacity: .85; margin-bottom: 18px; }
+  .prop { display: grid; grid-template-columns: 110px 1fr; align-items: center; height: 30px; }
+  .prop .k { height: 8px; width: 70px; border-radius: 4px; background: #d9d8d4; }
+  .prop .v { height: 9px; width: 60%; border-radius: 5px; background: #c9c7c1; }
+  .tag { height: 22px; width: 104px; border-radius: 5px; }
+  .tag.blue { background: #d3e5ef; } .tag.gray { background: #e3e2e0; width: 70px; display: inline-block; margin-right: 6px; } .tag.yel { background: #fdecc8; width: 80px; display: inline-block; }
+  .rule { height: 1.5px; background: #ecebe8; margin: 14px 0 16px; }
+  .nh { height: 13px; width: 46%; border-radius: 6px; background: #8f8c85; margin: 4px 0 12px; }
+  .bl { display: flex; align-items: center; gap: 10px; height: 22px; }
+  .bl::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #8f8c85; }
+  .bl .line { flex: 0 0 auto; background: #e3e2de; }
+  .tg { display: flex; align-items: center; gap: 10px; height: 28px; }
+  .tri { width: 0; height: 0; border-left: 8px solid #8f8c85; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+  .tg .line { background: #d9d8d4; }
+  .ntb { display: grid; grid-template-columns: 1.5fr 1fr 1fr; border: 1.5px solid #e3e2de; border-radius: 4px; margin: 8px 0 14px; }
+  .ntb span { height: 26px; border-right: 1.5px solid #e9e8e5; border-bottom: 1.5px solid #e9e8e5; position: relative; }
+  .ntb span::after { content: ''; position: absolute; left: 10px; top: 9px; height: 7px; width: 55%; border-radius: 4px; background: #d9d8d4; }
+  .ntb span.h { background: #f7f6f3; }
+
+  /* connector */
+  .go {
+    position: absolute; left: 568px; top: 412px; width: 64px; height: 64px; border-radius: 18px;
+    background: #fff; display: grid; place-items: center; z-index: 3;
+    box-shadow: 0 10px 24px rgba(40,50,120,.18);
+  }
+
+  /* EW page */
+  .page { left: 618px; top: 138px; width: 466px; height: 616px; }
+  .page .bar { background: #3e4aa6; }
+  .doc { padding: 24px 26px; }
+  .h1 { height: 18px; width: 64%; border-radius: 8px; background: #b9c0de; margin-bottom: 16px; }
+  .hero { height: 120px; border-radius: 10px; margin: 6px 0 18px; background: linear-gradient(160deg, #cdeedd 0%, #bfe3f0 60%, #f5c9d9 100%); position: relative; }
+  .hero::after { content: ''; position: absolute; right: 34px; top: 30px; width: 70px; height: 56px; border-radius: 50% 50% 45% 45%; background: #f4a5bf; }
+  .hero i { position: absolute; left: 22px; height: 10px; border-radius: 5px; background: #1f5f78; opacity: .7; }
+  .h2 { height: 12px; width: 44%; border-radius: 6px; background: #b9c0de; margin: 4px 0 12px; }
+  .tbl { border: 2px solid #dfe3f1; border-radius: 10px; overflow: hidden; margin-bottom: 18px; }
+  .tbl div { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 14px; align-items: center; height: 28px; padding: 0 14px; border-top: 1.5px solid #eceef6; }
+  .tbl div:first-child { border-top: 0; background: #eef0fa; }
+  .tbl span { height: 8px; border-radius: 4px; background: #cfd5ea; }
+  .tbl div:first-child span { background: #aab2d6; }
+  .acc div { display: flex; align-items: center; justify-content: space-between; height: 32px; border-top: 1.5px solid #e4e7f2; padding-right: 6px; }
+  .acc div:last-child { border-bottom: 1.5px solid #e4e7f2; }
+  .acc span { height: 9px; border-radius: 5px; background: #c9cee4; }
+  .chev { width: 9px; height: 9px; border-right: 2px solid #8a91b8; border-bottom: 2px solid #8a91b8; transform: rotate(45deg) translateY(-3px); }
+  .meta { margin-top: 18px; border: 2px dashed #c3c9e6; border-radius: 10px; padding: 10px 14px; background: #f7f8fe; }
+  .meta .mh { height: 9px; width: 80px; border-radius: 5px; background: #8a91c4; margin-bottom: 10px; }
+  .meta div { display: grid; grid-template-columns: 90px 1fr; height: 20px; align-items: center; }
+  .meta span { height: 7px; border-radius: 4px; background: #cfd5ea; }
+
+  .badge {
+    position: absolute; left: 1046px; top: 114px; width: 62px; height: 62px; border-radius: 50%;
+    background: #12805c; border: 4px solid #fff; display: grid; place-items: center; z-index: 4;
+    box-shadow: 0 10px 24px rgba(18,128,92,.35);
+  }
+  .back {
+    position: absolute; left: 84px; top: 150px; height: 44px; padding: 0 16px 0 12px; border-radius: 22px;
+    background: #fff; display: flex; align-items: center; gap: 8px; z-index: 4;
+    box-shadow: 0 10px 24px rgba(40,50,120,.18); font: 600 15px -apple-system, 'Helvetica Neue', Arial, sans-serif; color: #3e4aa6;
+  }
+  .spark { position: absolute; }
+</style>
+</head>
+<body>
+  <div class="stage"></div>
+  <svg class="spark" style="left:1088px;top:758px" width="28" height="28" viewBox="0 0 24 24"><path d="M12 0c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z" fill="#6f86ff"/></svg>
+  <svg class="spark" style="left:530px;top:736px" width="36" height="36" viewBox="0 0 24 24"><path d="M12 0c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z" fill="#8b5cf6"/></svg>
+
+  <div class="win np">
+    <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="title"></i></div>
+    <div class="nd">
+      <div class="emoji">🌱</div>
+      <div class="nt"></div>
+      <div class="prop"><i class="k"></i><i class="tag blue"></i></div>
+      <div class="prop"><i class="k"></i><i class="v" style="width:40%"></i></div>
+      <div class="prop"><i class="k"></i><span><i class="tag gray"></i><i class="tag yel"></i></span></div>
+      <div class="prop"><i class="k"></i><i class="v" style="width:74%;background:#9db7ff"></i></div>
+      <div class="rule"></div>
+      <div class="line" style="width:94%;margin-bottom:9px;background:#e3e2de"></div>
+      <div class="line" style="width:68%;margin-bottom:16px;background:#e3e2de"></div>
+      <div class="nh"></div>
+      <div class="bl"><i class="line" style="width:58%"></i></div>
+      <div class="bl"><i class="line" style="width:70%"></i></div>
+      <div class="bl"><i class="line" style="width:46%"></i></div>
+      <div class="ntb"><span class="h"></span><span class="h"></span><span class="h"></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="tg"><i class="tri"></i><i class="line" style="width:52%"></i></div>
+      <div class="tg"><i class="tri"></i><i class="line" style="width:40%"></i></div>
+    </div>
+  </div>
+
+  <div class="back"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="#3e4aa6" stroke-width="2.4" stroke-linecap="round"/></svg>EW page linked</div>
+
+  <div class="go"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="#3b63fb" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+  <div class="win page">
+    <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="title"></i></div>
+    <div class="doc">
+      <div class="h1"></div>
+      <div class="line" style="width:92%;margin-bottom:10px"></div>
+      <div class="line" style="width:70%;margin-bottom:8px"></div>
+      <div class="hero"><i style="top:30px;width:90px;height:8px"></i><i style="top:48px;width:150px;height:16px"></i><i style="top:76px;width:70px;height:16px;border-radius:8px;opacity:.9"></i></div>
+      <div class="h2"></div>
+      <div class="tbl">
+        <div><span></span><span></span><span></span></div>
+        <div><span style="width:80%"></span><span style="width:50%"></span><span style="width:60%"></span></div>
+        <div><span style="width:66%"></span><span style="width:50%"></span><span style="width:40%"></span></div>
+      </div>
+      <div class="acc">
+        <div><span style="width:58%"></span><i class="chev"></i></div>
+        <div><span style="width:46%"></span><i class="chev"></i></div>
+      </div>
+      <div class="meta">
+        <div class="mh"></div>
+        <div><span style="width:50px"></span><span style="width:70%"></span></div>
+        <div><span style="width:66px"></span><span style="width:88%"></span></div>
+        <div><span style="width:58px"></span><span style="width:46%"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="badge"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+</body>
+</html>
