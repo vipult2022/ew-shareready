@@ -1,0 +1,796 @@
+{
+ "databases": [
+  {
+   "id": "41d50256-e330-8108-b228-fd9122329a60",
+   "url": "https://app.notion.com/p/41d50256e3308108b228fd9122329a60",
+   "title": "Northwind content briefs",
+   "description": "Briefs and drafts for the Northwind Bank site. When a brief is ready, build the page from it in Experience Workspace with the Notion panel.",
+   "icon": "📝",
+   "properties": [
+    {
+     "name": "Status",
+     "type": "select"
+    },
+    {
+     "name": "Due",
+     "type": "date"
+    },
+    {
+     "name": "Page path",
+     "type": "rich_text"
+    },
+    {
+     "name": "Owner",
+     "type": "rich_text"
+    },
+    {
+     "name": "EW page",
+     "type": "url"
+    },
+    {
+     "name": "Keywords",
+     "type": "multi_select"
+    },
+    {
+     "name": "Description",
+     "type": "rich_text"
+    },
+    {
+     "name": "Name",
+     "type": "title"
+    }
+   ]
+  }
+ ],
+ "pages": {
+  "41d50256-e330-81a2-ab70-cb20eab736a9": {
+   "page": {
+    "id": "41d50256-e330-81a2-ab70-cb20eab736a9",
+    "url": "https://app.notion.com/p/How-to-freeze-your-card-41d50256e33081a2ab70cb20eab736a9",
+    "title": "How to freeze your card",
+    "icon": "❄️",
+    "lastEdited": "2026-11-19T18:58:00.000Z",
+    "database": "41d50256-e330-8108-b228-fd9122329a60",
+    "properties": [
+     {
+      "name": "Status",
+      "type": "select",
+      "value": "Idea",
+      "color": "gray"
+     },
+     {
+      "name": "Due",
+      "type": "date",
+      "value": ""
+     },
+     {
+      "name": "Page path",
+      "type": "rich_text",
+      "value": "/help/freeze-card"
+     },
+     {
+      "name": "Owner",
+      "type": "rich_text",
+      "value": "Help center team"
+     },
+     {
+      "name": "EW page",
+      "type": "url",
+      "value": ""
+     },
+     {
+      "name": "Keywords",
+      "type": "multi_select",
+      "value": "cards, security, help"
+     },
+     {
+      "name": "Description",
+      "type": "rich_text",
+      "value": "Lost your card? Freeze it in seconds from the Northwind app, then unfreeze it when you find it."
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "type": "paragraph",
+     "rich": [
+      {
+       "text": "If you misplace your card, freeze it straight away. Nobody can use it while it is frozen, and you can unfreeze it at any time."
+      }
+     ]
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Freeze your card in the app"
+      }
+     ]
+    },
+    {
+     "type": "numbered_list_item",
+     "rich": [
+      {
+       "text": "Open the Northwind app and tap "
+      },
+      {
+       "text": "Cards",
+       "bold": true
+      }
+     ]
+    },
+    {
+     "type": "numbered_list_item",
+     "rich": [
+      {
+       "text": "Choose the card"
+      }
+     ]
+    },
+    {
+     "type": "numbered_list_item",
+     "rich": [
+      {
+       "text": "Turn on "
+      },
+      {
+       "text": "Freeze card",
+       "bold": true
+      }
+     ]
+    },
+    {
+     "type": "callout",
+     "rich": [
+      {
+       "text": "If you think your card was stolen, call us on 1-800-555-0100 instead. We will cancel it and send a new one."
+      }
+     ],
+     "icon": "⚠️"
+    }
+   ],
+   "truncated": false
+  },
+  "41d50256-e330-81e4-b213-f7d8d36e8681": {
+   "page": {
+    "id": "41d50256-e330-81e4-b213-f7d8d36e8681",
+    "url": "https://app.notion.com/p/First-time-home-buyer-guide-41d50256e33081e4b213f7d8d36e8681",
+    "title": "First-time home buyer guide",
+    "icon": "🏡",
+    "lastEdited": "2026-11-19T18:58:00.000Z",
+    "database": "41d50256-e330-8108-b228-fd9122329a60",
+    "properties": [
+     {
+      "name": "Status",
+      "type": "select",
+      "value": "Drafting",
+      "color": "yellow"
+     },
+     {
+      "name": "Due",
+      "type": "date",
+      "value": "2027-01-20"
+     },
+     {
+      "name": "Page path",
+      "type": "rich_text",
+      "value": "/guides/first-home"
+     },
+     {
+      "name": "Owner",
+      "type": "rich_text",
+      "value": "Marcus Lee, Mortgages"
+     },
+     {
+      "name": "EW page",
+      "type": "url",
+      "value": ""
+     },
+     {
+      "name": "Keywords",
+      "type": "multi_select",
+      "value": "mortgage, first home"
+     },
+     {
+      "name": "Description",
+      "type": "rich_text",
+      "value": "A step-by-step guide to buying your first home: what to do before you apply, fixed or variable rates, and the costs to plan for."
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "type": "paragraph",
+     "rich": [
+      {
+       "text": "Buying your first home is exciting, and a little daunting. This guide walks you through it, one step at a time."
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "url": "https://main--ew-shareready--vipult2022.aem.page/offers/media_1defbd87e89df4fe450e5ac7c8976218033e0f79e.jpg?width=1200&format=jpg&optimize=medium",
+     "expires": false,
+     "caption": [
+      {
+       "text": "Keys to a new front door"
+      }
+     ]
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Before you apply"
+      }
+     ]
+    },
+    {
+     "type": "to_do",
+     "rich": [
+      {
+       "text": "Check your credit report for mistakes"
+      }
+     ],
+     "checked": true
+    },
+    {
+     "type": "to_do",
+     "rich": [
+      {
+       "text": "Save a deposit of at least 5%, or 10% for better rates"
+      }
+     ],
+     "checked": false
+    },
+    {
+     "type": "to_do",
+     "rich": [
+      {
+       "text": "Get a decision in principle, so you know what you can borrow"
+      }
+     ],
+     "checked": false
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Fixed or variable?"
+      }
+     ]
+    },
+    {
+     "type": "column_list",
+     "children": [
+      {
+       "type": "column",
+       "children": [
+        {
+         "type": "heading_3",
+         "rich": [
+          {
+           "text": "Fixed rate"
+          }
+         ]
+        },
+        {
+         "type": "paragraph",
+         "rich": [
+          {
+           "text": "Your payment stays the same for 2, 5 or 10 years. "
+          },
+          {
+           "text": "Best if",
+           "bold": true
+          },
+          {
+           "text": " you want certainty."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "column",
+       "children": [
+        {
+         "type": "heading_3",
+         "rich": [
+          {
+           "text": "Variable rate"
+          }
+         ]
+        },
+        {
+         "type": "paragraph",
+         "rich": [
+          {
+           "text": "Your payment moves with our base rate. "
+          },
+          {
+           "text": "Best if",
+           "bold": true
+          },
+          {
+           "text": " you can handle changes and want flexibility."
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Costs to plan for"
+      }
+     ]
+    },
+    {
+     "type": "bulleted_list_item",
+     "rich": [
+      {
+       "text": "Deposit"
+      }
+     ]
+    },
+    {
+     "type": "bulleted_list_item",
+     "rich": [
+      {
+       "text": "Fees"
+      }
+     ],
+     "children": [
+      {
+       "type": "bulleted_list_item",
+       "rich": [
+        {
+         "text": "Valuation fee"
+        }
+       ]
+      },
+      {
+       "type": "bulleted_list_item",
+       "rich": [
+        {
+         "text": "Legal fees"
+        }
+       ]
+      },
+      {
+       "type": "bulleted_list_item",
+       "rich": [
+        {
+         "text": "Arrangement fee, often added to the loan"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "bulleted_list_item",
+     "rich": [
+      {
+       "text": "Moving and furniture"
+      }
+     ]
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Questions"
+      }
+     ]
+    },
+    {
+     "type": "toggle",
+     "rich": [
+      {
+       "text": "How much can I borrow?"
+      }
+     ],
+     "children": [
+      {
+       "type": "paragraph",
+       "rich": [
+        {
+         "text": "Usually up to 4.5 times your yearly income. Use our "
+        },
+        {
+         "text": "mortgage calculator",
+         "href": "https://www.example.com/calculator"
+        },
+        {
+         "text": " for an estimate."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "toggle",
+     "rich": [
+      {
+       "text": "How long does it take?"
+      }
+     ],
+     "children": [
+      {
+       "type": "paragraph",
+       "rich": [
+        {
+         "text": "Most applications get a decision within 5 working days."
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "truncated": false
+  },
+  "41d50256-e330-81a9-91b3-f81e893a0d63": {
+   "page": {
+    "id": "41d50256-e330-81a9-91b3-f81e893a0d63",
+    "url": "https://app.notion.com/p/Spring-Savings-Event-2027-41d50256e33081a991b3f81e893a0d63",
+    "title": "Spring Savings Event 2027",
+    "icon": "🌱",
+    "lastEdited": "2026-11-19T18:58:00.000Z",
+    "database": "41d50256-e330-8108-b228-fd9122329a60",
+    "properties": [
+     {
+      "name": "Status",
+      "type": "select",
+      "value": "Ready for EW",
+      "color": "blue"
+     },
+     {
+      "name": "Due",
+      "type": "date",
+      "value": "2027-02-15"
+     },
+     {
+      "name": "Page path",
+      "type": "rich_text",
+      "value": "/offers/spring-savings-2027"
+     },
+     {
+      "name": "Owner",
+      "type": "rich_text",
+      "value": "Priya Shah, Savings marketing"
+     },
+     {
+      "name": "EW page",
+      "type": "url",
+      "value": ""
+     },
+     {
+      "name": "Keywords",
+      "type": "multi_select",
+      "value": "savings, promotion"
+     },
+     {
+      "name": "Description",
+      "type": "rich_text",
+      "value": "Earn 4.50% APY for 12 months on new deposits. No monthly fees. Join online or in a branch by 31 March 2027."
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "type": "paragraph",
+     "rich": [
+      {
+       "text": "Our biggest savings promotion of the year returns on "
+      },
+      {
+       "text": "1 March 2027",
+       "bold": true
+      },
+      {
+       "text": ". Earn a bonus rate on new deposits and keep it for a full 12 months."
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "url": "https://main--ew-shareready--vipult2022.aem.page/offers/media_14369143bad3c474e0ed37010b0dccabc9ce50fcf.jpg?width=1200&format=jpg&optimize=medium",
+     "expires": false,
+     "caption": [
+      {
+       "text": "A family planning their savings at the kitchen table"
+      }
+     ]
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Why save with Northwind"
+      }
+     ]
+    },
+    {
+     "type": "bulleted_list_item",
+     "rich": [
+      {
+       "text": "4.50% APY",
+       "bold": true
+      },
+      {
+       "text": " for 12 months on balances up to $250,000"
+      }
+     ]
+    },
+    {
+     "type": "bulleted_list_item",
+     "rich": [
+      {
+       "text": "No monthly fees, and no minimum balance once your account is open"
+      }
+     ]
+    },
+    {
+     "type": "bulleted_list_item",
+     "rich": [
+      {
+       "text": "Deposits insured up to the legal limit per depositor"
+      }
+     ]
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "How to join"
+      }
+     ]
+    },
+    {
+     "type": "numbered_list_item",
+     "rich": [
+      {
+       "text": "Open a High-Yield Savings account online or in any branch"
+      }
+     ]
+    },
+    {
+     "type": "numbered_list_item",
+     "rich": [
+      {
+       "text": "Deposit at least "
+      },
+      {
+       "text": "$100 of new money",
+       "bold": true
+      },
+      {
+       "text": " by 31 March 2027"
+      }
+     ]
+    },
+    {
+     "type": "numbered_list_item",
+     "rich": [
+      {
+       "text": "Your bonus rate starts the next business day"
+      }
+     ]
+    },
+    {
+     "type": "callout",
+     "rich": [
+      {
+       "text": "Already a customer? Existing savings accounts can join too. Just add new money."
+      }
+     ],
+     "icon": "💡"
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Compare rates"
+      }
+     ]
+    },
+    {
+     "type": "table",
+     "header": true,
+     "rowHeader": false,
+     "children": [
+      {
+       "type": "table_row",
+       "cells": [
+        [
+         {
+          "text": "Account"
+         }
+        ],
+        [
+         {
+          "text": "APY"
+         }
+        ],
+        [
+         {
+          "text": "Minimum deposit"
+         }
+        ]
+       ]
+      },
+      {
+       "type": "table_row",
+       "cells": [
+        [
+         {
+          "text": "High-Yield Savings"
+         }
+        ],
+        [
+         {
+          "text": "4.50%"
+         }
+        ],
+        [
+         {
+          "text": "$100"
+         }
+        ]
+       ]
+      },
+      {
+       "type": "table_row",
+       "cells": [
+        [
+         {
+          "text": "12-month CD"
+         }
+        ],
+        [
+         {
+          "text": "4.25%"
+         }
+        ],
+        [
+         {
+          "text": "$1,000"
+         }
+        ]
+       ]
+      },
+      {
+       "type": "table_row",
+       "cells": [
+        [
+         {
+          "text": "Everyday Savings"
+         }
+        ],
+        [
+         {
+          "text": "0.50%"
+         }
+        ],
+        [
+         {
+          "text": "$0"
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "type": "quote",
+     "rich": [
+      {
+       "text": "“I moved my emergency fund in ten minutes, all from the app.” Dana, Northwind customer since 2019"
+      }
+     ]
+    },
+    {
+     "type": "divider"
+    },
+    {
+     "type": "heading_1",
+     "rich": [
+      {
+       "text": "Questions"
+      }
+     ]
+    },
+    {
+     "type": "toggle",
+     "rich": [
+      {
+       "text": "Who can join?"
+      }
+     ],
+     "children": [
+      {
+       "type": "paragraph",
+       "rich": [
+        {
+         "text": "Anyone aged 18 or over with a US address. You can open up to two savings accounts during the event."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "toggle",
+     "rich": [
+      {
+       "text": "When does the bonus rate end?"
+      }
+     ],
+     "children": [
+      {
+       "type": "paragraph",
+       "rich": [
+        {
+         "text": "Twelve months after it starts. After that the standard High-Yield Savings rate applies, and we email you a month before."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "toggle",
+     "rich": [
+      {
+       "text": "Can I take money out?"
+      }
+     ],
+     "children": [
+      {
+       "type": "paragraph",
+       "rich": [
+        {
+         "text": "Yes, at any time and without a penalty. Keep in mind:"
+        }
+       ]
+      },
+      {
+       "type": "bulleted_list_item",
+       "rich": [
+        {
+         "text": "Withdrawals do not count as new money if you deposit them again"
+        }
+       ]
+      },
+      {
+       "type": "bulleted_list_item",
+       "rich": [
+        {
+         "text": "The bonus rate applies to balances up to $250,000"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "paragraph",
+     "rich": [
+      {
+       "text": "Read the "
+      },
+      {
+       "text": "full terms",
+       "href": "https://www.example.com/terms"
+      },
+      {
+       "text": " before you apply."
+      }
+     ]
+    }
+   ],
+   "truncated": false
+  }
+ }
+}

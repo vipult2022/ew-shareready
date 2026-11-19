@@ -1,0 +1,28 @@
+# Notion worker: holds the Notion integration secret, so it never reaches the browser.
+# Required: Notion's API does not accept calls from a browser.
+# Deploy from this folder with:  npx wrangler deploy
+#
+# Secret (never commit it):
+#   npx wrangler secret put NOTION_TOKEN
+#   The Internal Integration Secret (ntn_…) from https://www.notion.so/profile/integrations,
+#   with Read content (and Update content for the "EW page" link). Connect the integration
+#   to the pages or databases authors may use: in Notion, ••• → Connections.
+
+name = "notion"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[vars]
+# Required. Comma-separated orgs ("my-org") or sites ("my-org/my-site") this worker serves.
+ALLOWED_ORGS = "vipult2022"
+# Optional. The URL property that gets the link of a page created from a Notion page.
+# LINK_PROPERTY = "EW page"
+# Optional. "no" stops the worker from writing anything to Notion.
+# ALLOW_WRITE = "yes"
+# Optional. Comma-separated database ids the worker may read. Default: everything shared
+# with the integration.
+# NOTION_DATABASES = ""
+# Optional. Comma-separated origins allowed to call the worker. Wildcards (*) are allowed.
+# Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
+# http://localhost:3000
+# ALLOWED_ORIGINS = ""

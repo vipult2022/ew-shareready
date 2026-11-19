@@ -1,0 +1,677 @@
+/* Notion panel. Scoped to .nt-* classes. */
+
+:root {
+  --nt-font: 'Adobe Clean', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, sans-serif;
+  --nt-text: #222;
+  --nt-muted: #6e6e6e;
+  --nt-border: #e1e1e1;
+  --nt-soft: #f5f5f5;
+  --nt-accent: #3b63fb;
+  --nt-accent-hover: #274dea;
+  --nt-accent-soft: #eef2ff;
+  --nt-error: #d7373f;
+  --nt-warning-text: #b05d00;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: #fff;
+}
+
+body {
+  font: 14px/1.45 var(--nt-font);
+  color: var(--nt-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.nt-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.nt-app button,
+.nt-app input,
+.nt-app select {
+  font: inherit;
+  color: inherit;
+}
+
+.nt-app a {
+  color: var(--nt-accent);
+}
+
+.nt-muted {
+  color: var(--nt-muted);
+  font-size: 12px;
+}
+
+.nt-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--nt-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nt-empty {
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* Header */
+
+.nt-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--nt-border);
+}
+
+.nt-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nt-title h1 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.nt-logo {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  color: #191919;
+}
+
+.nt-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nt-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--nt-soft);
+  color: var(--nt-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.nt-chip-worker {
+  background: #e6f6ef;
+  color: #12805c;
+}
+
+.nt-banner {
+  margin: 0;
+  padding: 8px 16px;
+  background: var(--nt-accent-soft);
+  color: #1d3fb8;
+  font-size: 12px;
+}
+
+/* Buttons */
+
+.nt-btn {
+  padding: 6px 16px;
+  border: 2px solid var(--nt-border);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nt-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.nt-btn:hover:not(:disabled) {
+  border-color: #b1b1b1;
+}
+
+.nt-primary {
+  border-color: var(--nt-accent);
+  background: var(--nt-accent);
+  color: #fff !important;
+}
+
+.nt-primary:hover:not(:disabled) {
+  border-color: var(--nt-accent-hover);
+  background: var(--nt-accent-hover);
+}
+
+.nt-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.nt-icon-btn:hover {
+  background: var(--nt-soft);
+}
+
+/* Status */
+
+.nt-busy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: var(--nt-muted);
+  font-size: 12px;
+}
+
+.nt-busy[hidden] {
+  display: none;
+}
+
+.nt-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--nt-border);
+  border-top-color: var(--nt-accent);
+  border-radius: 50%;
+  animation: nt-spin 0.8s linear infinite;
+}
+
+@keyframes nt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nt-error {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--nt-error);
+  border-radius: 4px;
+  background: #fdeceb;
+  color: var(--nt-error);
+  font-size: 13px;
+}
+
+.nt-warn {
+  margin: 0 0 8px;
+  color: var(--nt-warning-text);
+  font-size: 12px;
+}
+
+.nt-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 72px;
+  left: 16px;
+  z-index: 5;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #323232;
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+}
+
+.nt-toast[hidden] {
+  display: none;
+}
+
+/* Setup */
+
+.nt-setup {
+  padding: 16px;
+}
+
+.nt-setup h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.nt-setup p {
+  margin: 0 0 12px;
+}
+
+.nt-steps {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+.nt-steps li {
+  margin-bottom: 6px;
+}
+
+.nt-steps code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--nt-soft);
+  font-size: 12px;
+}
+
+/* Main */
+
+.nt-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 16px 16px;
+}
+
+.nt-field {
+  display: block;
+}
+
+.nt-field select,
+.nt-search,
+.nt-create input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--nt-border);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.nt-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.nt-hint {
+  margin: 6px 0 0;
+}
+
+/* Page list */
+
+.nt-page-list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--nt-border);
+  border-radius: 8px;
+  list-style: none;
+}
+
+.nt-page-list li + li {
+  border-top: 1px solid var(--nt-border);
+}
+
+.nt-page {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nt-page:hover {
+  background: var(--nt-soft);
+}
+
+.nt-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--nt-soft);
+  font-size: 16px;
+  line-height: 1;
+  object-fit: cover;
+}
+
+.nt-page-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nt-page-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.nt-chevron {
+  color: var(--nt-muted);
+  font-size: 20px;
+}
+
+/* Notion's option colours */
+
+.nt-pill {
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: #e9e9e7;
+  color: #32302c;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.nt-c-gray {
+  background: #e3e2e0;
+  color: #32302c;
+}
+
+.nt-c-brown {
+  background: #eee0da;
+  color: #442a1e;
+}
+
+.nt-c-orange {
+  background: #fadec9;
+  color: #49290e;
+}
+
+.nt-c-yellow {
+  background: #fdecc8;
+  color: #402c1b;
+}
+
+.nt-c-green {
+  background: #dbeddb;
+  color: #1c3829;
+}
+
+.nt-c-blue {
+  background: #d3e5ef;
+  color: #183347;
+}
+
+.nt-c-purple {
+  background: #e8deee;
+  color: #412454;
+}
+
+.nt-c-pink {
+  background: #f5e0e9;
+  color: #4c2337;
+}
+
+.nt-c-red {
+  background: #ffe2dd;
+  color: #5d1715;
+}
+
+/* Page detail */
+
+.nt-back {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nt-accent) !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nt-back:hover {
+  text-decoration: underline;
+}
+
+.nt-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.nt-detail-head .nt-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+}
+
+.nt-detail-head h2 {
+  margin: 0 0 2px;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.nt-detail-head p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.nt-props {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--nt-border);
+  border-radius: 8px;
+  list-style: none;
+  font-size: 13px;
+}
+
+.nt-prop {
+  display: contents;
+}
+
+.nt-prop > :last-child {
+  justify-self: start;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nt-props a {
+  overflow-wrap: anywhere;
+}
+
+.nt-open {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nt-open:hover {
+  text-decoration: underline;
+}
+
+.nt-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nt-options .nt-label {
+  margin-bottom: 0;
+}
+
+/* Create a page */
+
+.nt-create {
+  padding: 12px;
+  border: 1px dashed #c6c6c6;
+  border-radius: 8px;
+}
+
+.nt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nt-row input {
+  flex: 1 1 100%;
+  min-width: 0;
+  font-family: ui-monospace, sfmono-regular, menlo, monospace !important;
+  font-size: 12px !important;
+}
+
+.nt-created {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-left: 3px solid #12805c;
+  border-radius: 6px;
+  background: #e6f6ef;
+}
+
+.nt-created a.nt-btn {
+  text-decoration: none;
+}
+
+.nt-created p {
+  margin: 0;
+}
+
+/* Preview: looks like DA's block tables */
+
+.nt-preview {
+  max-height: 420px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--nt-border);
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.nt-doc {
+  font-size: 13px;
+}
+
+.nt-doc h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.nt-doc h2,
+.nt-doc h3,
+.nt-doc h4 {
+  margin: 12px 0 4px;
+  font-size: 15px;
+}
+
+.nt-doc hr {
+  margin: 14px 0;
+  border: 0;
+  border-top: 2px dashed #c6c6c6;
+}
+
+.nt-doc blockquote {
+  margin: 0 0 6px;
+  padding-left: 10px;
+  border-left: 3px solid #c6c6c6;
+}
+
+.nt-doc code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #ececec;
+  font-size: 12px;
+}
+
+.nt-doc > :first-child,
+.nt-doc td > :first-child {
+  margin-top: 0;
+}
+
+.nt-doc p {
+  margin: 0 0 6px;
+}
+
+.nt-doc td > :last-child {
+  margin-bottom: 0;
+}
+
+.nt-doc table {
+  width: 100%;
+  margin-bottom: 12px;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 12px;
+}
+
+.nt-doc td,
+.nt-doc th {
+  padding: 6px 8px;
+  border: 1px solid #d1d1d1;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.nt-doc tr:first-child td[colspan] {
+  background: #efefef;
+  font-weight: 700;
+}
+
+.nt-doc img {
+  display: block;
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 4px;
+}
+
+.nt-doc ul,
+.nt-doc ol {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+/* Footer */
+
+.nt-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 10px 16px;
+  background: #fff;
+  border-top: 1px solid var(--nt-border);
+}
+
+.nt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.nt-app select:focus,
+.nt-app input:focus-visible,
+.nt-app button:focus-visible {
+  outline: 2px solid var(--nt-accent);
+  outline-offset: 1px;
+}

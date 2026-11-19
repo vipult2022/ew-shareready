@@ -15,3 +15,7 @@ tools/airtable/test/*
 tools/airtable/worker/*
 tools/airtable/docs/*
 tools/airtable/demo/*.mjs
+tools/notion/test/*
+tools/notion/worker/*
+tools/notion/docs/*
+tools/notion/demo/*.mjs
