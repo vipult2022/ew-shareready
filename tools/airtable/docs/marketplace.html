@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Marketplace image for the Airtable extension (1200×896). Screenshot at 1×: see README. -->
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 896px; overflow: hidden; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #ebe5fc 0%, #e0e6fd 50%, #dcecfb 100%);
+    position: relative;
+  }
+  .stage {
+    position: absolute; left: 70px; top: 70px; width: 1060px; height: 756px;
+    border-radius: 36px; background: rgba(255,255,255,.42);
+    border: 1px solid rgba(255,255,255,.8);
+    box-shadow: 0 30px 60px rgba(60,70,160,.12);
+  }
+  .win {
+    position: absolute; background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 18px 40px rgba(40,50,120,.18), 0 2px 6px rgba(40,50,120,.08);
+  }
+  .bar { height: 40px; display: flex; align-items: center; gap: 7px; padding: 0 16px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: #fff; opacity: .55; }
+  .bar .title { margin-left: 14px; height: 10px; width: 130px; border-radius: 6px; background: rgba(255,255,255,.35); }
+  .line { height: 9px; border-radius: 5px; background: #e4e7f2; }
+
+  /* base (grid) */
+  .base { left: 112px; top: 204px; width: 470px; height: 488px; }
+  .base .bar { background: #1d6fe0; }
+  .tabs { display: flex; gap: 8px; padding: 12px 16px; background: #1a63c9; }
+  .tab { height: 24px; width: 96px; border-radius: 6px; background: rgba(255,255,255,.18); }
+  .tab.on { background: #fff; }
+  .grid { padding: 0; }
+  .gr { display: grid; grid-template-columns: 40px 1.5fr 1fr 64px 0.8fr; align-items: center; height: 52px; border-bottom: 1.5px solid #eceef6; padding: 0 14px 0 0; }
+  .gr.head { height: 40px; background: #f6f7fb; }
+  .gr.head span { height: 8px; width: 60%; border-radius: 4px; background: #c9cee4; }
+  .gr.sel { background: #eef4ff; }
+  .cb { width: 18px; height: 18px; margin-left: 14px; border-radius: 5px; border: 2px solid #c9cee4; background: #fff; display: grid; place-items: center; }
+  .sel .cb { border-color: #1d6fe0; background: #1d6fe0; }
+  .t { height: 10px; width: 78%; border-radius: 5px; background: #b9c0de; }
+  .pill { height: 22px; width: 70px; border-radius: 11px; }
+  .y { background: #ffe9a8; } .g { background: #c9f0da; } .p { background: #ffd6e4; } .b { background: #d4e4ff; }
+  .thumb { width: 44px; height: 34px; border-radius: 6px; }
+  .n { height: 10px; width: 46px; border-radius: 5px; background: #d5daea; justify-self: end; }
+
+  /* connector */
+  .go {
+    position: absolute; left: 568px; top: 412px; width: 64px; height: 64px; border-radius: 18px;
+    background: #fff; display: grid; place-items: center; z-index: 3;
+    box-shadow: 0 10px 24px rgba(40,50,120,.18);
+  }
+
+  /* page */
+  .page { left: 618px; top: 138px; width: 466px; height: 616px; }
+  .page .bar { background: #3e4aa6; }
+  .doc { padding: 24px 26px; }
+  .h1 { height: 18px; width: 64%; border-radius: 8px; background: #b9c0de; margin-bottom: 18px; }
+  .tbl { border: 2px solid #dfe3f1; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+  .tbl div { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 14px; align-items: center; height: 30px; padding: 0 14px; border-top: 1.5px solid #eceef6; }
+  .tbl div:first-child { border-top: 0; background: #eef0fa; }
+  .tbl div:nth-child(odd):not(:first-child) { background: #fafbfe; }
+  .tbl span { height: 8px; border-radius: 4px; background: #cfd5ea; }
+  .tbl div:first-child span { background: #aab2d6; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .c { border: 1.5px solid #e1e4f0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 2px 6px rgba(40,50,120,.06); }
+  .c .img { height: 70px; }
+  .c .body { padding: 10px 10px 12px; }
+  .c .body .line { margin-bottom: 7px; }
+  .c .btn { margin-top: 10px; height: 16px; width: 54px; border-radius: 8px; border: 2px solid #5b6290; }
+  .acc div { display: flex; align-items: center; justify-content: space-between; height: 36px; border-top: 1.5px solid #e4e7f2; padding-right: 6px; }
+  .acc div:last-child { border-bottom: 1.5px solid #e4e7f2; }
+  .acc span { height: 9px; border-radius: 5px; background: #c9cee4; }
+  .chev { width: 9px; height: 9px; border-right: 2px solid #8a91b8; border-bottom: 2px solid #8a91b8; transform: rotate(45deg) translateY(-3px); }
+
+  .img1 { background: linear-gradient(160deg, #1f4f7a 0%, #2d7fa8 100%); }
+  .img2 { background: linear-gradient(160deg, #bfeedb 0%, #f5c9d9 100%); }
+  .img3 { background: linear-gradient(160deg, #ffb35c 0%, #ffd96b 55%, #3c8fd0 56%, #2f7cbf 100%); }
+  .img4 { background: linear-gradient(160deg, #7f97ff 0%, #a98bf5 55%, #f3b6d0 100%); }
+
+  .badge {
+    position: absolute; left: 1046px; top: 114px; width: 62px; height: 62px; border-radius: 50%;
+    background: #12805c; border: 4px solid #fff; display: grid; place-items: center; z-index: 4;
+    box-shadow: 0 10px 24px rgba(18,128,92,.35);
+  }
+  .spark { position: absolute; }
+</style>
+</head>
+<body>
+  <div class="stage"></div>
+  <svg class="spark" style="left:96px;top:110px" width="40" height="40" viewBox="0 0 24 24"><path d="M12 0c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z" fill="#8b5cf6"/></svg>
+  <svg class="spark" style="left:1088px;top:758px" width="28" height="28" viewBox="0 0 24 24"><path d="M12 0c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z" fill="#6f86ff"/></svg>
+
+  <div class="win base">
+    <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="title"></i></div>
+    <div class="tabs"><i class="tab on"></i><i class="tab"></i><i class="tab"></i></div>
+    <div class="grid">
+      <div class="gr head"><i></i><span></span><span></span><span></span><span></span></div>
+      <div class="gr sel"><i class="cb"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="#fff" stroke-width="2"/></svg></i><i class="t"></i><i class="pill y"></i><i class="thumb img1"></i><i class="n"></i></div>
+      <div class="gr sel"><i class="cb"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="#fff" stroke-width="2"/></svg></i><i class="t" style="width:62%"></i><i class="pill g"></i><i class="thumb img2"></i><i class="n"></i></div>
+      <div class="gr sel"><i class="cb"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="#fff" stroke-width="2"/></svg></i><i class="t" style="width:70%"></i><i class="pill p"></i><i class="thumb img3"></i><i class="n"></i></div>
+      <div class="gr"><i class="cb"></i><i class="t" style="width:54%"></i><i class="pill b"></i><i class="thumb img4"></i><i class="n"></i></div>
+      <div class="gr sel"><i class="cb"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="#fff" stroke-width="2"/></svg></i><i class="t" style="width:66%"></i><i class="pill y"></i><i class="thumb img2"></i><i class="n"></i></div>
+      <div class="gr"><i class="cb"></i><i class="t" style="width:48%"></i><i class="pill g"></i><i class="thumb img1"></i><i class="n"></i></div>
+      <div class="gr"><i class="cb"></i><i class="t" style="width:72%"></i><i class="pill p"></i><i class="thumb img4"></i><i class="n"></i></div>
+    </div>
+  </div>
+
+  <div class="go"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="#3b63fb" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+  <div class="win page">
+    <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="title"></i></div>
+    <div class="doc">
+      <div class="h1"></div>
+      <div class="line" style="width:92%;margin-bottom:10px"></div>
+      <div class="line" style="width:70%;margin-bottom:20px"></div>
+      <div class="tbl">
+        <div><span></span><span></span><span></span></div>
+        <div><span style="width:80%"></span><span style="width:50%"></span><span style="width:60%"></span></div>
+        <div><span style="width:66%"></span><span style="width:50%"></span><span style="width:40%"></span></div>
+        <div><span style="width:74%"></span><span style="width:50%"></span><span style="width:60%"></span></div>
+      </div>
+      <div class="cards">
+        <div class="c"><div class="img img1"></div><div class="body"><div class="line" style="background:#b9c0de;width:80%"></div><div class="line"></div><div class="line" style="width:60%"></div><div class="btn"></div></div></div>
+        <div class="c"><div class="img img2"></div><div class="body"><div class="line" style="background:#b9c0de;width:70%"></div><div class="line"></div><div class="line" style="width:66%"></div><div class="btn"></div></div></div>
+        <div class="c"><div class="img img3"></div><div class="body"><div class="line" style="background:#b9c0de;width:76%"></div><div class="line"></div><div class="line" style="width:52%"></div><div class="btn"></div></div></div>
+      </div>
+      <div class="acc">
+        <div><span style="width:58%"></span><i class="chev"></i></div>
+        <div><span style="width:46%"></span><i class="chev"></i></div>
+        <div><span style="width:52%"></span><i class="chev"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="badge"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+</body>
+</html>

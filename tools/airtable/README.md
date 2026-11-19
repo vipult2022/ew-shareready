@@ -308,7 +308,12 @@ npx -y @adobe/aem-cli up           # serves the repo on localhost:3000
 | Owner | vipult2022 |
 | Doc Url | https://github.com/vipult2022/ew-shareready/tree/main/tools/airtable#readme |
 | Try Url | https://main--ew-shareready--vipult2022.aem.page/tools/airtable.html?demo=1 |
+| Image | https://main--ew-shareready--vipult2022.aem.page/tools/airtable/marketplace.png (1200×896) |
 | Logo | https://main--ew-shareready--vipult2022.aem.page/tools/airtable/icon.svg |
+
+<img src="marketplace.png" width="600" alt="Airtable Marketplace image: a grid of records with four rows ticked, flowing into a page with a table, three cards and an accordion">
+
+The Marketplace image is drawn in HTML and CSS. Its source is in [`docs/marketplace.html`](docs/marketplace.html).
 
 ## License
 
