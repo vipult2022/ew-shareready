@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send to Experience Workspace</title>
+<style>
+  /* Spectrum 2 inspired tokens. Figma adds .figma-dark / .figma-light to <html>. */
+  :root {
+    --font: "adobe-clean", "Adobe Clean", "Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --gray-25: #fff;
+    --gray-50: #f8f8f8;
+    --gray-75: #f3f3f3;
+    --gray-100: #e9e9e9;
+    --gray-200: #e1e1e1;
+    --gray-300: #dadada;
+    --gray-400: #c6c6c6;
+    --gray-600: #717171;
+    --gray-700: #505050;
+    --gray-800: #292929;
+    --gray-900: #131313;
+    --accent: #3b63fb;
+    --accent-hover: #274dea;
+    --accent-down: #1d3ecf;
+    --accent-subtle: #e5ecff;
+    --accent-text: #274dea;
+    --red: #eb1000;
+    --positive: #07824f;
+    --positive-subtle: #d8f6e2;
+    --positive-text: #05613a;
+    --notice: #e46f00;
+    --notice-subtle: #ffead1;
+    --notice-text: #8c3d00;
+    --negative: #d73220;
+    --negative-subtle: #ffe4df;
+    --negative-text: #9e1c0e;
+    --info-subtle: #e5ecff;
+    --info-text: #2c45c2;
+    --focus: #4b75ff;
+    --shadow: 0 1px 4px rgb(0 0 0 / 8%), 0 6px 20px rgb(0 0 0 / 8%);
+    --radius: 8px;
+    --radius-lg: 14px;
+
+    color-scheme: light;
+  }
+
+  .figma-dark {
+    --gray-25: #111;
+    --gray-50: #1b1b1b;
+    --gray-75: #222;
+    --gray-100: #2c2c2c;
+    --gray-200: #323232;
+    --gray-300: #393939;
+    --gray-400: #4a4a4a;
+    --gray-600: #8a8a8a;
+    --gray-700: #afafaf;
+    --gray-800: #dbdbdb;
+    --gray-900: #f2f2f2;
+    --accent: #4b75ff;
+    --accent-hover: #6188ff;
+    --accent-down: #7a9bff;
+    --accent-subtle: #1f2a52;
+    --accent-text: #8aa8ff;
+    --positive-subtle: #0f3322;
+    --positive-text: #5fd396;
+    --notice-subtle: #3a2410;
+    --notice-text: #ffb46b;
+    --negative-subtle: #3d1611;
+    --negative-text: #ff8a78;
+    --info-subtle: #1f2a52;
+    --info-text: #9db4ff;
+    --shadow: 0 1px 4px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 40%);
+
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--gray-25);
+    color: var(--gray-800);
+    font: 14px/1.5 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, input, textarea { font: inherit; color: inherit; }
+
+  [hidden] { display: none !important; }
+
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* Header */
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 16px 12px;
+  }
+
+  .mark {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff4d2e 0%, var(--red) 55%, #b80d00 100%);
+    box-shadow: 0 2px 8px rgb(235 16 0 / 35%);
+    color: #fff;
+  }
+
+  .brand { flex: 1; min-width: 0; }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.25;
+    color: var(--gray-900);
+    letter-spacing: -0.01em;
+  }
+
+  .site {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--gray-600);
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .site span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gray-400); }
+  .dot.ok { background: var(--positive); box-shadow: 0 0 0 3px var(--positive-subtle); }
+  .dot.bad { background: var(--negative); box-shadow: 0 0 0 3px var(--negative-subtle); }
+
+  .icon-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--gray-700);
+    cursor: pointer;
+  }
+
+  .icon-btn:hover { background: var(--gray-100); color: var(--gray-900); }
+
+  /* Tabs */
+  .tabs {
+    position: relative;
+    display: flex;
+    gap: 20px;
+    padding: 0 16px;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .tab {
+    position: relative;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--gray-600);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .tab:hover { color: var(--gray-900); }
+  .tab[aria-selected="true"] { color: var(--gray-900); }
+
+  .tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -2px;
+    left: 0;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--gray-900);
+  }
+
+  .count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    margin-left: 4px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gray-200);
+    color: var(--gray-800);
+    font-size: 11px;
+  }
+
+  /* Views */
+  main { flex: 1; overflow-y: auto; padding: 16px; }
+
+  .stack > * + * { margin-top: 16px; }
+
+  .empty {
+    padding: 20px 16px 16px;
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-lg);
+    text-align: center;
+  }
+
+  .empty-art {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 10px;
+    border-radius: 16px;
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+  }
+
+  .empty h2, .section-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--gray-900);
+  }
+
+  .empty p { margin: 4px 0 0; color: var(--gray-600); }
+
+  .steps {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+    counter-reset: step;
+  }
+
+  .steps li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    background: var(--gray-50);
+    color: var(--gray-700);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gray-800);
+    color: var(--gray-25);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .steps b { color: var(--gray-900); }
+
+  /* Frame card */
+  .card {
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    background: var(--gray-25);
+    box-shadow: var(--shadow);
+  }
+
+  .thumb {
+    position: relative;
+    height: 168px;
+    overflow: hidden;
+    background:
+      conic-gradient(var(--gray-75) 25%, var(--gray-50) 0 50%, var(--gray-75) 0 75%, var(--gray-50) 0) 0 0 / 16px 16px;
+  }
+
+  .thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  .thumb .chip {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgb(0 0 0 / 65%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    backdrop-filter: blur(6px);
+  }
+
+  .card-body { padding: 12px 14px 14px; }
+
+  .card-body h2 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--gray-900);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+
+  .stats li {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--gray-75);
+    color: var(--gray-700);
+    font-size: 12px;
+  }
+
+  .stats b { color: var(--gray-900); }
+
+  /* In-line alerts */
+  .alert {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .alert svg { flex: none; margin-top: 1px; }
+  .alert.notice { background: var(--notice-subtle); color: var(--notice-text); }
+  .alert.info { background: var(--info-subtle); color: var(--info-text); }
+  .alert.positive { background: var(--positive-subtle); color: var(--positive-text); }
+  .alert.negative { background: var(--negative-subtle); color: var(--negative-text); }
+  .alert b { font-weight: 800; }
+
+  .alert .link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-weight: 800;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .alerts > * + * { margin-top: 8px; }
+
+  /* Fields */
+  .field { display: block; }
+
+  .label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--gray-700);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .input {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius);
+    background: var(--gray-25);
+    color: var(--gray-900);
+    transition: border-color 0.13s;
+  }
+
+  .input::placeholder { color: var(--gray-600); }
+  .input:hover { border-color: var(--gray-400); }
+  .input:focus { border-color: var(--focus); outline: none; }
+
+  textarea.input { resize: vertical; min-height: 64px; }
+
+  .help { display: block; margin-top: 4px; color: var(--gray-600); font-size: 12px; }
+
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; min-width: 0; }
+
+  .with-btn { position: relative; }
+  .with-btn .input { padding-right: 40px; }
+  .with-btn .icon-btn { position: absolute; top: 2px; right: 2px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 16px;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.13s, border-color 0.13s, transform 0.13s;
+  }
+
+  .btn:active { transform: scale(0.98); }
+  .btn.lg { width: 100%; height: 44px; border-radius: 22px; font-size: 15px; }
+  .btn.accent { background: var(--accent); color: #fff; }
+  .btn.accent:hover { background: var(--accent-hover); }
+  .btn.accent:active { background: var(--accent-down); }
+  .btn.secondary { background: var(--gray-100); color: var(--gray-900); }
+  .btn.secondary:hover { background: var(--gray-200); }
+  .btn.outline { border-color: var(--gray-300); background: transparent; color: var(--gray-900); }
+  .btn.outline:hover { border-color: var(--gray-400); background: var(--gray-50); }
+  .btn[disabled] { background: var(--gray-100); color: var(--gray-600); cursor: default; transform: none; }
+
+  /* Footer bar */
+  .bar {
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-25);
+  }
+
+  .bar .btn + .btn { margin-left: 8px; }
+  .bar.split { display: flex; }
+  .bar.split .btn { flex: 1; }
+
+  .progress { margin-bottom: 12px; }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: var(--gray-700);
+    font-size: 12px;
+  }
+
+  .track { height: 4px; overflow: hidden; border-radius: 2px; background: var(--gray-200); }
+
+  .fill {
+    width: 0;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.2s;
+  }
+
+  .progress.indeterminate .fill { width: 35%; animation: slide 1.1s ease-in-out infinite; }
+
+  @keyframes slide {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
+  }
+
+  /* Sent list */
+  .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+
+  .list { margin: 0; padding: 0; list-style: none; }
+
+  .item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .item:last-child { border-bottom: 0; }
+
+  .item-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--gray-75);
+    color: var(--gray-700);
+  }
+
+  .item-main { flex: 1; min-width: 0; }
+
+  .item-name {
+    overflow: hidden;
+    color: var(--gray-900);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-meta { color: var(--gray-600); font-size: 12px; }
+
+  .item-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent-text);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .item-link:hover { text-decoration: underline; }
+
+  .badge {
+    flex: none;
+    padding: 1px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .badge.new { background: var(--info-subtle); color: var(--info-text); }
+  .badge.updated { background: var(--notice-subtle); color: var(--notice-text); }
+  .badge.built { background: var(--positive-subtle); color: var(--positive-text); }
+
+  /* Settings */
+  .sub-head { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px -6px; }
+
+  .note { margin: 0; color: var(--gray-600); font-size: 13px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    right: 16px;
+    bottom: 84px;
+    left: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px 10px 14px;
+    border-radius: var(--radius);
+    background: var(--positive);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    animation: rise 0.2s ease-out;
+  }
+
+  .toast.negative { background: var(--negative); }
+  .toast.info { background: var(--gray-800); color: var(--gray-25); }
+  .toast span { flex: 1; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .spin { animation: spin 0.9s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mark" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path fill="currentColor" d="M9 8.5 16 12l-7 3.5z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.6" d="M10 12.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="m8.4 2.5-.5 2a5.8 5.8 0 0 0-1.6.9l-2-.6-1.6 2.8 1.5 1.4a5.9 5.9 0 0 0 0 1.9L2.7 12.3l1.6 2.8 2-.6c.5.4 1 .7 1.6.9l.5 2h3.2l.5-2c.6-.2 1.1-.5 1.6-.9l2 .6 1.6-2.8-1.5-1.4a5.9 5.9 0 0 0 0-1.9l1.5-1.4-1.6-2.8-2 .6a5.8 5.8 0 0 0-1.6-.9l-.5-2Z"/></symbol>
+  <symbol id="i-frame" viewBox="0 0 32 32"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M10 4v24M22 4v24M4 10h24M4 22h24"/></symbol>
+  <symbol id="i-page" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 2.5h6.5L15 6v11.5H5z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M11.5 2.5V6H15M7.5 10h5M7.5 13h5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 18 18"><path fill="currentColor" d="M9 1.5 17 16H1zm-.9 5v4.2h1.8V6.5zm0 5.6V14h1.8v-1.9z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="currentColor"/><path fill="var(--gray-25)" d="M8.1 7.8h1.8v5.4H8.1zm0-3h1.8v1.8H8.1z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" fill="currentColor"/><path fill="none" stroke="var(--gray-25)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m5.5 9.2 2.3 2.3 4.7-4.9"/></symbol>
+  <symbol id="i-check-white" viewBox="0 0 18 18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m4 9.5 3.2 3.2L14 5.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m12 4-6 6 6 6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M16 10a6 6 0 1 1-1.8-4.3M16 3.5v3h-3"/></symbol>
+  <symbol id="i-out" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 3h4v4M13 3 7.5 8.5M11.5 9.5V13h-8.5V4.5H6.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.6" d="M1.8 10S4.7 4.5 10 4.5 18.2 10 18.2 10 15.3 15.5 10 15.5 1.8 10 1.8 10Z"/><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-send" viewBox="0 0 20 20"><path fill="currentColor" d="M2.5 9.1 17 2.8c.5-.2 1 .3.8.8L11.5 18c-.2.5-.9.5-1.1 0l-1.9-5.1a1 1 0 0 0-.6-.6L2.5 10.2c-.5-.2-.5-.9 0-1.1Z"/></symbol>
+  <symbol id="i-sample" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M10 2.5 11.8 7l4.7.4-3.6 3 1.1 4.6L10 12.6 5.9 15l1.1-4.6-3.6-3L8.2 7z"/></symbol>
+</svg>
+
+<header class="top">
+  <span class="mark" aria-hidden="true"><svg width="22" height="22"><use href="#i-mark"/></svg></span>
+  <div class="brand">
+    <h1>Send to Experience Workspace</h1>
+    <button class="site" id="site" type="button" title="Connection settings"><span class="dot" id="site-dot"></span><span id="site-label">Not connected yet</span></button>
+  </div>
+  <button class="icon-btn" id="open-settings" type="button" aria-label="Settings" title="Settings"><svg width="20" height="20"><use href="#i-gear"/></svg></button>
+</header>
+
+<nav class="tabs" role="tablist" id="tabs">
+  <button class="tab" role="tab" type="button" data-tab="send" aria-selected="true">Send</button>
+  <button class="tab" role="tab" type="button" data-tab="sent" aria-selected="false">Sent<span class="count" id="sent-count" hidden></span></button>
+</nav>
+
+<main>
+  <section id="view-send" class="stack">
+    <div id="result" hidden></div>
+
+    <div class="empty" id="empty">
+      <div class="empty-art"><svg width="32" height="32"><use href="#i-frame"/></svg></div>
+      <h2 id="empty-title">Select a frame to send</h2>
+      <p id="empty-text">Pick one top-level frame: a page or a section of one.</p>
+      <ol class="steps">
+        <li><span><b>Select</b> the frame and add the page path and a note.</span></li>
+        <li><span><b>Send</b> it. Copy, layout and pictures go to your site's inbox.</span></li>
+        <li><span>The author <b>builds the page in Experience Workspace</b> with AI or one click, then marks it built here.</span></li>
+      </ol>
+      <p style="margin-top:14px"><button class="btn outline" id="sample" type="button"><svg width="18" height="18"><use href="#i-sample"/></svg>Draw a sample design</button></p>
+    </div>
+
+    <div id="frame" hidden class="stack">
+      <article class="card">
+        <div class="thumb"><img id="thumb" alt=""><span class="chip" id="frame-size"></span></div>
+        <div class="card-body">
+          <h2 id="frame-name"></h2>
+          <ul class="stats">
+            <li><b id="st-texts">0</b> texts</li>
+            <li><b id="st-pics">0</b> pictures</li>
+            <li id="st-skip-wrap"><b id="st-skip">0</b> icons left out</li>
+          </ul>
+        </div>
+      </article>
+      <div class="alerts" id="checks"></div>
+      <label class="field"><span class="label">Page path</span>
+        <input class="input" id="path" placeholder="/offers/spring-savings" autocomplete="off" spellcheck="false">
+        <span class="help">Where the author should create the page. Optional.</span>
+      </label>
+      <label class="field"><span class="label">Note for the author</span>
+        <textarea class="input" id="note" rows="3" placeholder="Anything they should know: sign-off, deadline, what not to change"></textarea>
+      </label>
+    </div>
+  </section>
+
+  <section id="view-sent" hidden>
+    <div class="list-head">
+      <h2 class="section-title">Sent to <span id="sent-site">your site</span></h2>
+      <button class="icon-btn" id="refresh" type="button" aria-label="Refresh" title="Refresh"><svg width="18" height="18" id="refresh-icon"><use href="#i-refresh"/></svg></button>
+    </div>
+    <div id="sent-alert"></div>
+    <ul class="list" id="sent-list"></ul>
+  </section>
+
+  <section id="view-settings" class="stack" hidden>
+    <div class="sub-head">
+      <button class="icon-btn" id="close-settings" type="button" aria-label="Back"><svg width="20" height="20"><use href="#i-back"/></svg></button>
+      <h2 class="section-title">Connection</h2>
+    </div>
+    <p class="note">Whoever set up the Figma extension for your site has these. They are kept in Figma on this computer only.</p>
+    <label class="field"><span class="label">Worker URL</span>
+      <input class="input" id="s-worker" placeholder="https://figma-handoff.your-team.workers.dev" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field"><span class="label">Team key</span>
+      <span class="with-btn"><input class="input" id="s-key" type="password" autocomplete="off" spellcheck="false">
+      <button class="icon-btn" id="s-show" type="button" aria-label="Show key" title="Show key"><svg width="18" height="18"><use href="#i-eye"/></svg></button></span>
+    </label>
+    <div class="row">
+      <label class="field"><span class="label">Org</span><input class="input" id="s-org" placeholder="my-org" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span class="label">Site</span><input class="input" id="s-site" placeholder="my-site" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <label class="field"><span class="label">Your name</span>
+      <input class="input" id="s-sender" placeholder="Shown to authors" autocomplete="off">
+    </label>
+    <div id="s-result"></div>
+  </section>
+</main>
+
+<footer class="bar" id="bar-send">
+  <div class="progress" id="progress" hidden>
+    <div class="progress-label"><span id="progress-text">Preparing</span><span id="progress-value"></span></div>
+    <div class="track"><div class="fill" id="progress-fill"></div></div>
+  </div>
+  <button class="btn accent lg" id="send" type="button" disabled><svg width="18" height="18"><use href="#i-send"/></svg><span id="send-label">Send to Experience Workspace</span></button>
+</footer>
+<footer class="bar split" id="bar-settings" hidden>
+  <button class="btn outline" id="s-test" type="button">Test connection</button>
+  <button class="btn accent" id="s-save" type="button">Save</button>
+</footer>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const PREVIEW = window.parent === window;
+  const PUBLIC_DEMO = 'https://main--ew-shareready--vipult2022.aem.page';
+  const ICON = (name, size = 18) => `<svg width="${size}" height="${size}"><use href="#i-${name}"/></svg>`;
+  const state = {
+    settings: {}, selection: { ok: false, reason: 'none' }, tab: 'send', busy: false, sent: [], lastSent: null,
+  };
+
+  if (PREVIEW && params.get('theme') === 'dark') document.documentElement.classList.add('figma-dark');
+
+  const esc = (text) => String(text ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+
+  /* Talking to code.js (or a stand-in when the window is opened in a browser) */
+  let mock = null;
+  function post(type, data = {}) {
+    if (PREVIEW) mock(type, data);
+    else parent.postMessage({ pluginMessage: { type, ...data } }, '*');
+  }
+
+  const connected = () => !!(state.settings.workerUrl && state.settings.key && state.settings.org && state.settings.site);
+  const siteName = () => `${state.settings.org}/${state.settings.site}`;
+
+  async function call(route, body) {
+    const { workerUrl, key, org, site } = state.settings;
+    if (PREVIEW) return mock.worker(route, body);
+    let resp;
+    try {
+      resp = await fetch(`${workerUrl.replace(/\/+$/, '')}/${route}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org, site, ...body }),
+      });
+    } catch {
+      throw new Error('Could not reach the worker. Check the worker URL and your connection.');
+    }
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || `The worker answered ${resp.status}.`);
+    return data;
+  }
+
+  /* Toast */
+  let toastTimer;
+  function toast(text, kind = 'positive') {
+    const el = $('toast');
+    el.className = `toast ${kind}`;
+    el.innerHTML = `${kind === 'positive' ? ICON('check-white') : ICON('alert', 16)}<span>${esc(text)}</span>`;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 4200);
+  }
+
+  const alertHtml = (kind, html) => `<div class="alert ${kind}">${ICON(kind === 'positive' ? 'check' : kind === 'info' ? 'info' : 'alert')}<div>${html}</div></div>`;
+
+  /* Header and tabs */
+  function renderSite() {
+    const ok = connected();
+    $('site-dot').className = `dot${ok ? ' ok' : ''}`;
+    $('site-label').textContent = ok ? `${siteName()} · ${hostOf(state.settings.workerUrl)}` : 'Not connected yet: open settings';
+    $('sent-site').textContent = ok ? siteName() : 'your site';
+  }
+
+  function hostOf(url) {
+    try { return new URL(url).host.split('.')[0]; } catch { return ''; }
+  }
+
+  function setTab(tab) {
+    state.tab = tab;
+    const settings = tab === 'settings';
+    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === tab)));
+    $('tabs').hidden = settings;
+    $('view-send').hidden = tab !== 'send';
+    $('view-sent').hidden = tab !== 'sent';
+    $('view-settings').hidden = !settings;
+    $('bar-send').hidden = tab !== 'send';
+    $('bar-settings').hidden = !settings;
+    if (settings) fillSettings();
+    if (tab === 'sent') loadSent();
+  }
+
+  /* Send view */
+  function renderSelection() {
+    const s = state.selection;
+    $('empty').hidden = s.ok;
+    $('frame').hidden = !s.ok;
+    if (!s.ok) {
+      $('empty-title').textContent = s.reason === 'type' ? 'Select a frame, not a layer' : s.reason === 'many' ? 'Select just one frame' : 'Select a frame to send';
+      $('empty-text').textContent = s.reason === 'type'
+        ? `“${s.name || 'This layer'}” is not a frame. Select the frame that holds the page.`
+        : 'Pick one top-level frame: a page or a section of one.';
+    } else {
+      $('frame-name').textContent = s.name;
+      $('frame-size').textContent = `${s.w} × ${s.h}`;
+      $('st-texts').textContent = s.texts;
+      $('st-pics').textContent = s.pictures;
+      $('st-skip').textContent = s.skipped;
+      $('st-skip-wrap').hidden = !s.skipped;
+      const img = $('thumb');
+      if (s.preview) img.src = /^(https?:|\.|\/)/.test(s.preview) ? s.preview : `data:image/jpeg;base64,${s.preview}`;
+      img.hidden = !s.preview;
+      const checks = [];
+      if (s.unnamed) {
+        checks.push(alertHtml('notice', `<b>${s.unnamed} picture${s.unnamed === 1 ? '' : 's'}</b> ${s.unnamed === 1 ? 'has' : 'have'} a default layer name. Rename ${s.unnamed === 1 ? 'it' : 'them'} to say what ${s.unnamed === 1 ? 'it shows' : 'they show'}: that becomes the alt text.`));
+      }
+      if (s.truncated) checks.push(alertHtml('notice', '<b>Very large frame.</b> Only the first 3,000 layers are sent. Send it in sections.'));
+      if (!connected()) checks.push(alertHtml('info', 'Connect to your team\'s worker before sending. <button class="link" type="button" data-open-settings>Open settings</button>'));
+      $('checks').innerHTML = checks.join('');
+    }
+    renderSend();
+  }
+
+  function renderSend() {
+    const btn = $('send');
+    btn.disabled = state.busy || !state.selection.ok;
+    $('send-label').textContent = state.busy ? 'Sending…' : connected() ? 'Send to Experience Workspace' : 'Connect and send';
+  }
+
+  function progress(text, value = null) {
+    const el = $('progress');
+    if (text === null) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.classList.toggle('indeterminate', value === null);
+    $('progress-text').textContent = text;
+    $('progress-value').textContent = value === null ? '' : `${Math.round(value * 100)}%`;
+    $('progress-fill').style.width = value === null ? '' : `${Math.round(value * 100)}%`;
+  }
+
+  function showResult(handoff) {
+    const el = $('result');
+    if (!handoff) {
+      el.hidden = true;
+      return;
+    }
+    const again = handoff.status === 'updated';
+    el.innerHTML = alertHtml('positive', `<b>${again ? 'Updated' : 'Sent'}: “${esc(handoff.name)}”.</b> Authors find it in Experience Workspace under Library → Figma. <button class="link" type="button" data-tab-link="sent">See status</button>`);
+    el.hidden = false;
+  }
+
+  function startSend() {
+    if (!connected()) {
+      setTab('settings');
+      $('s-result').innerHTML = alertHtml('info', 'Add your team\'s connection, then send.');
+      return;
+    }
+    state.busy = true;
+    showResult(null);
+    renderSend();
+    progress('Reading layers');
+    post('build', { options: { path: $('path').value.trim(), note: $('note').value.trim(), sender: state.settings.sender || '' } });
+  }
+
+  async function upload(payload) {
+    try {
+      const size = JSON.stringify(payload).length;
+      progress(`Uploading ${(size / 1048576).toFixed(1)} MB`);
+      const result = await call('send', payload);
+      progress(null);
+      state.lastSent = result.handoff;
+      showResult(result.handoff);
+      toast(result.handoff.status === 'updated' ? 'Design updated in Experience Workspace' : 'Sent to Experience Workspace');
+      loadSent(true);
+    } catch (error) {
+      progress(null);
+      toast(error.message, 'negative');
+    } finally {
+      state.busy = false;
+      renderSend();
+    }
+  }
+
+  /* Sent view */
+  function ago(iso) {
+    const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+    if (!iso || Number.isNaN(s)) return '';
+    if (s < 60) return 'just now';
+    if (s < 3600) return `${Math.round(s / 60)} min ago`;
+    if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+    return `${Math.round(s / 86400)} d ago`;
+  }
+
+  const LABEL = { new: 'New', updated: 'Updated', built: 'Built' };
+
+  function renderSent() {
+    const list = $('sent-list');
+    const count = state.sent.filter((h) => h.status !== 'built').length;
+    $('sent-count').textContent = count;
+    $('sent-count').hidden = !count;
+    if (!state.sent.length) {
+      list.innerHTML = '<li class="empty" style="border-style:solid"><div class="empty-art">' + ICON('send', 28) + '</div><h2>Nothing sent yet</h2><p>Designs you send show here, with what the authors did with them.</p></li>';
+      return;
+    }
+    list.innerHTML = state.sent.map((h) => {
+      const when = h.status === 'built' ? `Built ${ago(h.updated)}` : `Sent ${ago(h.sent)}${h.sender ? ` by ${esc(h.sender)}` : ''}`;
+      const link = h.url ? `<button class="item-link" type="button" data-url="${esc(h.url)}">Open page${ICON('out', 14)}</button>` : '';
+      return `<li class="item"><span class="item-icon">${ICON('page', 20)}</span><div class="item-main"><div class="item-name">${esc(h.name)}</div><div class="item-meta">${esc(h.path || h.page || '')}${h.path || h.page ? ' · ' : ''}${when}</div>${link}</div><span class="badge ${esc(h.status)}">${LABEL[h.status] || esc(h.status)}</span></li>`;
+    }).join('');
+  }
+
+  async function loadSent(quiet = false) {
+    if (!connected()) {
+      $('sent-alert').innerHTML = alertHtml('info', 'Connect to your team\'s worker to see what you sent. <button class="link" type="button" data-open-settings>Open settings</button>');
+      state.sent = [];
+      renderSent();
+      return;
+    }
+    $('sent-alert').innerHTML = '';
+    $('refresh-icon').classList.add('spin');
+    try {
+      state.sent = (await call('sent', {})).handoffs || [];
+      renderSent();
+    } catch (error) {
+      if (!quiet) $('sent-alert').innerHTML = alertHtml('negative', esc(error.message));
+    } finally {
+      $('refresh-icon').classList.remove('spin');
+    }
+  }
+
+  /* Settings view */
+  const FIELDS = { workerUrl: 's-worker', key: 's-key', org: 's-org', site: 's-site', sender: 's-sender' };
+
+  function fillSettings() {
+    Object.entries(FIELDS).forEach(([k, id]) => { $(id).value = state.settings[k] || ''; });
+  }
+
+  function readSettings() {
+    const out = {};
+    Object.entries(FIELDS).forEach(([k, id]) => { out[k] = $(id).value.trim(); });
+    out.workerUrl = out.workerUrl.replace(/\/+$/, '');
+    out.org = out.org.toLowerCase();
+    out.site = out.site.toLowerCase();
+    return out;
+  }
+
+  function validSettings(s) {
+    if (!/^(https:\/\/|http:\/\/localhost(:\d+)?)/.test(s.workerUrl)) return 'The worker URL must start with https://.';
+    if (!s.key) return 'Add the team key.';
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(s.org) || !/^[a-z0-9][a-z0-9-]*$/.test(s.site)) return 'Add the org and site, as in da.live/#/org/site.';
+    return '';
+  }
+
+  async function testSettings() {
+    const next = readSettings();
+    const problem = validSettings(next);
+    if (problem) {
+      $('s-result').innerHTML = alertHtml('negative', esc(problem));
+      return;
+    }
+    const saved = state.settings;
+    state.settings = { ...saved, ...next };
+    $('s-result').innerHTML = alertHtml('info', 'Checking…');
+    try {
+      const { handoffs } = await call('sent', {});
+      $('s-result').innerHTML = alertHtml('positive', `<b>Connected to ${esc(siteName())}.</b> ${handoffs.length} design${handoffs.length === 1 ? '' : 's'} in its inbox.`);
+    } catch (error) {
+      $('s-result').innerHTML = alertHtml('negative', esc(error.message));
+    } finally {
+      state.settings = saved;
+    }
+  }
+
+  function saveSettings() {
+    const next = readSettings();
+    const problem = validSettings(next);
+    if (problem) {
+      $('s-result').innerHTML = alertHtml('negative', esc(problem));
+      return;
+    }
+    post('save-settings', { settings: next });
+    $('s-result').innerHTML = '';
+    toast('Connection saved');
+    setTab('send');
+  }
+
+  /* Sample design */
+  async function drawSample() {
+    if (PREVIEW) {
+      toast('Sample design drawn', 'positive');
+      return;
+    }
+    const { org, site } = state.settings;
+    const base = org && site ? `https://main--${site}--${org}.aem.page` : PUBLIC_DEMO;
+    const btn = $('sample');
+    btn.disabled = true;
+    try {
+      let resp = await fetch(`${base}/tools/figma/demo/handoff.json`).catch(() => null);
+      let root = base;
+      if (!resp || !resp.ok) {
+        root = PUBLIC_DEMO;
+        resp = await fetch(`${PUBLIC_DEMO}/tools/figma/demo/handoff.json`);
+      }
+      const [sample] = await resp.json();
+      const images = {};
+      await Promise.all(Object.entries(sample.files || {}).filter(([k]) => k !== 'thumbnail').map(async ([k, file]) => {
+        const r = await fetch(`${root}/tools/figma/demo/${file}`);
+        if (r.ok) images[k] = new Uint8Array(await r.arrayBuffer());
+      }));
+      post('sample', { tree: sample.tree, images });
+      $('path').value = sample.path || '';
+      $('note').value = sample.note || '';
+    } catch {
+      toast('Could not load the sample design.', 'negative');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* Messages from code.js */
+  function onMessage(msg) {
+    if (!msg) return;
+    if (msg.type === 'settings') {
+      state.settings = msg.settings || {};
+      renderSite();
+      renderSelection();
+      if (connected()) loadSent(true);
+    } else if (msg.type === 'selection') {
+      const changed = !state.selection.ok || !msg.selection.ok || state.selection.id !== msg.selection.id;
+      state.selection = msg.selection;
+      if (changed && !state.busy) showResult(null);
+      renderSelection();
+    } else if (msg.type === 'progress') {
+      if (msg.step === 'pictures') progress(`Exporting pictures ${msg.done + 1} of ${msg.total}`, msg.total ? msg.done / msg.total : 0);
+      else progress('Making a thumbnail');
+    } else if (msg.type === 'payload') {
+      upload(msg.payload);
+    } else if (msg.type === 'error') {
+      state.busy = false;
+      progress(null);
+      renderSend();
+      toast(msg.text, 'negative');
+    }
+  }
+
+  window.onmessage = (event) => onMessage(event.data && event.data.pluginMessage);
+
+  /* Events */
+  document.addEventListener('click', (event) => {
+    const t = event.target.closest('button');
+    if (!t) return;
+    if (t.dataset.tab) setTab(t.dataset.tab);
+    else if (t.dataset.tabLink) setTab(t.dataset.tabLink);
+    else if ('openSettings' in t.dataset || t.id === 'open-settings' || t.id === 'site') setTab('settings');
+    else if (t.dataset.url) post('open', { url: t.dataset.url });
+  });
+  $('close-settings').onclick = () => { $('s-result').innerHTML = ''; setTab('send'); };
+  $('send').onclick = startSend;
+  $('refresh').onclick = () => loadSent();
+  $('sample').onclick = drawSample;
+  $('s-test').onclick = testSettings;
+  $('s-save').onclick = saveSettings;
+  $('s-show').onclick = () => {
+    const input = $('s-key');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  };
+
+  /* Browser preview: a stand-in for Figma, for trying the window and taking screenshots. */
+  if (PREVIEW) {
+    const view = params.get('state') || 'selected';
+    const demo = {
+      workerUrl: 'https://figma-handoff.vipult2022.workers.dev', key: 'demo', org: 'vipult2022', site: 'ew-shareready', sender: 'Maya Chen',
+    };
+    const hour = 3600000;
+    const sent = [
+      { id: 'a', name: 'Home loans landing', path: '/loans/home-loans', status: 'built', sent: new Date(Date.now() - 5 * hour).toISOString(), updated: new Date(Date.now() - 1 * hour).toISOString(), url: 'https://main--ew-shareready--vipult2022.aem.page/loans/home-loans', sender: 'Maya Chen' },
+      { id: 'b', name: 'Savings rates — winter', path: '/offers/winter-rates', status: 'updated', sent: new Date(Date.now() - 0.4 * hour).toISOString(), sender: 'Maya Chen' },
+      { id: 'c', name: 'Card benefits refresh', path: '/cards/benefits', status: 'new', sent: new Date(Date.now() - 26 * hour).toISOString(), sender: 'Maya Chen' },
+    ];
+    const selection = {
+      ok: true, id: '1:50', name: 'Home loans landing', w: 1440, h: 2936, texts: 22, pictures: 5, unnamed: 1, skipped: 3, preview: '../demo/media/thumbnail.jpg',
+    };
+    mock = (type) => {
+      if (type === 'ready') {
+        onMessage({ type: 'settings', settings: view === 'setup' ? { sender: 'Maya Chen' } : demo });
+        onMessage({ type: 'selection', selection: view === 'empty' || view === 'setup' ? { ok: false, reason: 'none' } : selection });
+        if (view === 'sent') setTab('sent');
+        if (view === 'settings') setTab('settings');
+        if (view === 'success') { onMessage({ type: 'settings', settings: demo }); showResult({ name: 'Home loans landing', status: 'new' }); toast('Sent to Experience Workspace'); }
+        if (view === 'sending') { state.busy = true; renderSend(); progress('Exporting pictures 3 of 5', 0.5); }
+      } else if (type === 'build') {
+        let i = 0;
+        const step = () => {
+          if (i < 5) { onMessage({ type: 'progress', step: 'pictures', done: i, total: 5 }); i += 1; setTimeout(step, 350); } else onMessage({ type: 'payload', payload: { handoff: { name: selection.name } } });
+        };
+        step();
+      } else if (type === 'save-settings') onMessage({ type: 'settings', settings: { ...demo } });
+    };
+    mock.worker = (route) => new Promise((resolve) => {
+      setTimeout(() => {
+        if (route === 'send') resolve({ handoff: { ...sent[0], status: 'new', name: selection.name } });
+        else resolve({ handoffs: sent });
+      }, route === 'send' ? 900 : 300);
+    });
+  }
+
+  post('ready');
+})();
+</script>
+</body>
+</html>
