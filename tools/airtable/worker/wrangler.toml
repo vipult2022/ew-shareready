@@ -1,0 +1,23 @@
+# Airtable worker: lets authors read Airtable with one team token, kept out of the browser.
+# Optional: without it, each author connects with their own read-only token in the panel.
+# Deploy from this folder with:  npx wrangler deploy
+#
+# Secret (never commit it):
+#   npx wrangler secret put AIRTABLE_TOKEN
+#   A personal access token from https://airtable.com/create/tokens with the scopes
+#   data.records:read and schema.bases:read, and the bases you want under Access.
+
+name = "airtable"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[vars]
+# Required. Comma-separated orgs ("my-org") or sites ("my-org/my-site") this worker serves.
+ALLOWED_ORGS = "vipult2022"
+# Optional. Comma-separated base ids (app…) the worker may read. Default: every base the
+# token can read.
+# AIRTABLE_BASES = ""
+# Optional. Comma-separated origins allowed to call the worker. Wildcards (*) are allowed.
+# Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
+# http://localhost:3000
+# ALLOWED_ORIGINS = ""

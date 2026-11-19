@@ -1,0 +1,40 @@
+.table {
+  margin: 32px 0;
+}
+
+.table .table-scroll {
+  overflow-x: auto;
+}
+
+.table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--body-font-size-s);
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #dadada;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  border-bottom: 2px solid var(--text-color);
+  font-weight: 700;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: var(--light-color);
+}
+
+.table th > :first-child,
+.table td > :first-child {
+  margin-top: 0;
+}
+
+.table th > :last-child,
+.table td > :last-child {
+  margin-bottom: 0;
+}

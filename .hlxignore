@@ -11,3 +11,7 @@ tools/shareready/docs/*
 tools/reviewloop/test/*
 tools/reviewloop/worker/*
 tools/reviewloop/docs/*
+tools/airtable/test/*
+tools/airtable/worker/*
+tools/airtable/docs/*
+tools/airtable/demo/*.mjs

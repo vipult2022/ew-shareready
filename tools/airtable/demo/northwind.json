@@ -1,0 +1,342 @@
+{
+ "bases": [
+  {
+   "id": "app5eAg9WToHjn2hs",
+   "name": "Northwind Bank"
+  }
+ ],
+ "tables": {
+  "app5eAg9WToHjn2hs": [
+   {
+    "id": "tbl0nT8AhlniFzr4P",
+    "name": "Savings rates",
+    "description": "Rates shown on the site. Change a rate here, then insert or update the table on the page.",
+    "primaryFieldId": "fldPjGQFI773zQDlO",
+    "fields": [
+     {
+      "id": "fldPjGQFI773zQDlO",
+      "name": "Product",
+      "type": "singleLineText"
+     },
+     {
+      "id": "fldFWUOYBY8sLqsgr",
+      "name": "APY",
+      "type": "percent"
+     },
+     {
+      "id": "fldi8LHl50Xuyg9k8",
+      "name": "Minimum deposit",
+      "type": "currency"
+     },
+     {
+      "id": "fldQnAoy2umywFyxE",
+      "name": "Term",
+      "type": "singleSelect"
+     },
+     {
+      "id": "fldTQZlTedyFHMrQ5",
+      "name": "Rate updated",
+      "type": "date"
+     }
+    ],
+    "views": [
+     {
+      "id": "viwr9rAIpLN74LE7Z",
+      "name": "Grid view",
+      "type": "grid"
+     }
+    ]
+   },
+   {
+    "id": "tblT9wYGN7VYvEKda",
+    "name": "Accounts",
+    "description": "Account and offer cards: one record per product, with a photo and a link.",
+    "primaryFieldId": "fldWrt84CAYAO6x9P",
+    "fields": [
+     {
+      "id": "fldWrt84CAYAO6x9P",
+      "name": "Account",
+      "type": "singleLineText"
+     },
+     {
+      "id": "fldPDDzFQDNZ6Px6S",
+      "name": "Photo",
+      "type": "multipleAttachments"
+     },
+     {
+      "id": "fldm0SW2ACHbbFaRW",
+      "name": "Summary",
+      "type": "multilineText"
+     },
+     {
+      "id": "fldSlaja3SZx0YSpB",
+      "name": "Monthly fee",
+      "type": "currency"
+     },
+     {
+      "id": "fldm7GtXlVquqKoc4",
+      "name": "Page",
+      "type": "url"
+     }
+    ],
+    "views": [
+     {
+      "id": "viwDL6Vrioh9S2ZBw",
+      "name": "Grid view",
+      "type": "grid"
+     }
+    ]
+   },
+   {
+    "id": "tblAkDAoGIaBS9158",
+    "name": "FAQs",
+    "description": "Questions and answers. Answers use rich text: bold, links and lists carry over.",
+    "primaryFieldId": "fld66qYPYrPvSV7ib",
+    "fields": [
+     {
+      "id": "fld66qYPYrPvSV7ib",
+      "name": "Question",
+      "type": "singleLineText"
+     },
+     {
+      "id": "fldMwW2hl1aTF8EGt",
+      "name": "Answer",
+      "type": "richText"
+     },
+     {
+      "id": "fldgaGB6bNb1LIR56",
+      "name": "Topic",
+      "type": "singleSelect"
+     },
+     {
+      "id": "fldL5K9tcxx8c2fZY",
+      "name": "Order",
+      "type": "number"
+     }
+    ],
+    "views": [
+     {
+      "id": "viw9CrjPUIjCodaIL",
+      "name": "Grid view",
+      "type": "grid"
+     }
+    ]
+   },
+   {
+    "id": "tblBccdUVS8bh02mS",
+    "name": "Branches",
+    "description": "Branch details for location pages.",
+    "primaryFieldId": "fldeqO9IGrt2sipaM",
+    "fields": [
+     {
+      "id": "fldeqO9IGrt2sipaM",
+      "name": "Branch",
+      "type": "singleLineText"
+     },
+     {
+      "id": "fld52g2890UMyeggc",
+      "name": "Address",
+      "type": "multilineText"
+     },
+     {
+      "id": "fldALgU0bCB9HPwZU",
+      "name": "Phone",
+      "type": "phoneNumber"
+     },
+     {
+      "id": "fld4zKniUFScMjZO9",
+      "name": "Opening hours",
+      "type": "multilineText"
+     },
+     {
+      "id": "fldv65Gp6Eysd3uZb",
+      "name": "Services",
+      "type": "multipleSelects"
+     }
+    ],
+    "views": [
+     {
+      "id": "viw2ip8CiV55xITcS",
+      "name": "Grid view",
+      "type": "grid"
+     }
+    ]
+   }
+  ]
+ },
+ "records": {
+  "tbl0nT8AhlniFzr4P": [
+   {
+    "id": "recXlyexnPrlh9nQ3",
+    "fields": {
+     "APY": "4.50%",
+     "Product": "High-Yield Savings",
+     "Term": "12 months",
+     "Rate updated": "November 2, 2026",
+     "Minimum deposit": "$100"
+    }
+   },
+   {
+    "id": "recBmfgZRrFoklAe2",
+    "fields": {
+     "APY": "0.50%",
+     "Product": "Everyday Savings",
+     "Term": "No term",
+     "Rate updated": "October 1, 2026",
+     "Minimum deposit": "$0"
+    }
+   },
+   {
+    "id": "recDrByhGr4NSTxKK",
+    "fields": {
+     "APY": "5.00%",
+     "Product": "Summer CD Special",
+     "Term": "9 months",
+     "Rate updated": "June 1, 2026",
+     "Minimum deposit": "$1,000"
+    }
+   },
+   {
+    "id": "recqjLnbLdHnxGvsK",
+    "fields": {
+     "APY": "4.25%",
+     "Product": "18-month CD",
+     "Term": "18 months",
+     "Rate updated": "November 2, 2026",
+     "Minimum deposit": "$1,000"
+    }
+   },
+   {
+    "id": "recNO38q1Hz3ADWWg",
+    "fields": {
+     "APY": "2.00%",
+     "Product": "Kids Savings",
+     "Term": "No term",
+     "Rate updated": "September 15, 2026",
+     "Minimum deposit": "$0"
+    }
+   }
+  ],
+  "tblT9wYGN7VYvEKda": [
+   {
+    "id": "rec4FiHNSMXfQRhoF",
+    "fields": {
+     "Photo": "everyday-checking.jpg (https://main--ew-shareready--vipult2022.aem.page/accounts/media_1b8102f4c47387bb96af04c4012873a2566cd49da.jpg?width=750&format=jpg&optimize=medium)",
+     "Monthly fee": "$0",
+     "Account": "Everyday Checking",
+     "Summary": "Direct deposit in minutes, card freeze from the app and alerts before you overdraw.",
+     "Page": "https://main--ew-shareready--vipult2022.aem.page/accounts/everyday-checking"
+    }
+   },
+   {
+    "id": "recXwYE66SJ4EFKhr",
+    "fields": {
+     "Photo": "spring-savings.jpg (https://main--ew-shareready--vipult2022.aem.page/offers/media_14369143bad3c474e0ed37010b0dccabc9ce50fcf.jpg?width=750&format=jpg&optimize=medium)",
+     "Monthly fee": "$0",
+     "Account": "Spring Savings Event",
+     "Summary": "4.50% APY for 12 months on balances up to $250,000.",
+     "Page": "https://main--ew-shareready--vipult2022.aem.page/offers/spring-savings"
+    }
+   },
+   {
+    "id": "recO2wnV1BowIFFEd",
+    "fields": {
+     "Photo": "summer-savings.jpg (https://main--ew-shareready--vipult2022.aem.page/offers/media_1defbd87e89df4fe450e5ac7c8976218033e0f79e.jpg?width=750&format=jpg&optimize=medium)",
+     "Monthly fee": "$0",
+     "Account": "Summer CD Special",
+     "Summary": "Lock in a guaranteed 5.00% APY for 9 months.",
+     "Page": "https://main--ew-shareready--vipult2022.aem.page/offers/summer-savings"
+    }
+   },
+   {
+    "id": "recHBRVvg5Lqh4Cod",
+    "fields": {
+     "Photo": "winter-savings.jpg (https://main--ew-shareready--vipult2022.aem.page/offers/media_11363c40d3c2ea9905d328e72fe3dfcd415a164f0.jpg?width=750&format=jpg&optimize=medium)",
+     "Monthly fee": "$0",
+     "Account": "Winter Savings Event",
+     "Summary": "Save for the new year with a bonus rate on new deposits.",
+     "Page": "https://main--ew-shareready--vipult2022.aem.page/offers/winter-savings"
+    }
+   }
+  ],
+  "tblAkDAoGIaBS9158": [
+   {
+    "id": "recbTyvixJBPmUGRj",
+    "fields": {
+     "Question": "How is APY calculated?",
+     "Order": "1",
+     "Answer": "APY is the yearly rate **including compound interest**. Interest is calculated daily and paid monthly.\n",
+     "Topic": "Savings"
+    }
+   },
+   {
+    "id": "recXEaVChI9a8HAwE",
+    "fields": {
+     "Question": "Is there a minimum balance?",
+     "Order": "2",
+     "Answer": "No minimum balance for Everyday Savings. High-Yield Savings needs **$100** to open.\n",
+     "Topic": "Savings"
+    }
+   },
+   {
+    "id": "rectBAW2yl0m8CIxj",
+    "fields": {
+     "Question": "Can I lose my rate?",
+     "Order": "3",
+     "Answer": "Promotional rates are fixed for the term shown. After that the [standard rate](https://www.example.com/rates) applies.\n",
+     "Topic": "Savings"
+    }
+   },
+   {
+    "id": "recDRbZ7pNRe1GHkp",
+    "fields": {
+     "Question": "How do I freeze my card?",
+     "Order": "4",
+     "Answer": "In the Northwind app:\n\n1. Tap **Cards**\n2. Choose the card\n3. Turn on **Freeze**\n",
+     "Topic": "Cards"
+    }
+   },
+   {
+    "id": "reccKy9IDNJ4NMJxr",
+    "fields": {
+     "Question": "Are my deposits insured?",
+     "Order": "5",
+     "Answer": "Yes. Deposits are insured up to the legal limit per depositor.\n",
+     "Topic": "Checking"
+    }
+   }
+  ],
+  "tblBccdUVS8bh02mS": [
+   {
+    "id": "recRgZ9wTvD13Tu7w",
+    "fields": {
+     "Opening hours": "Mon to Fri 9:00 to 17:00\nSat 9:00 to 13:00",
+     "Address": "12 Harbor Street\nPortland, OR 97201",
+     "Phone": "(503) 555-0142",
+     "Branch": "Harbor Street",
+     "Services": "Mortgages, Safe deposit boxes"
+    }
+   },
+   {
+    "id": "rec9QWDhIymOTafsu",
+    "fields": {
+     "Opening hours": "Mon to Fri 9:00 to 18:00",
+     "Address": "480 Maple Avenue\nSeattle, WA 98109",
+     "Phone": "(206) 555-0187",
+     "Branch": "Maple Avenue",
+     "Services": "Business banking, Drive-through"
+    }
+   },
+   {
+    "id": "recXzthwuvgMdDwUP",
+    "fields": {
+     "Opening hours": "Mon to Sat 9:00 to 17:00",
+     "Address": "75 Union Square\nSan Francisco, CA 94108",
+     "Phone": "(415) 555-0123",
+     "Branch": "Union Square",
+     "Services": "Mortgages, Business banking"
+    }
+   }
+  ]
+ }
+}
