@@ -17,6 +17,8 @@ Many teams write briefs and first drafts in Notion, then rebuild them by hand in
   </tr>
 </table>
 
+![The Spring Savings Event 2027 page as published, created from the Notion brief in one click: the title, intro, hero image, lists, a callout, a rates table, a quote and an FAQ accordion](docs/page.png)
+
 - **Try it now, no setup:** [panel demo with sample data](https://main--ew-shareready--vipult2022.aem.page/tools/notion.html?demo=1)
 - **Third party:** Notion (public API through a small worker, read, plus one optional write: the new page's link)
 - **Cost:** free. Any Notion plan works, including Free. The worker fits the Cloudflare Workers free tier.
