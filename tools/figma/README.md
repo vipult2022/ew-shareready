@@ -10,6 +10,19 @@ Today a design handoff is a link in a chat. The author opens the Figma file, hun
 
 <table>
   <tr>
+    <td width="37%"><img src="docs/figma-desktop.jpg" alt="Figma desktop: the Home loans landing frame selected on the canvas, next to the Send to Experience Workspace plugin connected to vipult2022/ew-shareready, with the frame's thumbnail, 26 texts and 5 pictures, a warning that one picture has a default layer name, the page path /loans/home-loans and the Send to Experience Workspace button"></td>
+    <td width="63%"><img src="docs/ew-panel.jpg" alt="Experience Workspace: the page built from the design, with Hero and Cards blocks holding the exact copy and pictures, and the Figma panel beside it: the Home loans landing design from Maya Chen marked Built, warnings about buttons without links and pictures without alt text, the page outline with a block for each section, and the design check at 100% with Insert and Build with AI"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Figma desktop</b>: the designer selects the frame and sends it</td>
+    <td align="center"><b>Experience Workspace</b>: the page built from it, with the design check at 100%</td>
+  </tr>
+</table>
+
+Step by step, as in the [panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/figma.html?demo=1):
+
+<table>
+  <tr>
     <td width="25%"><img src="docs/plugin-send.png" alt="Figma plugin: the selected Home loans landing frame with its thumbnail, 22 texts, 5 pictures and 3 icons left out, a warning that one picture has a default layer name, a page path field and a Send to Experience Workspace button"></td>
     <td width="25%"><img src="docs/panel-list.png" alt="EW panel: Designs for this site, with the Home loans landing design, its thumbnail, a New badge, the path /loans/home-loans and who sent it when"></td>
     <td width="25%"><img src="docs/panel-design.png" alt="EW panel: the Home loans landing design with its thumbnail, 5 sections, 22 texts, 5 pictures and 4 buttons, the designer's note and warnings about a button without a link and an image without alt text, with Insert and Build with AI buttons"></td>
