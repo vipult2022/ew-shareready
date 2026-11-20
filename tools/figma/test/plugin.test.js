@@ -108,3 +108,19 @@ test('the plugin tree converts into an EW page', () => {
   assert.match(html, /<h1>Your first home, sooner<\/h1>/);
   assert.match(html, /Fixed rates from 5\.9% with no fees\./);
 });
+
+test('the plugin window embeds the same sample design and pictures as demo/', () => {
+  const html = readFileSync(new URL('../plugin/ui.html', import.meta.url), 'utf8');
+  const json = html.match(/<script type="application\/json" id="sample-data">([^<]+)<\/script>/)?.[1];
+  assert.ok(json, 'run node tools/figma/demo/make-sample.mjs');
+  const embedded = JSON.parse(json);
+  const [sample] = JSON.parse(readFileSync(new URL('../demo/handoff.json', import.meta.url), 'utf8'));
+  assert.deepEqual(embedded.tree, sample.tree);
+  assert.equal(embedded.path, sample.path);
+  assert.equal(embedded.note, sample.note);
+  const files = Object.entries(sample.files).filter(([key]) => key !== 'thumbnail');
+  assert.deepEqual(Object.keys(embedded.images).sort(), files.map(([key]) => key).sort());
+  files.forEach(([key, file]) => {
+    assert.equal(embedded.images[key], readFileSync(new URL(`../demo/${file}`, import.meta.url)).toString('base64'), key);
+  });
+});
