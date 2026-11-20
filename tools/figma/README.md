@@ -8,6 +8,8 @@ Today a design handoff is a link in a chat. The author opens the Figma file, hun
 - **Or the author pastes a Figma link** (optional): if the worker has a Figma token, the author can paste a link to a frame in EW and the worker reads it through Figma's REST API. The designer doesn't need the plugin. See [Paste a Figma link](#paste-a-figma-link-optional).
 - **Author, in EW:** open **Extensions › Figma**, pick the design, then **Build with AI**. The panel copies the pictures into the site and hands the EW assistant an outline of the page: sections, suggested blocks, every text word for word, picture URLs and alt text. The **design check** then compares the page with the design and lists anything missing. **Mark built** tells the designer, with a link to the page.
 
+https://github.com/user-attachments/assets/0f0afcbb-b357-40b0-9085-dc28b3acab48
+
 <table>
   <tr>
     <td width="37%"><img src="docs/figma-desktop.jpg" alt="Figma desktop: the Home loans landing frame selected on the canvas, next to the Send to Experience Workspace plugin connected to vipult2022/ew-shareready, with the frame's thumbnail, 26 texts and 5 pictures, a warning that one picture has a default layer name, the page path /loans/home-loans and the Send to Experience Workspace button"></td>
@@ -20,12 +22,6 @@ Today a design handoff is a link in a chat. The author opens the Figma file, hun
 </table>
 
 Step by step, as in the [panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/figma.html?demo=1):
-
-
-
-https://github.com/user-attachments/assets/0f0afcbb-b357-40b0-9085-dc28b3acab48
-
-
 
 <table>
   <tr>
