@@ -21,6 +21,12 @@ Today a design handoff is a link in a chat. The author opens the Figma file, hun
 
 Step by step, as in the [panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/figma.html?demo=1):
 
+
+
+https://github.com/user-attachments/assets/0f0afcbb-b357-40b0-9085-dc28b3acab48
+
+
+
 <table>
   <tr>
     <td width="25%"><img src="docs/plugin-send.png" alt="Figma plugin: the selected Home loans landing frame with its thumbnail, 22 texts, 5 pictures and 3 icons left out, a warning that one picture has a default layer name, a page path field and a Send to Experience Workspace button"></td>
