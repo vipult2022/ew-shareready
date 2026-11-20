@@ -281,6 +281,7 @@ flowchart LR
 | The image upload fails | You need write access to the page in DA. Images over 20 MB are refused. |
 | The rules sheet seems ignored | The sheet must be named `block-studio`, with a `field` column. Reload the panel after saving the config. |
 | The panel is blank or old | Disable Grammarly and extensions that change page headers, and hard-reload EW. |
+| In EW's layout view, a changed button shows as a plain bold or italic link | The document is fine, and so is the published page. EW edits a single changed paragraph with an inline editor and, by default, never re-decorates it. Native EW edits do the same. Reload the layout, or add the snippet at the end of this repo's [`scripts/scripts.js`](../../scripts/scripts.js) to your site. It loads da.live's `quick-edit-init.js`, which re-decorates edited buttons, and only runs on `*.preview.da.live` with `?quick-edit`. |
 
 ## Development
 
