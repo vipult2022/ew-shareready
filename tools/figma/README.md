@@ -50,7 +50,7 @@ Today a design handoff is a link in a chat. The author opens the Figma file, hun
 
 1. Shows the selected frame with its size and what will be sent: texts, pictures, and icons that are left out.
 2. Warns about pictures whose layer name is a default like *Rectangle 12*, because layer names become alt text.
-3. Takes an optional **page path** (`/loans/home-loans`) and a **note for the author** ("Signed off by Brand, keep the hero copy as is").
+3. Takes an optional **page path** (`/loans/home-loans`) and a **note for the author** ("Signed off by Brand, keep the hero copy as is"). It remembers both on the frame, so they are filled in next time.
 4. Sends it. Sending the same frame again updates the design in the inbox and marks it *Updated*.
 5. Lists what you sent under **Sent**, with *New*, *Updated* or *Built*. A built design links to its page.
 6. Can **draw a sample design** (the Northwind Bank home loans page), to try everything in an empty file.
@@ -174,7 +174,7 @@ Each designer does this once, in the Figma desktop app:
 
 4. **Test connection**, then **Save**. Settings are kept in Figma on that computer.
 
-To try it without a design, choose **Draw a sample design** in the plugin. It draws the Northwind Bank home loans page in the current file.
+To try it without a design, choose **Draw a sample design** in the plugin. It draws the Northwind Bank home loans page in the current file, with its page path and note filled in. One picture is still called "Rectangle 12", so you can see the alt-text warning.
 
 On Figma's Organization or Enterprise plan, an admin can also publish the plugin privately, so designers install it from **Plugins** without the manifest.
 

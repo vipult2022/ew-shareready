@@ -13,6 +13,7 @@ const ICONS = ['VECTOR', 'BOOLEAN_OPERATION', 'STAR', 'POLYGON', 'LINE'];
 const GENERIC = /^(rectangle|image|img|frame|group|vector|ellipse|photo|picture|pic|layer|mask|bg|background|untitled)?([\s_-]*(\d+|copy))*$/i;
 const MAX_LAYERS = 3000;
 const THUMB_WIDTH = 800;
+const PREVIEW_WIDTH = 720;
 const PICTURE_WIDTH = 1600;
 
 const hex = (n) => Math.round(n * 255).toString(16).padStart(2, '0');
@@ -180,14 +181,28 @@ async function postSelection() {
   const node = selected();
   const info = describe(node);
   if (info.ok) {
+    // The page path and note last used for this frame, so they survive closing the plugin.
+    info.path = node.getPluginData('path');
+    info.note = node.getPluginData('note');
     try {
-      const bytes = await node.exportAsync({ format: 'JPG', constraint: { type: 'WIDTH', value: 360 } });
+      const bytes = await node.exportAsync({ format: 'JPG', constraint: { type: 'WIDTH', value: PREVIEW_WIDTH } });
       info.preview = figma.base64Encode(bytes);
-    } catch {
+    } catch (error) {
       info.preview = '';
+      info.previewError = error.message || String(error);
     }
   }
   figma.ui.postMessage({ type: 'selection', selection: info });
+}
+
+function remember(node, values) {
+  try {
+    ['path', 'note'].forEach((key) => {
+      if (typeof values[key] === 'string') node.setPluginData(key, values[key].slice(0, 2000));
+    });
+  } catch {
+    // View-only files cannot store plugin data. The values are still sent.
+  }
 }
 
 /** Everything /send needs, except the site and key, which the window adds. */
@@ -195,6 +210,7 @@ async function buildPayload(options) {
   const node = selected();
   const info = describe(node);
   if (!info.ok) throw new Error('Select one frame to send.');
+  remember(node, { path: options.path || '', note: options.note || '' });
   const ctx = {
     count: 0, pictures: [], skipped: 0, truncated: false,
   };
@@ -307,12 +323,13 @@ async function draw(spec, images, parent) {
   return node;
 }
 
-async function drawSample(tree, images) {
+async function drawSample(tree, images, values) {
   await Promise.all([
     figma.loadFontAsync({ family: 'Inter', style: 'Regular' }),
     figma.loadFontAsync({ family: 'Inter', style: 'Bold' }),
   ]);
   const node = await draw(tree, images, null);
+  remember(node, values);
   const { center } = figma.viewport;
   node.x = Math.round(center.x - node.width / 2);
   node.y = Math.round(center.y - node.height / 2);
@@ -333,8 +350,11 @@ async function onMessage(msg) {
     } else if (msg.type === 'build') {
       figma.ui.postMessage({ type: 'payload', payload: await buildPayload(msg.options || {}) });
     } else if (msg.type === 'sample') {
-      await drawSample(msg.tree, msg.images || {});
+      await drawSample(msg.tree, msg.images || {}, { path: msg.path, note: msg.note });
       figma.notify('Sample design drawn. Select it and send it to Experience Workspace.');
+    } else if (msg.type === 'remember') {
+      const node = msg.id ? await figma.getNodeByIdAsync(String(msg.id)) : null;
+      if (node && !node.removed) remember(node, msg);
     } else if (msg.type === 'open') {
       if (/^https:\/\//.test(String(msg.url || ''))) figma.openExternal(msg.url);
     } else if (msg.type === 'notify') {

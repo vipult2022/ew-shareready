@@ -295,12 +295,20 @@
       conic-gradient(var(--gray-75) 25%, var(--gray-50) 0 50%, var(--gray-75) 0 75%, var(--gray-50) 0) 0 0 / 16px 16px;
   }
 
-  .thumb img {
+  .thumb canvas {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: top center;
+  }
+
+  .thumb-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--gray-600);
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .thumb .chip {
@@ -629,7 +637,7 @@
 
     <div id="frame" hidden class="stack">
       <article class="card">
-        <div class="thumb"><img id="thumb" alt=""><span class="chip" id="frame-size"></span></div>
+        <div class="thumb"><canvas id="thumb" hidden></canvas><span class="thumb-empty" id="thumb-empty" hidden>No preview</span><span class="chip" id="frame-size"></span></div>
         <div class="card-body">
           <h2 id="frame-name"></h2>
           <ul class="stats">
@@ -782,6 +790,40 @@
   }
 
   /* Send view */
+  // The preview is decoded and painted on a canvas: Figma's network rules can block data: images.
+  let thumbFor = null;
+  let thumbRun = 0;
+  async function drawThumb(preview, reason) {
+    thumbRun += 1;
+    const run = thumbRun;
+    const canvas = $('thumb');
+    const empty = $('thumb-empty');
+    canvas.hidden = true;
+    empty.hidden = true;
+    try {
+      if (!preview) throw new Error(reason || 'No preview');
+      // Base64 JPEG starts with "/9j/", so only http(s) and "./" or "../" mean a URL (browser preview).
+      const blob = /^(https?:|\.)/.test(preview)
+        ? await (await fetch(preview)).blob()
+        : new Blob([Uint8Array.from(atob(preview), (c) => c.charCodeAt(0))], { type: 'image/jpeg' });
+      const bitmap = await createImageBitmap(blob);
+      if (run !== thumbRun) return;
+      const box = canvas.parentElement;
+      const ratio = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.round((box.clientWidth || 348) * ratio);
+      canvas.height = Math.round((box.clientHeight || 168) * ratio);
+      const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(bitmap, (canvas.width - bitmap.width * scale) / 2, 0, bitmap.width * scale, bitmap.height * scale);
+      canvas.hidden = false;
+    } catch (error) {
+      if (run !== thumbRun) return;
+      empty.title = error.message || '';
+      empty.hidden = false;
+    }
+  }
+
   function renderSelection() {
     const s = state.selection;
     $('empty').hidden = s.ok;
@@ -798,9 +840,10 @@
       $('st-pics').textContent = s.pictures;
       $('st-skip').textContent = s.skipped;
       $('st-skip-wrap').hidden = !s.skipped;
-      const img = $('thumb');
-      if (s.preview) img.src = /^(https?:|\.|\/)/.test(s.preview) ? s.preview : `data:image/jpeg;base64,${s.preview}`;
-      img.hidden = !s.preview;
+      if (s.preview !== thumbFor) {
+        thumbFor = s.preview;
+        drawThumb(s.preview, s.previewError);
+      }
       const checks = [];
       if (s.unnamed) {
         checks.push(alertHtml('notice', `<b>${s.unnamed} picture${s.unnamed === 1 ? '' : 's'}</b> ${s.unnamed === 1 ? 'has' : 'have'} a default layer name. Rename ${s.unnamed === 1 ? 'it' : 'them'} to say what ${s.unnamed === 1 ? 'it shows' : 'they show'}: that becomes the alt text.`));
@@ -989,7 +1032,9 @@
       Object.entries(sample.images || {}).forEach(([k, data]) => {
         images[k] = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
       });
-      post('sample', { tree: sample.tree, images });
+      post('sample', {
+        tree: sample.tree, images, path: sample.path || '', note: sample.note || '',
+      });
       $('path').value = sample.path || '';
       $('note').value = sample.note || '';
     } catch {
@@ -1009,6 +1054,10 @@
       const changed = !state.selection.ok || !msg.selection.ok || state.selection.id !== msg.selection.id;
       state.selection = msg.selection;
       if (changed && !state.busy) showResult(null);
+      if (changed && msg.selection.ok) {
+        $('path').value = msg.selection.path || '';
+        $('note').value = msg.selection.note || '';
+      }
       renderSelection();
     } else if (msg.type === 'progress') {
       if (msg.step === 'pictures') progress(`Exporting pictures ${msg.done + 1} of ${msg.total}`, msg.total ? msg.done / msg.total : 0);
@@ -1038,6 +1087,9 @@
   $('send').onclick = startSend;
   $('refresh').onclick = () => loadSent();
   $('sample').onclick = drawSample;
+  ['path', 'note'].forEach((field) => $(field).addEventListener('change', () => {
+    if (state.selection.ok) post('remember', { id: state.selection.id, path: $('path').value.trim(), note: $('note').value.trim() });
+  }));
   $('s-test').onclick = testSettings;
   $('s-save').onclick = saveSettings;
   $('s-show').onclick = () => {
