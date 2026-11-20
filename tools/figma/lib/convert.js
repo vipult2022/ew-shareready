@@ -1,8 +1,9 @@
 /**
  * Turns the analysed design (lib/design.js) into Document Authoring content: default content
- * plus Hero, Cards, Columns, Accordion, Table and Metadata blocks in DA's table form (first
- * row is the block name). EW's sendHTML inserts that form and DA stores it, so the same HTML
- * works for Insert and for a new page. Each design section becomes a page section.
+ * plus Hero, Cards, Columns, Accordion, Table, Section Metadata and Metadata blocks in DA's
+ * table form (first row is the block name). EW's sendHTML inserts that form and DA stores it,
+ * so the same HTML works for Insert and for a new page. Each design section becomes a page
+ * section; a section with a background colour of its own ends with a Section Metadata style.
  *
  * Buttons become links on their own line: the first of a group bold (primary), the others
  * italic (secondary), which is how Edge Delivery Services decorates buttons.
@@ -63,11 +64,17 @@ export function itemsHtml(items, opts) {
   }).join('');
 }
 
+/** A Section Metadata block that gives the section a style ('dark', 'light'), or ''. */
+export function sectionMetadata(style) {
+  return style ? blockTable('Section Metadata', [['<p>Style</p>', `<p>${escapeHtml(style)}</p>`]]) : '';
+}
+
 export function sectionHtml(section, opts = {}) {
-  if (section.block === 'Text' || !section.rows) return itemsHtml(section.items, opts);
+  const meta = sectionMetadata(section.style);
+  if (section.block === 'Text' || !section.rows) return itemsHtml(section.items, opts) + meta;
   const rows = section.rows.map((row) => row.map((cell) => itemsHtml(cell, opts)));
   const name = section.block === 'Table' ? 'Table (no header)' : section.block;
-  return itemsHtml(section.lead, opts) + blockTable(name, rows);
+  return itemsHtml(section.lead, opts) + blockTable(name, rows) + meta;
 }
 
 export function metadataBlock(model) {

@@ -33,7 +33,8 @@ function cellLines(cell, opts, indent) {
 function sectionLines(section, index, opts) {
   const out = [];
   const label = section.block === 'Text' ? 'default content' : `${section.block} block`;
-  out.push(`${index + 1}. ${section.name}: ${label}`);
+  const band = section.style ? `, ${section.style} background` : '';
+  out.push(`${index + 1}. ${section.name}: ${label}${band}`);
   (section.lead || []).forEach((item) => out.push(`   ${line(item, opts)}`));
   (section.items || []).forEach((item) => out.push(`   ${line(item, opts)}`));
   const rows = section.rows || [];
@@ -60,17 +61,22 @@ export default function buildPrompt(handoff, model, {
   imageSrc = (id) => id, blocks = ['Hero', 'Cards', 'Columns', 'Accordion', 'Table'], link = () => '', metadata = true,
 } = {}) {
   const opts = { imageSrc, link };
+  const styled = model.sections.some((s) => s.style);
+  const extra = [metadata && 'Metadata', styled && 'Section Metadata'].filter(Boolean);
   const from = handoff.sender ? ` sent by ${handoff.sender}` : '';
   const out = [
     `Build this page from the Figma design “${handoff.name}”${from}. Add it to this document in the order below.`,
     'Rules:',
     '- Keep every text exactly as written: no rewording, shortening, translating or extra copy.',
-    `- Use only these blocks from this site: ${blocks.join(', ')}${metadata ? ', Metadata' : ''}. Everything else is default content (headings, paragraphs, pictures).`,
+    `- Use only these blocks from this site: ${[...blocks, ...extra].join(', ')}. Everything else is default content (headings, paragraphs, pictures).`,
     '- Follow my suggested block for each section unless the content clearly fits another one better.',
     '- Start a new section (a horizontal rule) between the numbered sections.',
     '- Put each image in as a picture from its URL, never as a link or text.',
     '- Make each button a link on its own line: the first in a group bold, the others italic.',
   ];
+  if (styled) {
+    out.push('- End each section marked “dark background” or “light background” with a Section Metadata block: Style dark or Style light.');
+  }
   if (metadata) {
     out.push(`- End the page with a Metadata block: Title ${quote(model.title)}${model.description ? ` and Description ${quote(model.description)}` : ''}.`);
   }

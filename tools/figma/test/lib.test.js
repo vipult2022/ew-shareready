@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  analyze, altFromName, headingScale, isButton, ordered, sectionItems,
+  analyze, altFromName, headingScale, isButton, ordered, sectionItems, sectionStyle,
 } from '../lib/design.js';
 import {
   convert, itemHtml, itemsHtml, safeHref, documentHtml, cleanPath, suggestPath, blockTable,
@@ -101,6 +101,19 @@ test('frame names force a block', () => {
   assert.ok(model.warnings.some((w) => w.kind === 'h1'));
 });
 
+test('sectionStyle turns a section background into a Section Metadata style', () => {
+  assert.equal(sectionStyle('#0b2545'), 'dark');
+  assert.equal(sectionStyle('#eef4f8'), 'light');
+  assert.equal(sectionStyle('#13a89e'), 'light');
+  assert.equal(sectionStyle('#FFFFFF'), '');
+  assert.equal(sectionStyle(''), '');
+  assert.equal(sectionStyle(undefined), '');
+  assert.equal(sectionStyle('#0b2545', '#0B2545'), '');
+  assert.equal(sectionStyle('#ffffff', '#0b2545'), 'light');
+  const styles = analyze(SAMPLE).sections.map((s) => s.style || '');
+  assert.deepEqual(styles, ['', 'light', '', '', 'dark'], 'the hero keeps its own look');
+});
+
 test('analyze copes with an empty or missing tree', () => {
   assert.equal(analyze(null).sections.length, 0);
   assert.equal(analyze({ name: 'x', tree: F('Empty', []) }).sections.length, 0);
@@ -140,8 +153,11 @@ test('convert builds DA blocks, sections and metadata', () => {
   assert.match(sections[3], /<p>Accordion<\/p>/);
   assert.match(sections[4], /<p>Metadata<\/p>/);
   assert.equal(html.split('<hr>').length, 5);
+  const styleOf = (s) => s.match(/<p>Section Metadata<\/p><\/td><\/tr><tr><td><p>Style<\/p><\/td><td><p>(\w+)<\/p>/)?.[1] || '';
+  assert.deepEqual(sections.map(styleOf), ['', 'light', '', '', 'dark']);
+  assert.match(sections[1], /<p>light<\/p><\/td><\/tr><\/tbody><\/table>$/, 'ends the section');
   const plain = convert(analyze(SAMPLE), { imageSrc: src, metadata: false });
-  assert.doesNotMatch(plain.html, /Metadata/);
+  assert.doesNotMatch(plain.html, /<p>Metadata<\/p>/);
   assert.equal(blockTable('Table (no header)', [['a', 'b']]), '<table><tbody><tr><td colspan="2"><p>Table (no header)</p></td></tr><tr><td>a</td><td>b</td></tr></tbody></table>');
 });
 
@@ -160,12 +176,18 @@ test('buildPrompt keeps text verbatim and lists blocks, pictures and buttons', (
   const prompt = buildPrompt(SAMPLE, analyze(SAMPLE), { imageSrc: src, blocks: ['Hero', 'Cards'] });
   assert.match(prompt, /Figma design “Home loans landing” sent by Maya Chen \(Design\)/);
   assert.match(prompt, /Keep every text exactly as written/);
-  assert.match(prompt, /Use only these blocks from this site: Hero, Cards, Metadata\./);
+  assert.match(prompt, /Use only these blocks from this site: Hero, Cards, Metadata, Section Metadata\./);
+  assert.match(prompt, /2\. Why Northwind: Cards block, light background\n/);
+  assert.match(prompt, /End each section marked “dark background” or “light background” with a Section Metadata block/);
   assert.match(prompt, /1\. Hero: Hero block\n {3}Image: https:\/\/content\.da\.live\/o\/r\/media\/figma\/hero\.jpg/);
   assert.match(prompt, /Button: “Talk to an advisor” → no link yet/);
   assert.match(prompt, /advisor\.jpg \(write short alt text/);
-  assert.match(prompt, /5\. Closing call to action: default content/);
-  assert.doesNotMatch(buildPrompt(SAMPLE, analyze(SAMPLE), { metadata: false }), /Metadata/);
+  assert.match(prompt, /5\. Closing call to action: default content, dark background\n/);
+  const noMeta = buildPrompt(SAMPLE, analyze(SAMPLE), { metadata: false });
+  assert.doesNotMatch(noMeta, /, Metadata|a Metadata block/);
+  const flat = analyze(SAMPLE);
+  flat.sections = flat.sections.map(({ style, ...rest }) => rest);
+  assert.doesNotMatch(buildPrompt(SAMPLE, flat, { metadata: false }), /Metadata|background/);
 });
 
 /* lib/check.js */

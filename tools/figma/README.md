@@ -251,6 +251,7 @@ The plugin reads the selected frame into a small layer tree: frames with their p
 | A first band with the main heading and one or two pictures | a `Hero` block |
 | 2 or more similar frames in a band | a `Cards` block, one card each |
 | 2 to 4 different frames side by side | a `Columns` block |
+| A band with a background colour of its own (not the page's) | a `Section Metadata` block: `Style` `dark` when white text reads better on it, otherwise `light` (the hero keeps its own look) |
 | Small filled frames with one short label, or frames named like a button (`Button`, `CTA`) | buttons (links), the first one bold |
 | Text links | links; only `https:`, `mailto:` and `tel:` |
 | Picture layers | pictures, with the layer name as alt text unless it's a default name |
