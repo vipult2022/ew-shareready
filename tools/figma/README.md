@@ -376,7 +376,7 @@ npx -y @adobe/aem-cli up         # serves the repo on localhost:3000
 - **Inside EW:** add `?ref=local` to the EW URL to load the extension from `localhost:3000`.
 - **Run the worker locally:** `cd tools/figma/worker && npx wrangler dev` (put `HANDOFF_KEY`, and optionally `FIGMA_TOKEN`, in `.dev.vars`), then add `?worker-url=http://localhost:8787` to the panel URL and use the same URL in the plugin settings.
 - **Plugin window in a browser:** `plugin/` isn't served by `aem up`, so run `python3 -m http.server 8931` in the repo and open http://localhost:8931/tools/figma/plugin/ui.html to see it without Figma, with `?state=empty`, `selected`, `sent`, `settings` or `success`, and `&theme=dark`.
-- `node tools/figma/demo/make-sample.mjs` rebuilds `demo/handoff.json` from the sample design.
+- `node tools/figma/demo/make-sample.mjs` rebuilds `demo/handoff.json` from the sample design, and the copy embedded in `plugin/ui.html` that **Draw a sample design** uses offline.
 
 ## Marketplace listing
 

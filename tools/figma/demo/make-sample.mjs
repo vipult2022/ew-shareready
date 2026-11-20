@@ -1,10 +1,11 @@
 /**
  * Writes demo/handoff.json: the sample Northwind design, in the same shape the Figma plugin
- * sends. The panel uses it in demo mode, the tests analyse it, and the plugin's
- * "Create sample design" button draws it in Figma. Run: node tools/figma/demo/make-sample.mjs
+ * sends. The panel uses it in demo mode and the tests analyse it. Also embeds the design and
+ * its pictures in plugin/ui.html, for the plugin's "Draw a sample design" button.
+ * Run: node tools/figma/demo/make-sample.mjs
  */
 
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 const W = 1440;
 const PAD = 120;
@@ -224,3 +225,23 @@ const out = new URL('./handoff.json', import.meta.url);
 writeFileSync(out, `${JSON.stringify([handoff], null, 2)}\n`);
 // eslint-disable-next-line no-console
 console.log(`Wrote ${out.pathname}: ${next} layers, ${tree.w}×${tree.h}`);
+
+// The plugin draws the same sample from a copy inside its window. Figma plugin windows have no
+// origin, so they cannot download pictures from a site that does not send CORS headers.
+const embedded = {
+  path: handoff.path,
+  note: handoff.note,
+  tree,
+  images: Object.fromEntries(Object.entries(pictures).map(([key, p]) => [
+    key, readFileSync(new URL(`./${p.file}`, import.meta.url)).toString('base64'),
+  ])),
+};
+const ui = new URL('../plugin/ui.html', import.meta.url);
+const START = '<script type="application/json" id="sample-data">';
+const html = readFileSync(ui, 'utf8');
+const from = html.indexOf(START);
+if (from < 0) throw new Error(`${ui.pathname} has no ${START}`);
+const to = html.indexOf('</script>', from);
+writeFileSync(ui, `${html.slice(0, from + START.length)}${JSON.stringify(embedded).replace(/</g, '\\u003c')}${html.slice(to)}`);
+// eslint-disable-next-line no-console
+console.log(`Embedded the sample in ${ui.pathname}`);
