@@ -3,17 +3,49 @@
   padding: 0;
 }
 
+main > .section.hero-container {
+  margin-bottom: 0;
+}
+
+/* The picture fills the block; a navy wash keeps the white copy readable over it. */
 .hero {
   position: relative;
-  padding: 40px 24px;
-  min-height: 300px;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 360px;
+  padding: 56px 0;
+  background-color: var(--dark-section-color);
+  color: var(--background-color);
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(11 37 69 / 85%) 0%, rgb(11 37 69 / 55%) 55%, rgb(11 37 69 / 15%) 100%);
+}
+
+.hero > div {
+  flex: 1;
+}
+
+.hero > div > div {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .hero h1 {
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: 720px;
+  margin-top: 0;
   color: var(--background-color);
+}
+
+.hero p {
+  max-width: 620px;
 }
 
 .hero picture {
@@ -30,8 +62,30 @@
   height: 100%;
 }
 
+.hero p.button-wrapper {
+  display: inline-block;
+  margin: 16px 12px 0 0;
+}
+
+.hero a.button.secondary:any-link {
+  border-color: var(--background-color);
+  background-color: var(--background-color);
+  color: var(--brand-color);
+}
+
+.hero a.button.secondary:hover,
+.hero a.button.secondary:focus-visible {
+  background-color: transparent;
+  color: var(--background-color);
+}
+
 @media (width >= 900px) {
   .hero {
-    padding: 40px 32px;
+    min-height: 560px;
+    padding: 80px 0;
+  }
+
+  .hero > div > div {
+    padding: 0 32px;
   }
 }

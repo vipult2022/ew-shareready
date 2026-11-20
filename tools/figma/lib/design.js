@@ -6,8 +6,9 @@
  * Layer tree nodes:
  *   { type: 'TEXT', id, name, x, y, w, h, text, size, link }
  *   { type: 'IMAGE', id, name, x, y, w, h, image }              an exported picture
- *   { type: 'FRAME', id, name, x, y, w, h, layout, image, imageName, filled, children }
- *     layout is HORIZONTAL, VERTICAL or NONE; image is a background picture.
+ *   { type: 'FRAME', id, name, x, y, w, h, layout, image, imageName, filled, fill, children }
+ *     layout is HORIZONTAL, VERTICAL or NONE; image is a background picture; fill is the
+ *     solid background colour ("#rrggbb", '' when none).
  *
  * Designers can force a block by naming a frame after it: "Hero", "Cards", "Columns",
  * "Accordion" (or "FAQ"), "Table" or "Text". Otherwise:
@@ -15,6 +16,8 @@
  *   a row or grid of similar frames                     → Cards
  *   2 to 4 different frames side by side                → Columns
  *   everything else                                     → default content ("Text")
+ * A section with a background colour of its own (not the page's) gets a style for Section
+ * Metadata: "dark" when white text reads better on it, otherwise "light".
  */
 
 const HINTS = [
@@ -203,7 +206,26 @@ function table(node) {
 }
 
 /** One design band → { name, block, lead, rows } or { name, block: 'Text', items }. */
-function section(node, first, scale, ctx) {
+/** WCAG relative luminance of "#rrggbb", or null when it is not a colour. */
+function luminance(hex) {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!match) return null;
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(match[1].slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** The Section Metadata style for a section's background: 'dark', 'light' or ''. */
+export function sectionStyle(fill, pageFill = '#ffffff') {
+  const lum = luminance(fill);
+  if (lum === null || fill.toLowerCase() === String(pageFill || '#ffffff').toLowerCase()) return '';
+  // Below this, white text has more contrast than black.
+  return lum < 0.179 ? 'dark' : 'light';
+}
+
+function sectionBlock(node, first, scale, ctx) {
   const name = clean(node.name) || 'Section';
   const hint = hintFor(node.name);
   const base = { name, id: node.id };
@@ -262,6 +284,13 @@ function section(node, first, scale, ctx) {
   return { ...base, block: 'Text', items: contentOf(node, scale, ctx) };
 }
 
+function section(node, first, scale, ctx) {
+  const found = sectionBlock(node, first, scale, ctx);
+  // The hero has its own look over its picture.
+  const style = found.block === 'Hero' ? '' : sectionStyle(node.fill, ctx.pageFill);
+  return style ? { ...found, style } : found;
+}
+
 /** Peels off wrappers that hold a single frame, so sections are the real bands. */
 function pageRoot(tree) {
   let root = tree;
@@ -288,7 +317,7 @@ export function analyze(handoff) {
   }
   const root = pageRoot(tree);
   const scale = headingScale(root);
-  const ctx = { h1Used: false };
+  const ctx = { h1Used: false, pageFill: root.fill || '#ffffff' };
   const sections = [];
   let loose = [];
   const flush = () => {

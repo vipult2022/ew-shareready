@@ -13,11 +13,17 @@
 :root {
   /* colors */
   --background-color: white;
-  --light-color: #f8f8f8;
+  --light-color: #eef4f8;
   --dark-color: #505050;
-  --text-color: #131313;
+  --text-color: #1d2b3a;
+  --heading-color: #0b2545;
   --link-color: #3b63fb;
   --link-hover-color: #1d3ecf;
+
+  /* Northwind brand: teal buttons (dark enough for white text), navy bands */
+  --brand-color: #0f817a;
+  --brand-hover-color: #0b625c;
+  --dark-section-color: #0b2545;
 
   /* fonts */
   --body-font-family: roboto, roboto-fallback, sans-serif;
@@ -109,6 +115,7 @@ h6 {
   font-family: var(--heading-font-family);
   font-weight: 600;
   line-height: 1.25;
+  color: var(--heading-color);
   scroll-margin: 40px;
 }
 
@@ -199,8 +206,8 @@ button.button:disabled {
 
 a.button.primary,
 button.button.primary {
-  border-color: var(--text-color);
-  background-color: var(--text-color);
+  border-color: var(--brand-color);
+  background-color: var(--brand-color);
   color: var(--background-color);
 }
 
@@ -208,9 +215,9 @@ a.button.primary:hover,
 a.button.primary:focus-visible,
 button.button.primary:hover,
 button.button.primary:focus-visible {
-  border-color: var(--dark-color);
-  background-color: var(--dark-color);
-  color: var(--light-color);
+  border-color: var(--brand-hover-color);
+  background-color: var(--brand-hover-color);
+  color: var(--background-color);
 }
 
 a.button.primary[aria-disabled="true"],
@@ -226,18 +233,18 @@ button.button.primary:disabled:focus-visible {
 
 a.button.secondary,
 button.button.secondary {
-  border-color: var(--text-color);
+  border-color: var(--brand-color);
   background-color: transparent;
-  color: var(--text-color);
+  color: var(--brand-color);
 }
 
 a.button.secondary:hover,
 a.button.secondary:focus-visible,
 button.button.secondary:hover,
 button.button.secondary:focus-visible {
-  border-color: var(--dark-color);
+  border-color: var(--brand-hover-color);
   background-color: var(--light-color);
-  color: var(--dark-color);
+  color: var(--brand-hover-color);
 }
 
 a.button.secondary[aria-disabled="true"],
@@ -321,5 +328,39 @@ main .section.light,
 main .section.highlight {
   background-color: var(--light-color);
   margin: 0;
-  padding: 40px 0;
+  padding: 48px 0;
+}
+
+main .section.dark {
+  background-color: var(--dark-section-color);
+  color: var(--background-color);
+  margin: 0;
+  padding: 48px 0;
+}
+
+main .section.dark :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--background-color);
+}
+
+main .section.dark a:any-link:not(.button) {
+  color: #8fe0d8;
+}
+
+main .section.dark a.button.secondary {
+  border-color: var(--background-color);
+  color: var(--background-color);
+}
+
+main .section.dark a.button.secondary:hover,
+main .section.dark a.button.secondary:focus-visible {
+  background-color: var(--background-color);
+  color: var(--dark-section-color);
+}
+
+@media (width >= 900px) {
+  main .section.light,
+  main .section.highlight,
+  main .section.dark {
+    padding: 72px 0;
+  }
 }

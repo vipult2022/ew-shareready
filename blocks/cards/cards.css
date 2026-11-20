@@ -12,6 +12,13 @@
   gap: 24px;
 }
 
+/* Exactly three cards share the row instead of leaving a fourth slot empty */
+@media (width >= 900px) {
+  .cards > ul:has(> li:nth-child(3):last-child) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .cards > ul > li {
   display: flex;
   flex-direction: column;
@@ -62,7 +69,7 @@
 .cards .cards-card-body h3,
 .cards .cards-card-body h4 {
   margin-bottom: 8px;
-  color: #222;
+  color: var(--heading-color);
   font-size: var(--heading-font-size-s);
   line-height: 1.3;
 }
