@@ -1,6 +1,6 @@
 # Experience Workspace extensions
 
-Five extensions for [Experience Workspace](https://www.aem.live/docs/ew/) (EW) on AEM Edge Delivery Services, with Document Authoring (da.live). Each one has its own README with a demo, install steps, worker setup, security notes and troubleshooting.
+Six extensions for [Experience Workspace](https://www.aem.live/docs/ew/) (EW) on AEM Edge Delivery Services, with Document Authoring (da.live). Each one has its own README with a demo, install steps, worker setup, security notes and troubleshooting.
 
 | Extension | What it does | Third party | Docs | Try it |
 | --- | --- | --- | --- | --- |
@@ -9,8 +9,9 @@ Five extensions for [Experience Workspace](https://www.aem.live/docs/ew/) (EW) o
 | **Airtable** | Insert records from any Airtable base into a page as a table, cards, an accordion or text, with photos copied into the site. Each author can use their own read-only token, or the team can share one through a worker. | Airtable | [tools/airtable](tools/airtable#readme) | [Panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/airtable.html?demo=1) |
 | **Notion** | Turn a Notion brief or draft into a page: browse the team's Notion databases next to the page, then insert a page at the cursor or create a new page from it, with headings, lists, tables, toggles, images and metadata kept, and the new page's link written back to Notion. | Notion | [tools/notion](tools/notion#readme) | [Panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/notion.html?demo=1) |
 | **Figma handoff** | Send a design from Figma to the author who builds it: the author opens it next to the page, builds it with the EW assistant using the site's blocks and the exact copy, checks that nothing from the design is missing, and marks it built for the designer to see in Figma. | Figma (plugin) | [tools/figma](tools/figma#readme) | [Panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/figma.html?demo=1) |
+| **Block Studio** | Edit any block as a simple form with no setup: fields, items, block options, variants and icons are detected automatically, checks run as you type, and the EW assistant can shorten, rewrite, translate or fill the whole block from a one-line brief. | GitHub (site icons) | [tools/blockstudio](tools/blockstudio#readme) | [Panel demo](https://main--ew-shareready--vipult2022.aem.page/tools/blockstudio.html?demo=1) |
 
-All are plain JavaScript, HTML and CSS with no build step. Each extension is self-contained in its own folder, and each has an optional or required Cloudflare Worker that keeps third-party secrets out of the browser and checks the author's Adobe sign-in.
+All are plain JavaScript, HTML and CSS with no build step. Each extension is self-contained in its own folder. The five integrations each have an optional or required Cloudflare Worker that keeps third-party secrets out of the browser and checks the author's Adobe sign-in. Block Studio needs no worker.
 
 ## Repository layout
 
@@ -22,6 +23,7 @@ All are plain JavaScript, HTML and CSS with no build step. Each extension is sel
 | `tools/airtable.html`, `tools/airtable/` | Airtable panel, library, demo, worker (`worker/`) and tests (`test/`) |
 | `tools/notion.html`, `tools/notion/` | Notion panel, library, demo, worker (`worker/`) and tests (`test/`) |
 | `tools/figma.html`, `tools/figma/` | Figma panel, Figma plugin (`plugin/`), library, demo, worker (`worker/`) and tests (`test/`) |
+| `tools/blockstudio.html`, `tools/blockstudio/` | Block Studio panel, library (`lib/`), demo and tests (`test/`) |
 | `blocks/table/`, `blocks/accordion/` | Blocks the Airtable and Notion panels insert (Cards and Columns are the boilerplate's) |
 | `9ff637071dbd6a45cea0841507f0d2db.txt` | IndexNow key for the demo site |
 | everything else | The demo site, based on the [AEM boilerplate](https://github.com/adobe/aem-boilerplate) |

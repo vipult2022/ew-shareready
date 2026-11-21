@@ -215,3 +215,12 @@ async function loadPage() {
 }
 
 loadPage();
+
+// EW layout mode: the preview server appends a quick-edit loader to this file that never
+// re-decorates inline edits, so a changed button stays a raw link. Claim da-nx's decorating
+// loader first; awaiting here guarantees it runs before the appended one.
+const { hostname, search } = window.location;
+if (hostname.endsWith('preview.da.live') && new URLSearchParams(search).has('quick-edit')) {
+  // eslint-disable-next-line import/no-unresolved
+  await import('https://da.live/nx/public/plugins/quick-edit/quick-edit-init.js').catch(() => {});
+}

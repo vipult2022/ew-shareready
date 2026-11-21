@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Marketplace image for Block Studio (1200×896). Screenshot at 1×: see README. -->
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 896px; overflow: hidden; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: radial-gradient(circle at 12% 8%, #e6ddff 0%, transparent 45%),
+      radial-gradient(circle at 92% 96%, #dfe7ff 0%, transparent 50%),
+      linear-gradient(135deg, #f6f2ff 0%, #eef3ff 100%);
+    position: relative; color: #1d1d1f;
+  }
+  .stage {
+    position: absolute; left: 70px; top: 70px; width: 1060px; height: 756px;
+    border-radius: 36px; background: rgba(255,255,255,.45);
+    border: 1px solid rgba(255,255,255,.85);
+    box-shadow: 0 30px 60px rgba(70,40,140,.10);
+  }
+  .win {
+    position: absolute; background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 18px 40px rgba(50,30,110,.18), 0 2px 6px rgba(50,30,110,.08);
+  }
+  .bar { height: 40px; display: flex; align-items: center; gap: 7px; padding: 0 16px; background: #eb1000; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: #fff; opacity: .5; }
+  .line { height: 9px; border-radius: 5px; background: #e4e7f2; }
+
+  /* EW document with a raw block table */
+  .doc { left: 110px; top: 128px; width: 470px; height: 640px; }
+  .docbody { padding: 26px 26px; }
+  .h1 { height: 18px; width: 62%; border-radius: 9px; background: #c9cfe6; margin-bottom: 14px; }
+  .table { border: 2px solid #6f4cff; border-radius: 8px; overflow: hidden; margin: 22px 0 20px; box-shadow: 0 0 0 5px rgba(111,76,255,.12); }
+  .table .name { background: #6f4cff; color: #fff; font-size: 14px; font-weight: 700; padding: 9px 12px; }
+  .row { display: grid; grid-template-columns: 120px 1fr; border-top: 1.5px solid #e6e3f5; }
+  .row > div { padding: 10px 12px; min-height: 84px; }
+  .row > div + div { border-left: 1.5px solid #e6e3f5; }
+  .img { height: 64px; border-radius: 6px; background: linear-gradient(135deg, #f6d9bf, #f1e6d6); position: relative; overflow: hidden; }
+  .img::before { content: ''; position: absolute; left: 14px; top: 6px; width: 24px; height: 58px; background: #14304f; }
+  .img.b { background: linear-gradient(135deg, #cfe7f0, #e3f1f6); }
+  .img.b::before { left: 30px; top: 14px; width: 40px; height: 36px; border-radius: 5px; background: #fff; border-top: 9px solid #1aa08e; }
+  .cell i { display: block; height: 7px; border-radius: 4px; background: #c9cee4; margin-bottom: 8px; }
+  .cell i.t { height: 10px; background: #8a90aa; width: 70%; }
+  .cell u { display: block; height: 7px; width: 34%; border-radius: 4px; background: #3b63fb; margin-top: 10px; }
+  .hint {
+    position: absolute; left: 136px; top: 660px; z-index: 3; font-size: 13px; font-weight: 700; color: #b0190b;
+    background: #ffeae6; border: 1.5px solid #ffc7bd; border-radius: 9px; padding: 7px 10px;
+  }
+
+  /* connector */
+  .go {
+    position: absolute; left: 546px; top: 400px; width: 64px; height: 64px; border-radius: 18px;
+    background: #fff; display: grid; place-items: center; z-index: 3;
+    box-shadow: 0 10px 24px rgba(50,30,110,.18);
+  }
+
+  /* Block Studio panel */
+  .panel { left: 640px; top: 110px; width: 450px; height: 676px; padding: 22px 24px; }
+  .ph { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .mark { width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg, #9b7bff, #6f4cff 55%, #4a2ee0); display: grid; place-items: center; }
+  .ph b { font-size: 20px; }
+  .ph small { display: block; font-size: 13px; color: #717171; margin-top: 2px; }
+  .issues { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 14px; border-radius: 10px; background: #e7f6ef; color: #0d6b4b; font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+  .issues em { width: 18px; height: 18px; border-radius: 50%; background: #12805c; color: #fff; font-style: normal; font-size: 12px; display: grid; place-items: center; }
+  .label { font-size: 11px; letter-spacing: .1em; font-weight: 700; color: #555; margin: 4px 0 8px; }
+  .card { border: 1.5px solid #e3e3ea; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+  .chips { display: flex; gap: 7px; margin-bottom: 12px; }
+  .chip { font-size: 13px; font-weight: 600; padding: 5px 11px; border-radius: 14px; background: #efeaff; color: #3b1fc7; border: 1.5px solid #d9cfff; }
+  .chip.add { background: #fff; color: #444; border-style: dashed; border-color: #ccc; }
+  .opt { display: grid; grid-template-columns: 96px 1fr; align-items: center; font-size: 13px; font-weight: 600; color: #444; }
+  .select { height: 32px; border: 1.5px solid #c9c9d2; border-radius: 7px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; font-weight: 500; color: #1d1d1f; }
+  .item { border: 1.5px solid #e3e3ea; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .ihead { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .ihead span { color: #717171; font-weight: 500; }
+  .ihead .tools { margin-left: auto; display: flex; gap: 10px; }
+  .ihead .tools i { width: 14px; height: 14px; border-radius: 3px; border: 1.8px solid #9a9aa6; }
+  .field { margin-bottom: 10px; }
+  .flabel { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 5px; }
+  .flabel span { font-weight: 500; color: #888; display: flex; gap: 8px; align-items: center; }
+  .flabel span b { color: #6f4cff; font-size: 14px; }
+  .input { height: 34px; border: 1.5px solid #c9c9d2; border-radius: 7px; padding: 0 10px; display: flex; align-items: center; font-size: 14px; }
+  .input.big { font-weight: 700; }
+  .media { display: flex; gap: 12px; align-items: center; }
+  .media .img { width: 92px; height: 60px; }
+  .btn { font-size: 13px; font-weight: 700; border: 1.5px solid #c9c9d2; border-radius: 15px; padding: 5px 12px; }
+  .ai {
+    position: absolute; right: 136px; top: 598px; z-index: 4; width: 190px; padding: 10px 0;
+    background: #fff; border-radius: 10px; font-size: 14px;
+    box-shadow: 0 14px 30px rgba(50,30,110,.22), 0 0 0 1px rgba(50,30,110,.06);
+  }
+  .ai div { padding: 7px 16px; }
+  .ai .t { font-size: 11px; letter-spacing: .1em; font-weight: 700; color: #555; }
+  .ai .t b { color: #6f4cff; }
+  .ai .on { background: #f1edff; color: #3b1fc7; font-weight: 600; }
+  .closed { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; border: 1.5px solid #e3e3ea; border-radius: 12px; padding: 12px 14px; }
+  .closed span { color: #717171; font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="stage"></div>
+
+  <div class="win doc">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <div class="docbody">
+      <div class="h1"></div>
+      <div class="line" style="width:88%;margin-bottom:8px"></div>
+      <div class="line" style="width:64%"></div>
+      <div class="table">
+        <div class="name">carousel (media-left, surface-light)</div>
+        <div class="row"><div><div class="img"></div></div><div class="cell"><i style="width:40%"></i><i class="t"></i><i></i><i style="width:80%"></i><u></u></div></div>
+        <div class="row"><div><div class="img b"></div></div><div class="cell"><i style="width:30%"></i><i class="t" style="width:60%"></i><i style="width:90%"></i><u style="width:28%"></u></div></div>
+        <div class="row"><div></div><div class="cell"><i class="t" style="width:76%"></i><i style="width:96%"></i><i style="width:88%"></i><i style="width:70%"></i></div></div>
+      </div>
+      <div class="line" style="width:80%;margin-bottom:8px"></div>
+      <div class="line" style="width:56%"></div>
+    </div>
+  </div>
+  <div class="hint">Which cell is the eyebrow? Is the link right?</div>
+
+  <div class="go">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6f4cff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+  </div>
+
+  <div class="win panel">
+    <div class="ph">
+      <span class="mark"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2.5" fill="none" stroke="#fff" stroke-width="1.8"/><path fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" d="M7 8.5h5M7 12h10M7 15.5h7"/><circle cx="17" cy="8.5" r="1.6" fill="#fff"/></svg></span>
+      <div><b>Block Studio</b><small>Carousel · 3 slides</small></div>
+    </div>
+    <div class="issues"><em>✓</em>No issues in this block</div>
+    <div class="label">BLOCK OPTIONS</div>
+    <div class="card">
+      <div class="chips"><span class="chip">media-left ×</span><span class="chip add">+ media-right</span><span class="chip add">+ full-width</span></div>
+      <div class="opt">Background<div class="select">Light surface <span>⌄</span></div></div>
+    </div>
+    <div class="label">SLIDES</div>
+    <div class="item">
+      <div class="ihead">⌄ Slide 1 <span>Save a little every payday</span></div>
+      <div class="field media"><div class="img"></div><span class="btn">⇪ Replace</span></div>
+      <div class="field"><div class="flabel">Eyebrow <span>15/24</span></div><div class="input">Everyday saving</div></div>
+      <div class="field"><div class="flabel">Heading <span>26/70 <b>✦</b></span></div><div class="input big">Save a little every payday</div></div>
+      <div class="field"><div class="flabel">Primary button <span>13/25</span></div><div class="input">Start saving</div></div>
+    </div>
+    <div class="closed">› Slide 2 <span>Lock in 4.25% for a year</span></div>
+  </div>
+
+  <div class="ai">
+    <div class="t"><b>✦</b> ASK THE ASSISTANT</div>
+    <div class="on">Shorten</div>
+    <div>Make clearer</div>
+    <div>Translate to…</div>
+  </div>
+</body>
+</html>
