@@ -178,7 +178,7 @@ function loadVariants(name) {
   if (!settings.libraryBlocks?.length) return;
   let pending = variantCache.get(name);
   if (!pending) {
-    pending = libraryVariants(settings.libraryBlocks, name).catch(() => []);
+    pending = libraryVariants(settings.libraryBlocks, name, fetcher).catch(() => []);
     variantCache.set(name, pending);
   }
   pending.then((list) => {

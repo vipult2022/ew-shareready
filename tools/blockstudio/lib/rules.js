@@ -154,9 +154,10 @@ async function getJson(fetcher, url) {
 
 /**
  * Loads the site's config. Missing sheets and network errors return empty settings,
- * so the panel always works with zero setup.
+ * so the panel always works with zero setup. The library index is read with the
+ * same fetcher, so a DA-hosted library (content.da.live) gets the IMS token.
  */
-export async function loadSiteSettings(fetcher, context, fetchImpl = fetch) {
+export async function loadSiteSettings(fetcher, context, fetchImpl = fetcher) {
   const { org, site } = context;
   const [siteJson, orgJson] = await Promise.all([
     getJson(fetcher, `${DA_ADMIN}/config/${org}/${site}`),
