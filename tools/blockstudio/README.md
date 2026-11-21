@@ -194,6 +194,8 @@ If the site's `library` sheet has a **Blocks** row (the block library), Block St
 - the library's **`options`** sheet (`blocks | key | values`, the format Block Inspector uses) gives the dropdown values for settings rows, so an existing setup keeps working;
 - the library's example pages give more variant suggestions for each block.
 
+The library can be published pages (`/library/blocks.json`) or kept in DA (`https://content.da.live/{org}/{site}/library/blocks.json`); see [Set up the library](https://www.aem.live/docs/ew/administering/set-up-library). DA-hosted files are read with your EW sign-in.
+
 ### Icons
 
 The icon picker lists the SVG files in the `/icons` folder of the site's GitHub repository (`https://api.github.com/repos/{org}/{site}/contents/icons`), plus the icons already used on the page and the rules sheet's `icons`. Icons are shown from `https://main--{site}--{org}.aem.live/icons/{name}.svg`.
