@@ -208,17 +208,18 @@ test('config: typed options and the fields sheet configure a block without code'
   assert.equal(blockRules([], 'hero', new Map(), { optionDefs: defs }).optionDefs.get('spacing').type, 'select');
 });
 
-test('config: library variants carry the example heading and description', async () => {
+test('config: library variants are the documented class combinations, with heading and description', async () => {
   const doc = `<div><h2>Horizontal</h2><div class="cards horizontal"><div><div>a</div></div></div>
     <div class="library-metadata"><div><div>description</div><div>Image beside the text.</div></div></div>
-    <div class="cards icons compact"><div><div>b</div></div></div></div>`;
+    <div class="cards icons compact"><div><div>b</div></div></div>
+    <h3>Plain</h3><div class="cards"><div><div>c</div></div></div>
+    <h3>Same, reordered</h3><div class="cards compact icons"><div><div>d</div></div></div></div>`;
   const fake = async (url) => new Response(url.endsWith('/da') ? `<body><header></header><main>${doc}</main></body>` : doc);
   const variants = await libraryVariants([{ name: 'Cards', path: 'https://x.test/cards' }], 'cards', fake, DOMParser);
   assert.deepEqual(variants, [
     { value: 'horizontal', title: 'Horizontal', description: 'Image beside the text.' },
-    { value: 'icons', title: 'Icons', description: '' },
-    { value: 'compact', title: 'Compact', description: '' },
-  ]);
+    { value: 'icons compact', title: 'Icons, Compact', description: '' },
+  ], 'one choice per combination; the default example and a reordered duplicate add none');
   const fromDa = await libraryVariants([{ name: 'Cards', path: 'https://content.da.live/o/s/da' }], 'cards', fake, DOMParser);
-  assert.deepEqual(fromDa.map((v) => v.value), ['horizontal', 'icons', 'compact'], 'a whole DA document');
+  assert.deepEqual(fromDa.map((v) => v.value), ['horizontal', 'icons compact'], 'a whole DA document');
 });

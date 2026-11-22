@@ -834,77 +834,58 @@ export default function createPanel(root, state, on) {
 
   /* Variants and options */
 
-  /** Variants the block library (or the rules sheet) defines: [{value, title, description}]. */
+  /**
+   * The variants authors can choose: the block library's examples, then the rules sheet's
+   * `variants` row, keyed by their sorted classes so order doesn't matter.
+   */
   function configuredVariants() {
-    const list = new Map((state.libraryVariants || []).map((v) => [v.value, v]));
-    (state.rules?.variants || []).forEach((v) => {
-      if (!list.has(v)) list.set(v, { value: v, title: title(v), description: '' });
-    });
-    return [...list.values()];
+    const list = new Map();
+    const add = (v) => {
+      const classes = [...new Set(String(v.value || '').split(/\s+/).map(toClass).filter(Boolean))];
+      const id = [...classes].sort().join(' ');
+      if (classes.length && !list.has(id)) list.set(id, { ...v, classes });
+    };
+    (state.libraryVariants || []).forEach(add);
+    (state.rules?.variants || []).forEach((v) => add({ value: v, title: title(v), description: '' }));
+    return list;
   }
 
-  const removeVariantBtn = (variants, v) => (locked() ? null : h('button', {
-    type: 'button', class: 'bs-chip-x', 'aria-label': `Remove variant ${v}`, dataset: { key: `variant:${v}` }, onclick: () => on.setVariants(variants.filter((x) => x !== v)),
-  }, icon('close')));
-
-  /** A fixed picker: authors toggle the variants the library documents. */
-  function variantPicker(variants, configured) {
-    const known = new Set(configured.map((v) => v.value));
-    const toggle = (value) => on.setVariants(variants.includes(value)
-      ? variants.filter((x) => x !== value) : [...variants, value]);
-    const chip = (label, pressed, onclick, key, tip) => h('button', {
-      type: 'button',
-      class: `bs-chip bs-variant-opt${pressed ? ' is-on' : ''}`,
-      'aria-pressed': String(pressed),
-      title: tip,
-      disabled: locked(),
-      dataset: { key },
-      onclick,
-    }, label);
-    const unknown = variants.filter((v) => !known.has(v));
-    const chosen = configured.filter((v) => variants.includes(v.value) && v.description);
-    return h(
-      'div',
-      { class: 'bs-variants bs-variants-fixed', role: 'group', 'aria-label': 'Variant' },
-      h('span', { class: 'bs-label' }, 'Variant'),
-      h(
-        'div',
-        { class: 'bs-chips' },
-        chip('Default', !variants.length, () => on.setVariants(unknown), 'variant-opt:', 'The block without a variant'),
-        configured.map((v) => chip(title(v.value), variants.includes(v.value), () => toggle(v.value), `variant-opt:${v.value}`, [v.title, v.description].filter(Boolean).join(': '))),
-        unknown.map((v) => h('span', { class: 'bs-chip bs-chip-warn', title: 'Not in the block library. The site may not style it.' }, icon('alert'), v, removeVariantBtn(variants, v))),
-      ),
-      chosen.map((v) => h('p', { class: 'bs-variant-desc' }, h('strong', {}, title(v.value)), ` ${v.description}`)),
-    );
-  }
-
+  /**
+   * A dropdown of the documented variants: authors can't type their own. A variant on the
+   * page that isn't documented is shown (so it can be changed) with a warning.
+   */
   function variantsSection() {
     const { variants } = state.model;
     const configured = configuredVariants();
-    if (configured.length) return variantPicker(variants, configured);
-    const suggestions = [...new Set(state.variantSuggestions || [])]
-      .filter((v) => !variants.includes(v)).slice(0, 8);
-    const add = (value) => {
-      const v = toClass(value);
-      if (v && !variants.includes(v)) on.setVariants([...variants, v]);
-    };
-    const field = h('input', {
-      class: 'bs-input bs-variant-input', placeholder: 'Add a variant', 'aria-label': 'Add a variant', dataset: { key: 'variant-add' }, disabled: locked(),
-    });
-    field.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && field.value.trim()) {
-        e.preventDefault();
-        add(field.value);
-      }
-    });
+    if (!configured.size && !variants.length) return null;
+    const now = configured.get([...variants].sort().join(' '));
+    const label = (classes) => classes.map(title).join(', ');
+    const select = h(
+      'select',
+      {
+        class: 'bs-input',
+        id: 'bs-variant',
+        disabled: locked(),
+        dataset: { key: 'variant' },
+        onchange: (e) => on.setVariants(e.target.value ? e.target.value.split(' ') : []),
+      },
+      h('option', { value: '' }, 'Default'),
+      variants.length && !now ? h('option', { value: variants.join(' ') }, `${label(variants)} (undocumented)`) : null,
+      [...configured.values()].map((v) => h('option', { value: v.classes.join(' ') }, label(v.classes))),
+    );
+    select.value = now ? now.classes.join(' ') : variants.join(' ');
+    let note = null;
+    if (variants.length && !now) {
+      note = h('p', { class: 'bs-variant-desc bs-variant-warn' }, icon('alert'), configured.size
+        ? 'This variant isn\'t in the block library, so the site may not style it. Choose one from the list.'
+        : 'This block has no documented variants, so the site may not style it. Choose Default to remove it.');
+    } else if (now?.description) note = h('p', { class: 'bs-variant-desc' }, now.description);
     return h(
       'div',
-      { class: 'bs-variants' },
-      h('span', { class: 'bs-label' }, 'Variant'),
-      h('div', { class: 'bs-chips' }, variants.map((v) => h('span', { class: 'bs-chip' }, v, removeVariantBtn(variants, v))), variants.length ? null : h('span', { class: 'bs-muted bs-small' }, 'Default'), field),
-      suggestions.length && !locked() ? h('div', { class: 'bs-chips bs-suggest' }, suggestions.map((v) => h('button', {
-        type: 'button', class: 'bs-chip bs-chip-add', dataset: { key: `variant-suggest:${v}` }, onclick: () => add(v),
-      }, icon('plus'), v))) : null,
+      { class: 'bs-option bs-option-select bs-variants', dataset: { target: 'variant' } },
+      h('label', { class: 'bs-label', for: 'bs-variant' }, 'Variant'),
+      select,
+      note,
     );
   }
 
@@ -1219,7 +1200,7 @@ export default function createPanel(root, state, on) {
       state.target.index, state.model.name, state.model.mode, state.model.noun,
       state.model.variants, state.editable,
       state.ai?.available, state.ai?.busy, state.addingOption, [...state.open].sort(),
-      state.rules?.variants, state.variantSuggestions, state.libraryVariants,
+      state.rules?.variants, state.libraryVariants,
       [...optionDefs().values()].map((d) => [d.key, d.type, d.type === 'text' ? '' : optionNow(d.key)?.value ?? null, d.type === 'image' && !!on.optionBusy?.(d.key), (state.issues || []).filter((i) => i.target === `option:${d.key}`).length]),
       view().options.map((o) => [o.key, valuesFor(o.key).length ? o.value : '', (state.issues || []).filter((i) => i.target === `option:${o.key}`).length]),
       view().groups.map((g) => [g.kind, g.title, g.cells.map((cell) => cell.map((s) => [s.type, !!s.field, s.label, s.field?.style === 'accent']))]),

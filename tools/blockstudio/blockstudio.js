@@ -61,7 +61,6 @@ const state = {
   addingOption: '',
   showIssues: false,
   briefOpen: false,
-  variantSuggestions: [],
   libraryVariants: [],
   icons: [],
   rulesFound: false,
@@ -186,13 +185,10 @@ function iconUrl(name) {
 }
 
 /**
- * Variants come from the block library (a fixed list, with descriptions) when it
- * documents the block; otherwise the page's own variants are offered as suggestions.
+ * The variants authors can choose come from the block library (a fixed list, with
+ * descriptions) and the rules sheet. Authors can't add their own.
  */
 function loadVariants(name) {
-  const fromPage = blockElements(liveDoc).filter((el) => blockName(el) === name)
-    .flatMap((el) => classesOf(el).slice(1));
-  state.variantSuggestions = [...new Set(fromPage)];
   state.libraryVariants = settings.variants?.[name] || [];
   if (!settings.libraryBlocks?.length) return;
   let pending = variantCache.get(name);

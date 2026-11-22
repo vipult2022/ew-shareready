@@ -287,8 +287,9 @@ function exampleMeta(el) {
 
 /**
  * The variants the block library documents for a block, as [{value, title, description}].
- * Each example's class tokens are variants; its heading and `library-metadata`
- * description describe the variant when the example uses exactly one.
+ * Each example with classes after the block name is one variant (`value` is those
+ * classes, such as "icons compact"); its heading and `library-metadata` description
+ * describe it. Authors can choose only these.
  */
 export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Parser = DOMParser) {
   const key = toClass(name);
@@ -304,19 +305,19 @@ export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Pa
       const text = await resp.text();
       const doc = parseHtml(/<main[\s>]/i.test(text) ? text : `<main>${text}</main>`, Parser);
       blockElements(doc).forEach((el) => {
-        const [blockName, ...variants] = classesOf(el);
-        if (blockName !== key) return;
+        const [blockName, ...classes] = classesOf(el);
+        const variants = [...new Set(classes)];
+        if (blockName !== key || !variants.length) return;
+        // The same classes in another order are the same variant.
+        const id = [...variants].sort().join(' ');
         const prev = el.previousElementSibling;
         const meta = exampleMeta(el);
-        variants.forEach((value) => {
-          const own = variants.length === 1;
-          const known = found.get(value);
-          const heading = own && isHeading(prev) ? prev.textContent.trim() : '';
-          found.set(value, {
-            value,
-            title: heading || known?.title || titleCase(value),
-            description: (own && meta.description) || known?.description || '',
-          });
+        const known = found.get(id);
+        found.set(id, {
+          value: known?.value || variants.join(' '),
+          title: known?.title || (isHeading(prev) ? prev.textContent.trim() : '')
+            || variants.map(titleCase).join(', '),
+          description: known?.description || meta.description || '',
         });
       });
     } catch {
