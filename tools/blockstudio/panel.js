@@ -193,13 +193,16 @@ export default function createPanel(root, state, on) {
       // eslint-disable-next-line no-use-before-define
       render(true);
     }
-    if (target.startsWith('option-missing:')) {
-      state.addingOption = target.slice(15);
+    const missing = target.startsWith('option-missing:') ? target.slice(15) : '';
+    const definedKey = missing && state.rules?.optionDefs?.has(missing);
+    if (missing && !definedKey) {
+      state.addingOption = missing;
       // eslint-disable-next-line no-use-before-define
       render(true);
     }
+    const fallback = definedKey ? `option:${missing}` : target.replace(/^option-missing:.*/, 'add-option');
     const el = ui.body.querySelector(`[data-target="${CSS.escape(target)}"]`)
-      || ui.body.querySelector(`[data-target="${CSS.escape(target.replace(/^option-missing:.*/, 'add-option'))}"]`);
+      || ui.body.querySelector(`[data-target="${CSS.escape(fallback)}"]`);
     if (!el) return;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     el.classList.remove('bs-flash');
@@ -831,10 +834,55 @@ export default function createPanel(root, state, on) {
 
   /* Variants and options */
 
+  /** Variants the block library (or the rules sheet) defines: [{value, title, description}]. */
+  function configuredVariants() {
+    const list = new Map((state.libraryVariants || []).map((v) => [v.value, v]));
+    (state.rules?.variants || []).forEach((v) => {
+      if (!list.has(v)) list.set(v, { value: v, title: title(v), description: '' });
+    });
+    return [...list.values()];
+  }
+
+  const removeVariantBtn = (variants, v) => (locked() ? null : h('button', {
+    type: 'button', class: 'bs-chip-x', 'aria-label': `Remove variant ${v}`, dataset: { key: `variant:${v}` }, onclick: () => on.setVariants(variants.filter((x) => x !== v)),
+  }, icon('close')));
+
+  /** A fixed picker: authors toggle the variants the library documents. */
+  function variantPicker(variants, configured) {
+    const known = new Set(configured.map((v) => v.value));
+    const toggle = (value) => on.setVariants(variants.includes(value)
+      ? variants.filter((x) => x !== value) : [...variants, value]);
+    const chip = (label, pressed, onclick, key, tip) => h('button', {
+      type: 'button',
+      class: `bs-chip bs-variant-opt${pressed ? ' is-on' : ''}`,
+      'aria-pressed': String(pressed),
+      title: tip,
+      disabled: locked(),
+      dataset: { key },
+      onclick,
+    }, label);
+    const unknown = variants.filter((v) => !known.has(v));
+    const chosen = configured.filter((v) => variants.includes(v.value) && v.description);
+    return h(
+      'div',
+      { class: 'bs-variants bs-variants-fixed', role: 'group', 'aria-label': 'Variant' },
+      h('span', { class: 'bs-label' }, 'Variant'),
+      h(
+        'div',
+        { class: 'bs-chips' },
+        chip('Default', !variants.length, () => on.setVariants(unknown), 'variant-opt:', 'The block without a variant'),
+        configured.map((v) => chip(title(v.value), variants.includes(v.value), () => toggle(v.value), `variant-opt:${v.value}`, [v.title, v.description].filter(Boolean).join(': '))),
+        unknown.map((v) => h('span', { class: 'bs-chip bs-chip-warn', title: 'Not in the block library. The site may not style it.' }, icon('alert'), v, removeVariantBtn(variants, v))),
+      ),
+      chosen.map((v) => h('p', { class: 'bs-variant-desc' }, h('strong', {}, title(v.value)), ` ${v.description}`)),
+    );
+  }
+
   function variantsSection() {
     const { variants } = state.model;
-    const known = [...(state.rules?.variants || []), ...(state.variantSuggestions || [])];
-    const suggestions = [...new Set(known)]
+    const configured = configuredVariants();
+    if (configured.length) return variantPicker(variants, configured);
+    const suggestions = [...new Set(state.variantSuggestions || [])]
       .filter((v) => !variants.includes(v)).slice(0, 8);
     const add = (value) => {
       const v = toClass(value);
@@ -853,18 +901,19 @@ export default function createPanel(root, state, on) {
       'div',
       { class: 'bs-variants' },
       h('span', { class: 'bs-label' }, 'Variant'),
-      h('div', { class: 'bs-chips' }, variants.map((v) => h('span', { class: 'bs-chip' }, v, locked() ? null : h('button', {
-        type: 'button', class: 'bs-chip-x', 'aria-label': `Remove variant ${v}`, dataset: { key: `variant:${v}` }, onclick: () => on.setVariants(variants.filter((x) => x !== v)),
-      }, icon('close')))), variants.length ? null : h('span', { class: 'bs-muted bs-small' }, 'Default'), field),
+      h('div', { class: 'bs-chips' }, variants.map((v) => h('span', { class: 'bs-chip' }, v, removeVariantBtn(variants, v))), variants.length ? null : h('span', { class: 'bs-muted bs-small' }, 'Default'), field),
       suggestions.length && !locked() ? h('div', { class: 'bs-chips bs-suggest' }, suggestions.map((v) => h('button', {
         type: 'button', class: 'bs-chip bs-chip-add', dataset: { key: `variant-suggest:${v}` }, onclick: () => add(v),
       }, icon('plus'), v))) : null,
     );
   }
 
-  const optionLabel = (key, keyText) => state.rules?.fields?.get(key)?.label
-    || title(keyText || key);
+  const optionDefs = () => state.rules?.optionDefs || new Map();
+  const optionLabel = (key, keyText) => optionDefs().get(key)?.label
+    || state.rules?.fields?.get(key)?.label || title(keyText || key);
   const valuesFor = (key) => state.rules?.values?.get(key) || [];
+  const optionNow = (key) => view().options.find((o) => o.key === key);
+  const isOff = (value) => /^(|false|no|off|0)$/i.test(String(value ?? '').trim());
 
   function optionControl(option) {
     const values = valuesFor(option.key);
@@ -890,10 +939,116 @@ export default function createPanel(root, state, on) {
     return el;
   }
 
-  function addOptionForm() {
+  /**
+   * A control for an option the library defines. The block's default needs no row, so
+   * choosing it removes the option row; any other choice writes `key | value`.
+   */
+  function definedControl(def) {
+    const key = `option:${def.key}`;
+    const id = `bs-option-${def.key}`;
+    const option = optionNow(def.key);
+    const current = option?.value ?? '';
+    const apply = (value, commit = true) => {
+      const v = String(value ?? '').trim();
+      if (!v || v === def.default) {
+        if (optionNow(def.key)) on.removeOption(def.key);
+      } else on.setOption(def.key, v, def.keyText, commit);
+    };
+    if (def.type === 'select') {
+      const values = def.values.length ? def.values : valuesFor(def.key);
+      const fallback = values.find((v) => v.value === def.default);
+      const match = values.find((v) => v.value === current || v.title === current);
+      const select = h(
+        'select',
+        {
+          class: 'bs-input', id, dataset: { key }, disabled: locked(), onchange: (e) => apply(e.target.value),
+        },
+        h('option', { value: '' }, fallback ? `${fallback.title} (default)` : 'Default'),
+        current && !match ? h('option', { value: current }, `${current} (not in the list)`) : null,
+        values.filter((v) => v !== fallback).map((v) => h('option', { value: v.value }, v.title)),
+      );
+      if (!match) select.value = current;
+      else select.value = match === fallback ? '' : match.value;
+      return select;
+    }
+    if (def.type === 'toggle') {
+      const checked = !!option && !isOff(current);
+      return h(
+        'label',
+        { class: 'bs-toggle' },
+        h('input', {
+          type: 'checkbox',
+          id,
+          checked,
+          disabled: locked(),
+          dataset: { key },
+          onchange: (e) => (e.target.checked
+            ? on.setOption(def.key, def.values[0]?.value || 'true', def.keyText)
+            : apply('')),
+        }),
+        h('span', { class: 'bs-toggle-track', 'aria-hidden': 'true' }),
+        h('span', { class: 'bs-small' }, checked ? 'On' : 'Off'),
+      );
+    }
+    if (def.type === 'image') {
+      const busy = !!on.optionBusy?.(def.key);
+      const info = current ? on.image(current) || {} : {};
+      const file = h('input', {
+        type: 'file',
+        accept: 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml',
+        hidden: true,
+        onchange: () => {
+          if (file.files[0]) on.uploadOption(def.key, file.files[0], def.keyText);
+          file.value = '';
+        },
+      });
+      return h(
+        'div',
+        { class: 'bs-image bs-option-image' },
+        h('div', { class: 'bs-thumb' }, info.url ? h('img', { src: info.url, alt: '' }) : icon('image', 'bs-i bs-thumb-empty')),
+        h(
+          'div',
+          { class: 'bs-image-side' },
+          h('p', { class: 'bs-img-meta' }, (busy && 'Uploading…') || (current ? 'Image set' : 'No image')),
+          h(
+            'div',
+            { class: 'bs-inline' },
+            h('button', {
+              type: 'button', id, class: 'bs-btn bs-small-btn', disabled: locked() || busy, dataset: { key: `${key}:upload` }, onclick: () => file.click(),
+            }, icon('upload'), current ? 'Replace' : 'Choose image'),
+            current && !locked() ? h('button', {
+              type: 'button', class: 'bs-btn bs-small-btn', dataset: { key: `${key}:remove` }, onclick: () => on.removeOption(def.key),
+            }, 'Remove') : null,
+          ),
+          file,
+        ),
+      );
+    }
+    const el = h('input', {
+      class: 'bs-input', id, value: current, placeholder: def.default || '', dataset: { key }, disabled: locked(),
+    });
+    // Each keystroke reaches the model (adding the row if needed), so a re-render keeps it.
+    el.addEventListener('input', () => {
+      if (!el.value.trim()) return;
+      on.setOption(def.key, el.value, def.keyText, false);
+      sent.set(el, optionNow(def.key)?.value ?? '');
+    });
+    el.addEventListener('change', () => apply(el.value));
+    binds.push(() => sync(el, optionNow(def.key)?.value ?? ''));
+    return el;
+  }
+
+  /** Known settings the block doesn't have yet; with library definitions, the only ones to add. */
+  function addableKeys() {
     const present = new Set(view().options.map((o) => o.key));
-    const known = [...(state.rules?.values?.keys() || []), ...(state.rules?.options || [])]
-      .filter((key, i, all) => !present.has(key) && all.indexOf(key) === i);
+    const defs = optionDefs();
+    return [...(state.rules?.values?.keys() || []), ...(state.rules?.options || [])]
+      .filter((key, i, all) => !present.has(key) && !defs.has(key) && all.indexOf(key) === i);
+  }
+
+  function addOptionForm() {
+    const known = addableKeys();
+    const free = !optionDefs().size;
     if (!state.addingOption) {
       return locked() ? null : h('button', {
         type: 'button',
@@ -944,6 +1099,10 @@ export default function createPanel(root, state, on) {
             toast('Give the option a name, such as theme.');
             return;
           }
+          if (!free && !known.includes(key)) {
+            toast(`This block's options are set by the library. Add one of: ${known.map((k) => optionLabel(k)).join(', ')}.`);
+            return;
+          }
           on.setOption(key, valueInput.value, keyInput.value.trim().toLowerCase());
           done();
         },
@@ -951,21 +1110,35 @@ export default function createPanel(root, state, on) {
     );
   }
 
+  const optionIssues = (key) => h('ul', { class: 'bs-field-issues bs-option-issues' }, issuesFor(`option:${key}`).map((issue) => h('li', { class: `bs-${issue.level}` }, issueIcon(issue.level), issue.message)));
+
+  /**
+   * Options the library defines are always listed, in sheet order, with a control for
+   * their type. Other settings rows on the block are listed after them; free-form
+   * options can be added only when the block has no definitions.
+   */
   function optionsSection() {
-    const opts = view().options;
-    const rows = opts.map((option) => h(
+    const defs = optionDefs();
+    const defined = [...defs.values()].map((def) => h(
+      'div',
+      { class: `bs-option bs-option-${def.type}`, dataset: { target: `option:${def.key}` } },
+      h('label', { class: 'bs-label', for: `bs-option-${def.key}` }, def.label || title(def.keyText)),
+      definedControl(def),
+      optionIssues(def.key),
+    ));
+    const rows = view().options.filter((option) => !defs.has(option.key)).map((option) => h(
       'div',
       { class: 'bs-option', dataset: { target: `option:${option.key}` } },
       h('label', { class: 'bs-label', for: `bs-option-${option.key}` }, optionLabel(option.key, option.keyText)),
       optionControl(option),
       locked() ? null : iconBtn('close', `Remove ${optionLabel(option.key, option.keyText)}`, () => on.removeOption(option.key)),
-      h('ul', { class: 'bs-field-issues bs-option-issues' }, issuesFor(`option:${option.key}`).map((issue) => h('li', { class: `bs-${issue.level}` }, issueIcon(issue.level), issue.message))),
+      optionIssues(option.key),
     ));
     return h(
       'section',
       { class: 'bs-section' },
       h('div', { class: 'bs-section-head' }, h('h2', {}, 'Block options'), h('span', { class: 'bs-grow' }), h('span', { class: 'bs-muted bs-small' }, 'Once per block')),
-      h('div', { class: 'bs-card bs-options' }, variantsSection(), rows, addOptionForm()),
+      h('div', { class: 'bs-card bs-options' }, variantsSection(), defined, rows, !defs.size || addableKeys().length ? addOptionForm() : null),
     );
   }
 
@@ -1046,7 +1219,8 @@ export default function createPanel(root, state, on) {
       state.target.index, state.model.name, state.model.mode, state.model.noun,
       state.model.variants, state.editable,
       state.ai?.available, state.ai?.busy, state.addingOption, [...state.open].sort(),
-      state.rules?.variants, state.variantSuggestions,
+      state.rules?.variants, state.variantSuggestions, state.libraryVariants,
+      [...optionDefs().values()].map((d) => [d.key, d.type, d.type === 'text' ? '' : optionNow(d.key)?.value ?? null, d.type === 'image' && !!on.optionBusy?.(d.key), (state.issues || []).filter((i) => i.target === `option:${d.key}`).length]),
       view().options.map((o) => [o.key, valuesFor(o.key).length ? o.value : '', (state.issues || []).filter((i) => i.target === `option:${o.key}`).length]),
       view().groups.map((g) => [g.kind, g.title, g.cells.map((cell) => cell.map((s) => [s.type, !!s.field, s.label, s.field?.style === 'accent']))]),
     ]);

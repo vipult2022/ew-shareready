@@ -59,7 +59,8 @@ Open a page in EW, then **Extensions › Block Studio**, and click inside any bl
 | Header | The block's name and variants, with **Undo** and **Redo** for everything done in the panel. In a rich text field, Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z do the same. |
 | Block health | "No issues" or "3 issues". Open it to see each issue; click one to jump to its field. Items with issues show a red or amber count. |
 | Fill from a brief | One line in ("Spring savings offers for young families"), and the assistant writes every field of the block. |
-| Block options | **Variant** chips you can add or remove, with suggestions from the rules sheet, the block library and the variants already on the page. Then each **setting row** (`theme`, `autoplay`, …) as a dropdown with friendly labels, or a text field. **+ Add option** lists the known settings this block doesn't have yet. |
+| Block options | **Variant** chips: the block's documented variants (from the block library or the rules sheet) as toggles with their descriptions, or free-text chips when none are configured. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Other setting rows (`theme`, `autoplay`, …) show as a dropdown with friendly labels, or a text field, and **+ Add option** lists the known settings this block doesn't have yet. |
+| Item fields | When the library's `fields` sheet describes a repeating block's cells, each item uses those names ("Card title", "Card background"), limits and required flags, and offers to add any declared field it's missing. |
 | Items | Slides, cards, tabs or accordion rows as collapsible items, named from the block ("Slide 1", "Card 2") with their heading as a subtitle. Add, duplicate, move up or down, delete (with Undo). New items go in before the settings rows, which never move. |
 | Groups | Blocks whose rows differ (hero, columns) are shown row by row as fixed groups instead of items. |
 
@@ -187,14 +188,73 @@ Example, as used by the demo:
 | cards | icons | | | | | `lock, piggy, phone, shield, chart, home, card, clock` |
 | * | heading | | 70 | | | |
 
-### Works with Block Inspector's setup
+### Configure a block from the block library
 
-If the site's `library` sheet has a **Blocks** row (the block library), Block Studio reads it too:
+Block Studio has no per-block code. A new block is configured in the site's **block library** (the **Blocks** row of the `library` sheet; see [Set up the library](https://www.aem.live/docs/ew/administering/set-up-library)), so the same panel works on any project. The library can be published pages (`/library/blocks.json`) or kept in DA (`https://content.da.live/{org}/{site}/library/blocks.json`); DA-hosted files are read with your EW sign-in.
 
-- the library's **`options`** sheet (`blocks | key | values`, the format Block Inspector uses) gives the dropdown values for settings rows, so an existing setup keeps working;
-- the library's example pages give more variant suggestions for each block.
+A block gets three kinds of configuration:
 
-The library can be published pages (`/library/blocks.json`) or kept in DA (`https://content.da.live/{org}/{site}/library/blocks.json`); see [Set up the library](https://www.aem.live/docs/ew/administering/set-up-library). DA-hosted files are read with your EW sign-in.
+| What | Where | Panel shows |
+| --- | --- | --- |
+| **Variants**: fixed looks, written as classes (`cards horizontal`) | The block's example page in the library | Toggle chips with the example's heading and description |
+| **Block options**: settings for the whole block (`theme`, `background`) | The library's `options` sheet | One typed control per option |
+| **Item fields**: the cells of each card, slide or tab | The library's `fields` sheet | Named fields, limits, required checks and "Add …" slots |
+
+**Variants.** Each example on a block's library page whose class has variants (`cards horizontal`) adds them. When the example uses one variant, the heading above it becomes its title and its `library-metadata` description is shown when it's selected. The rules sheet's `variants` field adds more. When a block has configured variants, authors choose from that list only; a variant on the page that isn't in the list is flagged so it can be removed.
+
+**Block options.** The library's `options` sheet uses Block Inspector's columns (`blocks | key | values`), so an existing setup keeps working. Block Studio reads three more columns, which EW ignores:
+
+| Column | Meaning |
+| --- | --- |
+| `blocks` | Block name, a comma list, or `all` |
+| `key` | The option's key, written as the first cell of its row (`theme`) |
+| `values` | For a `select`: `Label=value\|Label 2=value-2` |
+| `label` | Label shown in the panel |
+| `type` | `select` (the default when there are values), `text`, `toggle` (writes `true`, removed when off) or `image` (one picture) |
+| `default` | The value the block uses when the row is absent. Choosing it removes the row |
+
+| blocks | key | values | label | type | default |
+| --- | --- | --- | --- | --- | --- |
+| cards | theme | `Light=light\|Dark=dark` | Theme | select | light |
+| cards | background | | Block background | image | |
+
+**Item fields.** Add a sheet named **`fields`** to the library's `blocks.json`, after `blocks` and `options` (EW reads the first sheet as the block list, so `blocks` must stay first):
+
+| Column | Meaning |
+| --- | --- |
+| `block` | Block name or a comma list |
+| `column` | The cell, counting from 1 |
+| `name` | A short id (`title`, `background`) |
+| `type` | `image`, `text`, `heading`, `button` or `icon` |
+| `label` | Name shown in the panel; also the name the rules sheet's `field` column matches |
+| `required` | `yes` to report it missing or empty as an error |
+| `max` | Character limit |
+| `hint` | Help text |
+
+| block | column | name | type | label | required | max | hint |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| cards | 1 | image | image | Card image | | | |
+| cards | 2 | title | heading | Card title | | 60 | |
+| cards | 2 | body | text | Card text | yes | 160 | One or two short sentences. |
+| cards | 3 | background | image | Card background | | | Fills the card behind the text. |
+
+The rules sheet still applies on top, and its rows win.
+
+#### The block contract (site code)
+
+Options are written into the block as plain two-cell rows (`theme | dark`, `background | <picture>`), the same rows EW's block inspector writes. A block that supports options must read and remove them in its `decorate`, so they never render as an extra card. This site's [`scripts/block-options.js`](../../scripts/block-options.js) does that for any block:
+
+```js
+import readBlockOptions from '../../scripts/block-options.js';
+
+export default function decorate(block) {
+  // Removes the rows; sets data-theme="dark"; returns the background picture.
+  const { background } = readBlockOptions(block, ['theme', 'background']);
+  // …decorate the remaining rows as items
+}
+```
+
+Style the option with `.cards[data-theme='dark']`. See [`blocks/cards/cards.js`](../../blocks/cards/cards.js) for a full example, including a third-column card background.
 
 ### Icons
 
@@ -249,7 +309,7 @@ flowchart LR
 | `tools/blockstudio/lib/model.js` | Reads a block into items, options and fields; applies edits; writes it back |
 | `tools/blockstudio/lib/live.js` | Finds blocks in the live page and strips EW's markup |
 | `tools/blockstudio/lib/check.js` | Checks and character limits |
-| `tools/blockstudio/lib/rules.js` | The `block-studio` sheet and Block Inspector's `options` sheet |
+| `tools/blockstudio/lib/rules.js` | The `block-studio` sheet and the block library's `options` and `fields` sheets and variants |
 | `tools/blockstudio/lib/sanitize.js` | Cleans rich text and pasted HTML |
 | `tools/blockstudio/lib/ai.js` | Prompts for the EW assistant |
 | `tools/blockstudio/lib/dom.js` | Small DOM helpers |
