@@ -134,24 +134,32 @@ function parseCell(cellEl, rowId, c, doc) {
   };
 }
 
-function optionOf(rowEl) {
+const COMPLEX = 'a, h1, h2, h3, h4, h5, h6, ul, ol, table, div, video, iframe';
+
+/** A `key | value` settings row. Image options (from `imageKeys`) hold one picture. */
+function optionOf(rowEl, imageKeys) {
   const cells = [...rowEl.children];
   if (cells.length !== 2) return null;
   const [keyEl, valueEl] = cells;
-  const complex = 'img, picture, a, h1, h2, h3, h4, h5, h6, ul, ol, table, div, video, iframe';
-  if (keyEl.querySelector(complex) || valueEl.querySelector(complex)) return null;
-  if (keyEl.querySelectorAll('p').length > 1 || valueEl.querySelectorAll('p').length > 1) return null;
+  if (keyEl.querySelector(`img, picture, ${COMPLEX}`) || keyEl.querySelectorAll('p').length > 1) return null;
   const keyText = norm(keyEl.textContent);
-  const value = norm(valueEl.textContent);
   if (!keyText || keyText.length > 30 || keyText.split(' ').length > 3 || /[.!?:]$/.test(keyText)) return null;
-  if (value.length > 80 || ICON_TOKEN.test(keyText)) return null;
-  return {
-    key: optionKey(keyText),
-    keyText,
-    keyHtml: keyEl.innerHTML,
-    value,
-    valueWrap: !!valueEl.querySelector('p'),
+  if (ICON_TOKEN.test(keyText)) return null;
+  const key = optionKey(keyText);
+  const base = {
+    key, keyText, keyHtml: keyEl.innerHTML, valueWrap: !!valueEl.querySelector('p'),
   };
+  const img = valueEl.querySelector('img');
+  if (img && imageKeys?.has(key)) {
+    if (valueEl.querySelector(COMPLEX) || valueEl.querySelectorAll('img').length > 1 || norm(valueEl.textContent)) return null;
+    return {
+      ...base, image: true, value: img.getAttribute('src') || '', alt: img.getAttribute('alt') || '', valueHtml: valueEl.innerHTML,
+    };
+  }
+  if (valueEl.querySelector(`img, picture, ${COMPLEX}`) || valueEl.querySelectorAll('p').length > 1) return null;
+  const value = norm(valueEl.textContent);
+  if (value.length > 80) return null;
+  return { ...base, value };
 }
 
 const lowerSlug = (text) => /^[a-z][a-z0-9 _-]*$/.test(text);
@@ -174,13 +182,15 @@ function overlap(a, b) {
  * @param {string[]} [hints.options] keys the rules sheet forces to be options
  * @param {string[]|'all'} [hints.items] keys forced to be items ('all' = no options)
  * @param {string} [hints.noun] item name from the rules sheet
+ * @param {Set<string>} [hints.imageKeys] option keys whose value is a picture
+ * @param {object[]} [hints.schema] the block's `fields` sheet rows ({c, type, label})
  */
 export function parseBlock(element, hints = {}) {
   const el = cleanBlock(element);
   const doc = el.ownerDocument;
   const name = blockName(el);
   const rowEls = [...el.children].filter((row) => row.tagName === 'DIV');
-  const candidates = rowEls.map(optionOf);
+  const candidates = rowEls.map((rowEl) => optionOf(rowEl, hints.imageKeys));
   const known = hints.knownKeys || new Set();
   const forced = new Set((hints.options || []).map(optionKey));
   const itemsAll = hints.items === 'all';
@@ -209,7 +219,7 @@ export function parseBlock(element, hints = {}) {
     };
   });
   const content = rows.filter((row) => row.kind === 'item');
-  const repeater = REPEATER.test(name) || !!hints.noun;
+  const repeater = REPEATER.test(name) || !!hints.noun || !!hints.schema?.length;
   let mode = 'groups';
   if (content.length >= 2) {
     const sameCells = content.every((row) => row.cells.length === content[0].cells.length);
@@ -223,6 +233,7 @@ export function parseBlock(element, hints = {}) {
     rows,
     mode,
     noun: hints.noun || nounFor(name),
+    schema: hints.schema || [],
     seq: 0,
   };
 }
@@ -352,16 +363,51 @@ const itemTitle = (noun, n, fields, doc) => {
 };
 
 /**
+ * Names a column's slots from the `fields` sheet: each definition takes the next slot of
+ * its type. With `insert`, a definition no slot matches is added as an empty slot, so
+ * every item offers it ("Add card background").
+ */
+function withSchema(template, defs, insert) {
+  const out = template.map((sample) => ({ ...sample }));
+  let i = 0;
+  defs.forEach((def) => {
+    let k = i;
+    while (k < out.length && out[k].type !== def.type) k += 1;
+    if (k < out.length) {
+      out[k].schemaLabel = def.label;
+      i = k + 1;
+    } else if (insert) {
+      out.splice(i, 0, { type: def.type, schemaLabel: def.label, schema: true });
+      i += 1;
+    }
+  });
+  return out;
+}
+
+const schemaFor = (model, c) => (model.schema || []).filter((def) => def.c === c);
+
+/**
  * What the panel shows: options, then items (or groups) with labelled slots. A slot
- * with no field is a field this item is missing compared with the others.
+ * with no field is a field this item is missing compared with the others, or one the
+ * block's `fields` sheet declares.
  */
 export function layout(model, doc) {
   const rows = items(model);
   const groups = [];
   if (model.mode === 'items') {
-    const cellCount = Math.max(0, ...rows.map((row) => row.cells.length));
-    const templates = Array.from({ length: cellCount }, (_, c) => buildTemplate(rows, c));
-    const templateLabels = templates.map((template) => labelFields(template, doc));
+    const cellCount = Math.max(
+      0,
+      ...rows.map((row) => row.cells.length),
+      ...(model.schema || []).map((def) => def.c + 1),
+    );
+    const templates = Array.from(
+      { length: cellCount },
+      (_, c) => withSchema(buildTemplate(rows, c), schemaFor(model, c), true),
+    );
+    const templateLabels = templates.map((template) => labelFields(
+      template.map((sample) => (sample.schema ? null : sample)),
+      doc,
+    ));
     rows.forEach((row, n) => {
       const cells = templates.map((template, c) => {
         const fields = row.cells[c]?.fields || [];
@@ -371,6 +417,7 @@ export function layout(model, doc) {
           const field = slots[k] >= 0 ? fields[slots[k]] : null;
           let label = field ? labels[k] : templateLabels[c][k];
           if (field?.type === 'button') label = labels[k];
+          if (sample.schemaLabel) label = sample.schemaLabel;
           const at = slots.slice(0, k).filter((f) => f >= 0).length;
           return {
             field, type: sample.type, label, c, slot: k, sample, at,
@@ -391,10 +438,11 @@ export function layout(model, doc) {
       parts.forEach(({ cells: partCells, c: firstCell }) => {
         const cells = partCells.map((cell, i) => {
           const labels = labelFields(cell.fields, doc);
+          const named = withSchema(cell.fields, schemaFor(model, firstCell + i), false);
           return cell.fields.map((field, k) => ({
             field,
             type: field.type,
-            label: labels[k],
+            label: named[k].schemaLabel || labels[k],
             c: firstCell + i,
             slot: k,
             sample: field,
@@ -540,9 +588,11 @@ export function applyOp(model, op, doc) {
       return true;
     case 'option': {
       const key = optionKey(op.key);
+      const image = op.image ? { image: true, alt: op.image.alt || '', valueHtml: '' } : {};
+      const value = op.image ? op.image.src || '' : norm(op.value);
       const row = options(model).find((r) => r.option.key === key);
       if (row) {
-        row.option.value = norm(op.value);
+        Object.assign(row.option, image, { value });
         row.dirty = true;
         return true;
       }
@@ -556,8 +606,9 @@ export function applyOp(model, op, doc) {
           key,
           keyText: op.keyText || key,
           keyHtml: escapeHtml(op.keyText || key),
-          value: norm(op.value),
+          value,
           valueWrap: false,
+          ...image,
         },
       });
       return true;
@@ -665,7 +716,13 @@ function cellHtml(cell, doc) {
 function rowHtml(row, doc) {
   if (!row.dirty) return row.html;
   if (row.kind === 'option') {
-    const { keyHtml, value, valueWrap } = row.option;
+    const {
+      keyHtml, value, valueWrap, image, alt, valueHtml,
+    } = row.option;
+    if (image) {
+      const html = imageHtml({ src: value, alt, html: valueHtml }, !valueWrap, doc);
+      return `<div><div>${keyHtml}</div><div>${html}</div></div>`;
+    }
     return `<div><div>${keyHtml}</div><div>${valueWrap ? `<p>${escapeHtml(value)}</p>` : escapeHtml(value)}</div></div>`;
   }
   const cells = row.cells.map((cell) => cellHtml(cell, doc));

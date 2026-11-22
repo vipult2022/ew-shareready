@@ -568,6 +568,86 @@ select.bs-input { padding-right: 4px; }
 .bs-chip-add .bs-i { width: 12px; height: 12px; }
 .bs-chip-add:hover { border-color: var(--bs-brand); color: #3b1fc7; }
 
+.bs-variant-opt {
+  padding: 0 10px;
+  border-color: var(--bs-gray-300);
+  color: var(--bs-gray-700);
+  background: var(--bs-bg);
+  cursor: pointer;
+}
+
+.bs-variant-opt:disabled { cursor: default; opacity: 0.6; }
+.bs-variant-opt:hover:not(:disabled) { border-color: var(--bs-brand); color: #3b1fc7; }
+
+.bs-variant-opt.is-on {
+  border-color: var(--bs-brand);
+  color: #fff;
+  background: var(--bs-brand);
+}
+
+.bs-chip-warn {
+  gap: 4px;
+  border-color: #f0c36d;
+  color: #7a4d00;
+  background: #fff6e0;
+}
+
+.bs-chip-warn > .bs-i { width: 12px; height: 12px; }
+.bs-chip-warn .bs-chip-x:hover { background: rgb(122 77 0 / 12%); }
+
+.bs-variant-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--bs-gray-700);
+}
+
+.bs-option-select,
+.bs-option-text,
+.bs-option-image,
+.bs-option-toggle { grid-template-columns: minmax(70px, 34%) 1fr; }
+
+.bs-option .bs-option-image { display: flex; gap: 10px; align-items: center; }
+
+.bs-toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.bs-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.bs-toggle-track {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--bs-gray-300);
+  transition: background 0.15s;
+}
+
+.bs-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.bs-toggle input:checked + .bs-toggle-track { background: var(--bs-brand); }
+.bs-toggle input:checked + .bs-toggle-track::after { transform: translateX(12px); }
+.bs-toggle input:focus-visible + .bs-toggle-track { outline: 2px solid var(--bs-brand); outline-offset: 2px; }
+
 .bs-option {
   display: grid;
   grid-template-columns: minmax(70px, 34%) 1fr auto;
@@ -882,6 +962,8 @@ select.bs-input { padding-right: 4px; }
 }
 
 .bs-img-meta { font-size: 12px; color: var(--bs-gray-600); }
+.bs-option-image .bs-thumb { width: 64px; height: 44px; }
+.bs-option-image .bs-img-meta { margin: 0 0 4px; }
 
 .bs-icon-chip {
   display: flex;

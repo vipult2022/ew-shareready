@@ -206,3 +206,55 @@ test('sanitize: cleans Word and Google Docs paste and unsafe links', () => {
   assert.equal(safeUrl('/rates?x=1'), '/rates?x=1');
   assert.equal(textToHtml('One\nline <b>\n\nTwo'), '<p>One<br>line &lt;b&gt;</p><p>Two</p>');
 });
+
+test('config: image options and fields-sheet slots for a block nobody coded for', () => {
+  const html = `<div class="promo">
+    <div><div><picture><img src="./a.jpg" alt="A"></picture></div><div><h3>One</h3><p>a</p></div></div>
+    <div><div><picture><img src="./b.jpg" alt="B"></picture></div><div><h3>Two</h3></div></div>
+    <div><div>background</div><div><picture><img src="./bg.jpg" alt="Sky"></picture></div></div>
+  </div>`;
+  const schema = [
+    { c: 1, type: 'heading', label: 'Promo title' },
+    { c: 1, type: 'text', label: 'Promo text' },
+    { c: 2, type: 'image', label: 'Promo background' },
+  ];
+  const hints = {
+    knownKeys: new Set(['background']), imageKeys: new Set(['background']), noun: 'Promo', schema,
+  };
+  const { doc, model } = firstBlock(html, hints);
+  const [bg] = options(model).map((row) => row.option);
+  assert.deepEqual([bg.key, bg.image, bg.value, bg.alt], ['background', true, './bg.jpg', 'Sky']);
+  assert.equal(items(model).length, 2);
+
+  const view = layout(model, doc);
+  const second = view.groups[1].cells;
+  assert.equal(second.length, 3, 'the fields sheet adds a third column');
+  assert.deepEqual(second[1].map((s) => [s.label, !!s.field]), [['Promo title', true], ['Promo text', false]]);
+  assert.deepEqual(second[2].map((s) => [s.type, s.label, !!s.field]), [['image', 'Promo background', false]]);
+
+  assert.doesNotMatch(buildBlock(model, doc), /Promo|<h3><\/h3>/, 'schema slots add nothing until used');
+  applyOp(model, {
+    t: 'option', key: 'background', keyText: 'background', image: { src: './new.jpg', alt: 'Sea' },
+  }, doc);
+  const out = buildBlock(model, doc);
+  assert.match(out, /<div><div>background<\/div><div><picture>.*<img[^>]*src="\.\/new\.jpg"[^>]*alt="Sea"|<div><div>background<\/div><div><picture>.*<img[^>]*alt="Sea"[^>]*src="\.\/new\.jpg"/);
+  assert.doesNotMatch(out, /bg\.jpg/);
+  const again = firstBlock(out, hints).model;
+  assert.equal(options(again)[0].option.value, './new.jpg');
+});
+
+test('config: a block with only a fields sheet stays a list of items', () => {
+  const schema = [
+    { c: 0, type: 'heading', label: 'Promo title' },
+    { c: 1, type: 'image', label: 'Promo background' },
+  ];
+  const one = firstBlock('<div class="promo"><div><div><h3>One</h3></div></div></div>', { schema });
+  assert.equal(one.model.mode, 'items', 'one item');
+  const mixed = firstBlock(`<div class="promo">
+    <div><div><h3>One</h3></div><div><picture><img src="./a.jpg" alt=""></picture></div></div>
+    <div><div><h3>Two</h3><p>Text</p></div></div>
+  </div>`, { schema });
+  assert.equal(mixed.model.mode, 'items', 'items with different cell counts');
+  const second = layout(mixed.model, mixed.doc).groups[1].cells;
+  assert.deepEqual(second[1].map((s) => [s.label, !!s.field]), [['Promo background', false]]);
+});
