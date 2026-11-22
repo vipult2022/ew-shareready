@@ -112,6 +112,17 @@
   outline-offset: 2px;
 }
 
+/* Light theme (the default): light cards with dark text, even in a dark section */
+.cards[data-theme='light'] .cards-card-body h2,
+.cards[data-theme='light'] .cards-card-body h3,
+.cards[data-theme='light'] .cards-card-body h4 {
+  color: var(--heading-color);
+}
+
+.cards[data-theme='light'] .cards-card-body :any-link:not(.button, p:last-child > :only-child) {
+  color: var(--link-color);
+}
+
 /* Card background (third column): the image fills the card, text sits on a scrim */
 .cards > ul > li.has-bg {
   position: relative;
@@ -167,6 +178,11 @@
 .cards > ul > li.has-bg .cards-card-body h4,
 .cards > ul > li.has-bg .cards-card-body strong {
   color: #fff;
+}
+
+.cards[data-theme='dark'] .cards-card-body :any-link:not(.button, p:last-child > :only-child),
+.cards > ul > li.has-bg .cards-card-body :any-link:not(.button, p:last-child > :only-child) {
+  color: #8fe0d8;
 }
 
 .cards[data-theme='dark'] .cards-card-body > p:last-child:has(> a:only-child),

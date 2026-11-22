@@ -13,6 +13,8 @@ const isEmpty = (cell) => !cell.textContent.trim() && !cell.querySelector('pictu
 export default function decorate(block) {
   // Settings rows (theme, background) are options, not cards.
   const { background } = readBlockOptions(block, ['theme', 'background']);
+  // Light is the default; any other value than dark is light.
+  block.dataset.theme = block.dataset.theme === 'dark' ? 'dark' : 'light';
 
   const ul = document.createElement('ul');
   [...block.children].forEach((row) => {
