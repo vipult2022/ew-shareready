@@ -69,7 +69,7 @@ Open a page in EW, then **Extensions › Block Studio**, and click inside any bl
 | Field | Editing |
 | --- | --- |
 | Heading | Text with an **H1–H6** picker. |
-| Rich text | Bold, Italic, Link, bulleted and numbered lists, Clear formatting. Short fields (an eyebrow with a 24-character limit) get a single-line editor. Text pasted from Word or Google Docs is cleaned. |
+| Rich text | A toolbar like DA's: **Paragraph** or **Heading 2–6**, Bold, Italic, Underline, Strikethrough, Link, Code, Superscript, Subscript, bulleted and numbered lists, Quote and Clear formatting. A description can hold its own subheadings ("Who it's for", then a paragraph); they stay in that field. Short fields (an eyebrow with a 24-character limit) get a single-line editor with inline tools only. Text pasted from Word or Google Docs is cleaned. |
 | Image | Thumbnail, pixel size and file size, **Replace** (PNG, JPEG, GIF, WebP or SVG, up to 20 MB) and an **Alt text** field. |
 | Button | Text, URL and style: **Primary**, **Secondary** or **Plain link** (and **Accent** when the page already uses it). |
 | Icon | `:lock:` tokens show as an icon with a picker of the site's icons, or type any icon name. |
@@ -227,6 +227,22 @@ The library's `editor` sheet (Block Inspector's, in the same `blocks.json` as `b
 
 Without it, Block Studio still treats one label row as naming every item, and in a block of items the first item's labels also name items beyond the example. Each variant's example can name its fields; a block with no example for its variant uses the default example's names. When labels don't line up with the example's content, that cell keeps its automatic names. The `fields` sheet below wins for any column it describes.
 
+**Name this block's fields (from the panel).** A new block doesn't have to be named by hand. When the open block has no names yet (no `fields` table and no `fields` sheet rows), and you can write to the block library in DA, the panel shows **Name this block's fields**. Open it and Block Studio suggests a name for every field, one row per item for a repeating block or one row per row for a hero or columns:
+
+- Names come from the rules sheet's `label` first, then the item's noun ("Slide image", "Slide title"), taken from the rules sheet's `noun`, the block's code (`blocks/carousel/carousel.js` says "slide") or the block's name.
+- Edit any name, then **Save names**. Under the names, **Saving will** lists each change first.
+
+Saving writes, in DA:
+
+| Change | When |
+| --- | --- |
+| A `fields` table in the example's `library-metadata` | Always. An existing `library-metadata` keeps its other rows. |
+| The block's library page, with this block as its example | The block has no library page, or its page has no example of it |
+| A row in the library's `blocks` sheet | The block isn't listed yet |
+| A `multi` row in the `editor` sheet | The block repeats items |
+
+The panel uses the new names straight away. EW's own library list picks up a new block after the library is previewed, or on the next reload. The card doesn't show in read-only access, on blocks that only hold options, or when the library isn't in DA.
+
 **Block options.** The library's `options` sheet uses Block Inspector's columns (`blocks | key | values`), so an existing setup keeps working. Block Studio reads three more columns, which EW ignores:
 
 | Column | Meaning |
@@ -335,6 +351,7 @@ flowchart LR
 | `tools/blockstudio/lib/live.js` | Finds blocks in the live page and strips EW's markup |
 | `tools/blockstudio/lib/check.js` | Checks and character limits |
 | `tools/blockstudio/lib/rules.js` | The `block-studio` sheet and the block library's `options` and `fields` sheets, variants and field names |
+| `tools/blockstudio/lib/naming.js` | **Name this block's fields**: suggests names and writes them to the block library |
 | `tools/blockstudio/lib/sanitize.js` | Cleans rich text and pasted HTML |
 | `tools/blockstudio/lib/ai.js` | Prompts for the EW assistant |
 | `tools/blockstudio/lib/dom.js` | Small DOM helpers |

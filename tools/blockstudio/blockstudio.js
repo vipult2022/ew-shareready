@@ -12,6 +12,7 @@ import {
 } from './lib/live.js';
 import {
   parseBlock, layout, applyOp, applyOps, pushOp, buildBlock, items, options, findField, ICON_TOKEN,
+  toClass,
 } from './lib/model.js';
 import {
   DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryBlock, exampleFieldsFor,
@@ -21,7 +22,12 @@ import {
 import { checkBlock } from './lib/check.js';
 import { fieldPrompt, altPrompt, briefPrompt } from './lib/ai.js';
 import {
-  createDemoHost, DEMO_RULES, DEMO_LIBRARY, demoLibraryFetch, cannedEdit,
+  codeNoun, suggestNames, pickExample, exampleFromBlock, libraryPageFor, daStore, daSource,
+  planNames, saveNames,
+} from './lib/naming.js';
+import {
+  createDemoHost, DEMO_RULES, DEMO_LIBRARY, DEMO_LIBRARY_INDEX, demoLibraryFetch,
+  demoLibraryStore, cannedEdit,
 } from './lib/demo.js';
 
 const SDK_TIMEOUT = 4000;
@@ -65,6 +71,9 @@ const state = {
   libraryVariants: [],
   icons: [],
   rulesFound: false,
+  canName: false,
+  naming: null,
+  namingOpen: false,
   error: '',
 };
 
@@ -110,6 +119,8 @@ let pageIcons = [];
 let siteIcons = [];
 const libraryCache = new Map();
 const libraryLoaded = new Map();
+let libraryStore = null;
+let libraryWritable = false;
 
 /* Small helpers */
 
@@ -138,6 +149,7 @@ function derive() {
   if (!state.model) return;
   state.view = layout(state.model, doc);
   state.issues = checkBlock(state.view, state.rules, doc, images);
+  state.canName = namingAllowed();
 }
 
 /** Where the block with this signature is now, preferring the index it had. */
@@ -235,10 +247,146 @@ function loadVariants(name) {
     if (named.length) {
       state.rules.itemFields = withLibraryFields(state.rules.itemFields, named);
       state.model.schema = state.rules.itemFields;
+    }
+    derive();
+    render();
+  });
+}
+
+/* Naming a block's fields in the block library */
+
+/**
+ * A block can have its fields named when the signed-in person can change the block
+ * library and nothing names them yet: no library example, no `fields` sheet rows.
+ */
+function namingAllowed() {
+  const { model } = state;
+  if (!model || !state.editable || !libraryStore || !settings.libraryIndex) return false;
+  if (state.mode !== 'demo' && !libraryWritable) return false;
+  const { name } = model;
+  if (settings.libraryBlocks?.length && !libraryLoaded.has(name)) return false;
+  if (exampleFieldsFor(libraryLoaded.get(name)?.examples, model.variants).length) return false;
+  if (settings.itemFields?.get?.(toClass(name))?.length) return false;
+  return model.rows.some((row) => row.kind === 'item' && row.cells.some((cell) => cell.fields.length));
+}
+
+async function checkLibraryWritable() {
+  if (!settings.libraryIndex || !daSource(settings.libraryIndex)) return;
+  libraryWritable = await libraryStore.writable(settings.libraryIndex);
+  if (!libraryWritable || !state.model) return;
+  derive();
+  render();
+}
+
+/** The word block code uses for its items (`cards-card-body` → Card). Same origin only. */
+async function blockCodeNoun(name) {
+  const key = toClass(name);
+  const resp = await withTimeout(fetch(`/blocks/${key}/${key}.js`), 3000, null);
+  if (!resp?.ok) return '';
+  return codeNoun(await resp.text().catch(() => ''), key);
+}
+
+const blockOf = (html) => blockElements(parseHtml(`<main><div>${html}</div></main>`))[0] || null;
+
+async function startNaming() {
+  const { model } = state;
+  if (!model || state.naming || !state.canName) return;
+  const { name } = model;
+  const naming = { step: 'loading', error: '' };
+  state.naming = naming;
+  render();
+  try {
+    const page = libraryPageFor(settings.libraryBlocks, settings.libraryIndex, name);
+    const [pageHtml, indexText, noun] = await Promise.all([
+      libraryStore.read(page.url),
+      libraryStore.read(settings.libraryIndex),
+      blockCodeNoun(name),
+    ]);
+    let indexJson = null;
+    try {
+      indexJson = indexText ? JSON.parse(indexText) : null;
+    } catch {
+      throw new Error("The block library list is not valid JSON, so it can't be changed here");
+    }
+    const current = blockAt(state.target?.index);
+    const exampleHtml = current ? exampleFromBlock(current, pageUrl) : '';
+    const libraryExample = pageHtml ? pickExample(parseHtml(pageHtml), name, model.variants) : null;
+    const example = libraryExample || blockOf(exampleHtml);
+    if (!example) throw new Error("The block could not be read, so its fields can't be named");
+    const suggestion = suggestNames(example, hintsFor(state.rules), {
+      rules: state.rules, codeNoun: noun,
+    });
+    const opts = {
+      name,
+      title: title(name),
+      variants: model.variants,
+      multi: suggestion.multi,
+      noun: suggestion.noun,
+      exampleHtml,
+      pageUrl: page.url,
+      indexUrl: settings.libraryIndex,
+    };
+    const plan = planNames(pageHtml, indexJson, { ...opts, rows: suggestion.rows });
+    if (state.naming !== naming) return;
+    Object.assign(naming, {
+      step: 'ready', ...suggestion, opts, changes: plan.changes, notes: plan.notes,
+    });
+  } catch (error) {
+    if (state.naming !== naming) return;
+    Object.assign(naming, { step: 'failed', error: error?.message || String(error) });
+  }
+  render();
+}
+
+async function saveNaming() {
+  const { naming } = state;
+  if (naming?.step !== 'ready' || !state.model) return;
+  const { opts } = naming;
+  Object.assign(naming, { step: 'saving', error: '' });
+  render();
+  try {
+    const plan = await saveNames(libraryStore, { ...opts, rows: naming.rows });
+    const { name } = opts;
+    if (plan.index.addedBlock) {
+      settings.libraryBlocks = [...(settings.libraryBlocks || []), {
+        name: opts.title, path: opts.pageUrl,
+      }];
+    }
+    if (plan.index.addedMulti) {
+      settings.multiBlocks = new Set([...(settings.multiBlocks || []), toClass(name)]);
+    }
+    const saved = plan.page.html;
+    const sourceKey = (url) => daSource(url)?.url || String(url).replace(/(\.plain)?\.html$/, '');
+    const readSaved = (url) => (sourceKey(url) === sourceKey(opts.pageUrl)
+      ? Promise.resolve(new Response(saved, { status: 200 })) : libraryFetch(url));
+    const hints = hintsFor(blockRules(settings.rules, name, settings.libraryOptions, settings));
+    const lib = await libraryBlock(settings.libraryBlocks, name, readSaved, { hints });
+    libraryCache.set(name, Promise.resolve(lib));
+    libraryLoaded.set(name, lib);
+    if (state.naming === naming) {
+      state.naming = null;
+      state.namingOpen = false;
+    }
+    if (state.model?.name === name) {
+      if (lib.variants.length) state.libraryVariants = lib.variants;
+      const named = exampleFieldsFor(lib.examples, state.model.variants);
+      state.rules.itemFields = withLibraryFields(state.rules.itemFields, named);
+      state.model.schema = state.rules.itemFields;
       derive();
     }
     render();
-  });
+    panel.toast(`Saved the ${opts.title} field names to the block library`);
+  } catch (error) {
+    if (state.naming !== naming) return;
+    Object.assign(naming, { step: 'ready', error: error?.message || String(error) });
+    render();
+  }
+}
+
+function cancelNaming() {
+  state.naming = null;
+  state.namingOpen = false;
+  render();
 }
 
 /* Images */
@@ -430,6 +578,8 @@ function closeBlock() {
   state.target = null;
   state.view = null;
   state.issues = [];
+  state.naming = null;
+  state.namingOpen = false;
   base = '';
   state.phase = 'empty';
   setStatus('idle');
@@ -456,6 +606,8 @@ function openBlock(el, index, same) {
     state.addingOption = '';
     state.showIssues = false;
     state.briefOpen = false;
+    state.naming = null;
+    state.namingOpen = false;
     state.ai.undo = null;
     setStatus('idle');
   }
@@ -1045,6 +1197,8 @@ async function startLive(sdk) {
     org: context.org, site: context.repo, ref: context.ref,
   }), SETTINGS_TIMEOUT, settings);
   state.rulesFound = settings.rules.length > 0;
+  libraryStore = daStore(fetcher);
+  checkLibraryWritable();
   setupAi(actions, capabilities);
   loadSiteIcons();
   state.phase = 'empty';
@@ -1070,9 +1224,11 @@ function startDemo() {
     multiBlocks: parseMultiBlocks(DEMO_LIBRARY.editor),
     variants: DEMO_LIBRARY.variants,
     libraryBlocks: DEMO_LIBRARY.blocks,
+    libraryIndex: DEMO_LIBRARY_INDEX,
     loaded: true,
   };
   libraryFetch = demoLibraryFetch;
+  libraryStore = demoLibraryStore();
   state.rulesFound = true;
   setupAi(demo.actions, demo.capabilities);
   state.phase = 'empty';
@@ -1113,6 +1269,9 @@ function init() {
     iconUrl,
     selectBlock: (index) => host?.select?.(index),
     tryDemo,
+    startNaming,
+    saveNaming,
+    cancelNaming,
   });
   render(true);
   document.addEventListener('visibilitychange', () => {

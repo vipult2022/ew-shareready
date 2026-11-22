@@ -117,12 +117,21 @@ export function blockRules(rules, name, libraryOptions, schema = {}) {
   return result;
 }
 
-/** The rule for a field, by its label ("primary-button"), its base label, then its type. */
-export function fieldRule(rules, label, type) {
+/**
+ * The rule for a field, by its label ("primary-button") or base label, then the name it
+ * would have had automatically (`auto`), then its type. A rule found by its automatic
+ * name or type still sets limits for a field the block library renamed, but not its label.
+ */
+export function fieldRule(rules, label, type, auto = label) {
   if (!rules) return {};
-  const slug = toClass(label);
-  return rules.fields.get(slug) || rules.fields.get(slug.replace(/-\d+$/, ''))
-    || rules.fields.get(type) || {};
+  const find = (text) => {
+    const slug = toClass(text);
+    return slug ? rules.fields.get(slug) || rules.fields.get(slug.replace(/-\d+$/, '')) : null;
+  };
+  const own = find(label);
+  if (own) return own;
+  const rule = (auto !== label && find(auto)) || rules.fields.get(type) || {};
+  return auto === label || !rule.label ? rule : { ...rule, label: '' };
 }
 
 export const OPTION_TYPES = ['select', 'text', 'image', 'toggle'];
@@ -280,6 +289,7 @@ export async function loadSiteSettings(fetcher, context, fetchImpl = fetcher) {
     itemFields: parseItemFields(indexes.flatMap((json) => json.fields?.data || [])),
     multiBlocks: parseMultiBlocks(indexes.flatMap((json) => json.editor?.data || [])),
     libraryBlocks: indexes.flatMap(firstSheet).map(lower).filter((row) => row.name && row.path),
+    libraryIndex: indexUrls[0] || '',
     loaded: !!siteJson,
   };
 }

@@ -35,11 +35,24 @@ const ICONS = {
   ul: '<svg viewBox="0 0 20 20"><circle cx="4.5" cy="5.5" r="1.3" fill="currentColor"/><circle cx="4.5" cy="10" r="1.3" fill="currentColor"/><circle cx="4.5" cy="14.5" r="1.3" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M8 5.5h8.5M8 10h8.5M8 14.5h8.5"/></svg>',
   ol: '<svg viewBox="0 0 20 20"><path fill="currentColor" d="M3.6 4h1.3v4H3.9V5.2l-.6.2V4.5zM3 12.4c0-1 .8-1.4 1.5-1.4s1.4.4 1.4 1.1c0 .6-.4 1-1 1.4l-.6.4h1.7v.9H3v-.8l1.3-1c.4-.3.6-.5.6-.8 0-.2-.2-.4-.5-.4s-.5.2-.5.6z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M8 6h8.5M8 13h8.5"/></svg>',
   clear: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 4.5h10M10 4.5 7.5 15.5M12 12l4 4m0-4-4 4"/></svg>',
+  underline: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6 3.5V9a4 4 0 0 0 8 0V3.5M5 16.5h10"/></svg>',
+  strike: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M13.6 5.6c-.6-1.3-1.9-2.1-3.7-2.1-2 0-3.5 1.1-3.5 2.7 0 1.3.9 2.1 2.6 2.7M6.4 14.1c.6 1.5 2 2.4 3.9 2.4 2.2 0 3.7-1.1 3.7-2.8 0-.7-.2-1.3-.7-1.7M3.5 10h13"/></svg>',
+  code: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M7 5.5 2.5 10 7 14.5m6-9 4.5 4.5-4.5 4.5"/></svg>',
+  sup: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="m3 7 6.5 9m0-9L3 16"/><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" d="M12.8 4.6c.2-.9.9-1.4 1.8-1.4s1.6.6 1.6 1.4c0 .6-.3 1.1-1 1.6l-2.3 1.7h3.4"/></svg>',
+  sub: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="m3 4 6.5 9m0-9L3 13"/><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" d="M12.8 13.1c.2-.9.9-1.4 1.8-1.4s1.6.6 1.6 1.4c0 .6-.3 1.1-1 1.6l-2.3 1.7h3.4"/></svg>',
+  quote: '<svg viewBox="0 0 20 20"><path fill="currentColor" d="M3.5 10.6c0-3 1.6-5.2 4.4-6.1l.6 1.2C6.8 6.5 6 7.7 5.9 9h2.4v5.5H3.5zm8 0c0-3 1.6-5.2 4.4-6.1l.6 1.2c-1.7.8-2.5 2-2.6 3.3h2.4v5.5h-4.8z"/></svg>',
+  tag: '<svg viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M3.5 4.5v5.1l7 7a1.5 1.5 0 0 0 2.1 0l3.9-3.9a1.5 1.5 0 0 0 0-2.1l-7-7H4.5a1 1 0 0 0-1 1Z"/><circle cx="7.2" cy="7.9" r="1.3" fill="currentColor"/></svg>',
   out: '<svg viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 3h4v4M13 3 7.5 8.5M11.5 9.5V13h-8.5V4.5H6.5"/></svg>',
   cursor: '<svg viewBox="0 0 48 48"><rect x="6" y="8" width="36" height="26" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 16h14M12 22h20M12 28h9"/><path fill="currentColor" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" d="m30 24 12 5-5 1.8 3.6 5-2.4 1.7-3.6-5-3.2 4z"/></svg>',
 };
 
 const HEADING_LEVELS = [1, 2, 3, 4, 5, 6];
+const TEXT_FORMATS = [['p', 'Paragraph'], ...[2, 3, 4, 5, 6].map((n) => [`h${n}`, `Heading ${n}`])];
+const INLINE_TOOLS = [
+  ['bold', 'Bold', 'bold'], ['italic', 'Italic', 'italic'], ['underline', 'Underline', 'underline'],
+  ['strike', 'Strikethrough', 'strikeThrough'],
+];
+const SCRIPT_TOOLS = [['sup', 'Superscript', 'superscript'], ['sub', 'Subscript', 'subscript']];
 const BUTTON_STYLES = [
   ['primary', 'Primary'], ['secondary', 'Secondary'], ['link', 'Plain link'],
 ];
@@ -118,7 +131,7 @@ export default function createPanel(root, state, on) {
     return groupOf(gi)?.cells[c]?.[k] || null;
   };
   const issuesFor = (target) => (state.issues || []).filter((issue) => issue.target === target);
-  const ruleFor = (slot) => fieldRule(state.rules, slot.label, slot.type);
+  const ruleFor = (slot) => fieldRule(state.rules, slot.label, slot.type, slot.auto);
   const locked = () => !state.editable;
 
   function toast(message) {
@@ -390,7 +403,8 @@ export default function createPanel(root, state, on) {
       dataset: { key: `${key}:value` },
     });
     el.innerHTML = slot.field.value || '';
-    const clean = (html) => (single ? cleanInline(html, doc) : cleanFlow(html, doc));
+    const clean = (html) => (single ? cleanInline(html, doc)
+      : cleanFlow(html, doc, { blocks: !compact }));
     el.addEventListener('input', () => {
       const value = clean(el.innerHTML);
       sent.set(el, value);
@@ -421,22 +435,97 @@ export default function createPanel(root, state, on) {
     return el;
   }
 
-  function toolbar(editor, key, { lists = true } = {}) {
+  function toolbar(editor, key, { blocks = true } = {}) {
     let saved = null;
+    let lastRange = null;
     const linkBox = h('div', { class: 'bs-link-form', hidden: true });
+    const selectionIn = () => {
+      const selection = window.getSelection();
+      return selection.rangeCount && editor.contains(selection.anchorNode) ? selection : null;
+    };
+    const closestIn = (selector) => {
+      const node = selectionIn()?.anchorNode;
+      const hit = (node?.nodeType === 1 ? node : node?.parentElement)?.closest(selector);
+      return hit && editor.contains(hit) ? hit : null;
+    };
+    const pressed = [];
+    let format = null;
+    const refresh = () => {
+      if (!selectionIn()) return;
+      lastRange = window.getSelection().getRangeAt(0).cloneRange();
+      pressed.forEach(([btn, isOn]) => btn.setAttribute('aria-pressed', String(!!isOn())));
+      if (format) {
+        const block = closestIn('h1, h2, h3, h4, h5, h6');
+        format.value = block && block.tagName !== 'H1' ? block.tagName.toLowerCase() : 'p';
+      }
+    };
+    ['keyup', 'mouseup', 'focus', 'input'].forEach((type) => editor.addEventListener(type, refresh));
+    const changed = () => {
+      editor.dispatchEvent(new Event('input'));
+      refresh();
+    };
     const exec = (cmd, value) => {
       editor.focus();
       document.execCommand(cmd, false, value);
-      editor.dispatchEvent(new Event('input'));
+      changed();
     };
-    const tool = (name, label, cmd) => h('button', {
-      type: 'button',
-      class: 'bs-tool',
-      'aria-label': label,
-      title: label,
-      onmousedown: (e) => e.preventDefault(),
-      onclick: () => exec(cmd),
-    }, icon(name));
+    const button = (name, label, onclick, isOn) => {
+      const btn = h('button', {
+        type: 'button',
+        class: 'bs-tool',
+        'aria-label': label,
+        title: label,
+        dataset: { key: `${key}:${name}` },
+        onmousedown: (e) => e.preventDefault(),
+        onclick,
+      }, icon(name));
+      if (isOn) pressed.push([btn, isOn]);
+      return btn;
+    };
+    const tool = (name, label, cmd) => button(name, label, () => exec(cmd), () => {
+      try {
+        return document.queryCommandState(cmd);
+      } catch {
+        return false;
+      }
+    });
+    const toggleCode = () => {
+      const existing = closestIn('code');
+      if (existing) {
+        existing.replaceWith(...existing.childNodes);
+        changed();
+        return;
+      }
+      const selection = selectionIn();
+      if (!selection || selection.getRangeAt(0).collapsed) {
+        toast('Select some text in the field first.');
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const holder = document.createElement('div');
+      holder.append(range.cloneContents());
+      if (holder.querySelector('p, li, ul, ol, blockquote, h1, h2, h3, h4, h5, h6')) {
+        toast('Select text within one paragraph.');
+        return;
+      }
+      // Wrapping in place keeps the formatting around the selection (unlike insertHTML).
+      const code = document.createElement('code');
+      code.append(range.extractContents());
+      range.insertNode(code);
+      range.selectNodeContents(code);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      changed();
+    };
+    const toggleQuote = () => {
+      const existing = closestIn('blockquote');
+      if (!existing) {
+        exec('formatBlock', '<blockquote>');
+        return;
+      }
+      existing.replaceWith(...existing.childNodes);
+      changed();
+    };
     const openLink = () => {
       const selection = window.getSelection();
       if (!selection.rangeCount || !editor.contains(selection.anchorNode)) {
@@ -476,29 +565,46 @@ export default function createPanel(root, state, on) {
       linkBox.hidden = false;
       input.focus();
     };
+    if (blocks) {
+      format = h('select', {
+        class: 'bs-format',
+        'aria-label': 'Text format',
+        title: 'Text format',
+        dataset: { key: `${key}:format` },
+        onchange: () => {
+          const tag = format.value;
+          const range = lastRange;
+          editor.focus();
+          if (range) {
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+          }
+          exec('formatBlock', `<${tag}>`);
+        },
+      }, TEXT_FORMATS.map(([value, label]) => h('option', { value }, label)));
+    }
+    const sep = () => h('span', { class: 'bs-tool-sep' });
     const bar = h(
       'div',
       { class: 'bs-toolbar', role: 'toolbar', 'aria-label': 'Formatting' },
-      tool('bold', 'Bold', 'bold'),
-      tool('italic', 'Italic', 'italic'),
-      h('button', {
-        type: 'button', class: 'bs-tool', 'aria-label': 'Link', title: 'Link', onmousedown: (e) => e.preventDefault(), onclick: openLink, dataset: { key: `${key}:link` },
-      }, icon('link')),
-      h('span', { class: 'bs-tool-sep' }),
-      lists ? tool('ul', 'Bulleted list', 'insertUnorderedList') : null,
-      lists ? tool('ol', 'Numbered list', 'insertOrderedList') : null,
-      lists ? h('span', { class: 'bs-tool-sep' }) : null,
-      h('button', {
-        type: 'button',
-        class: 'bs-tool',
-        'aria-label': 'Clear formatting',
-        title: 'Clear formatting',
-        onmousedown: (e) => e.preventDefault(),
-        onclick: () => {
-          exec('removeFormat');
-          exec('unlink');
-        },
-      }, icon('clear')),
+      format,
+      format ? sep() : null,
+      INLINE_TOOLS.map(([name, label, cmd]) => tool(name, label, cmd)),
+      button('link', 'Link', openLink, () => closestIn('a')),
+      blocks ? h('span', { class: 'bs-tool-break' }) : sep(),
+      button('code', 'Code', toggleCode, () => closestIn('code')),
+      SCRIPT_TOOLS.map(([name, label, cmd]) => tool(name, label, cmd)),
+      blocks ? [
+        sep(),
+        tool('ul', 'Bulleted list', 'insertUnorderedList'),
+        tool('ol', 'Numbered list', 'insertOrderedList'),
+        button('quote', 'Quote', toggleQuote, () => closestIn('blockquote')),
+      ] : null,
+      sep(),
+      button('clear', 'Clear formatting', () => {
+        exec('removeFormat');
+        exec('unlink');
+      }),
     );
     return [bar, linkBox];
   }
@@ -529,7 +635,7 @@ export default function createPanel(root, state, on) {
     const head = fieldHead(slot, key, gi);
     // Short fields such as an eyebrow stay one line; the value keeps its paragraph.
     const compact = (limitFor(slot, state.rules) || Infinity) <= 40
-      && !/<(?:ul|ol|li|br)\b|<\/p>\s*<p/i.test(slot.field.value || '');
+      && !/<(?:ul|ol|li|br|h[1-6]|blockquote)\b|<\/p>\s*<p/i.test(slot.field.value || '');
     const editor = richEditor(slot, key, { single: false, compact, labelId: `${head.id}-label` });
     const issues = issuesBox(slot.field.id);
     binds.push(() => {
@@ -539,7 +645,7 @@ export default function createPanel(root, state, on) {
       updateCount(head.count, fieldText(current.field, doc).length, limitFor(current, state.rules));
       issues.update();
     });
-    const bar = locked() ? null : toolbar(editor, key, { lists: !compact });
+    const bar = locked() ? null : toolbar(editor, key, { blocks: !compact });
     return [head.el, bar, editor, head.hint, issues.box];
   }
 
@@ -1147,6 +1253,82 @@ export default function createPanel(root, state, on) {
     );
   }
 
+  /* Naming the block's fields */
+
+  function namingFields(naming, onLabel) {
+    return naming.rows.map((row, r) => {
+      if (row.option) return null;
+      const cells = row.cells.map((fields, c) => (fields.length ? h(
+        'div',
+        { class: 'bs-naming-cell' },
+        row.cells.filter((cell) => cell.length).length > 1 ? h('p', { class: 'bs-naming-col' }, `Column ${c + 1}`) : null,
+        fields.map((field, f) => h(
+          'label',
+          { class: 'bs-naming-field' },
+          h('span', { class: 'bs-naming-meta' }, h('span', { class: 'bs-tag' }, title(field.type)), h('span', { class: 'bs-naming-text' }, field.text || 'Empty')),
+          h('input', {
+            class: 'bs-input',
+            value: field.label,
+            placeholder: field.auto,
+            'aria-label': `Name for ${field.auto}`,
+            dataset: { key: `name:${r}:${c}:${f}` },
+            disabled: naming.step === 'saving',
+            oninput: (e) => {
+              field.label = e.target.value;
+              onLabel();
+            },
+          }),
+        )),
+      ) : null));
+      return h('div', { class: 'bs-naming-row' }, h('p', { class: 'bs-label' }, row.title), cells);
+    });
+  }
+
+  function namingSection() {
+    const { naming } = state;
+    if (!naming && (!state.canName || locked())) return null;
+    const step = naming?.step || 'closed';
+    const named = () => naming.rows.some((row) => row.cells?.some((fields) => fields.some((field) => String(field.label || '').trim())));
+    let body = null;
+    if (step === 'loading') {
+      body = h('div', { class: 'bs-alert bs-info' }, h('span', { class: 'bs-spinner' }), 'Reading the block library…');
+    } else if (step === 'failed') {
+      body = [
+        h('div', { class: 'bs-alert bs-naming-error', role: 'alert' }, icon('alert'), naming.error),
+        h('div', { class: 'bs-naming-actions' }, h('button', { type: 'button', class: 'bs-btn bs-small-btn', onclick: () => on.cancelNaming() }, 'Close')),
+      ];
+    } else if (naming) {
+      const saving = step === 'saving';
+      const save = h('button', {
+        type: 'button', class: 'bs-btn bs-primary bs-small-btn', onclick: () => on.saveNaming(), disabled: saving || !named(),
+      }, saving ? 'Saving…' : 'Save names');
+      const canSave = () => { save.disabled = saving || !named(); };
+      body = [
+        h('div', { class: 'bs-naming-rows' }, namingFields(naming, canSave)),
+        h('div', { class: 'bs-naming-plan' }, h('p', { class: 'bs-label' }, 'Saving will'), h('ul', {}, naming.changes.map((change) => h('li', {}, change)))),
+        naming.notes.map((note) => h('p', { class: 'bs-muted bs-small' }, note)),
+        naming.error ? h('div', { class: 'bs-alert bs-naming-error', role: 'alert' }, icon('alert'), naming.error) : null,
+        h('div', { class: 'bs-naming-actions' }, h('button', {
+          type: 'button', class: 'bs-btn bs-small-btn', onclick: () => on.cancelNaming(), disabled: saving,
+        }, 'Cancel'), save),
+      ];
+    }
+    return h(
+      'details',
+      {
+        class: 'bs-naming',
+        open: state.namingOpen ? true : undefined,
+        ontoggle: (e) => {
+          state.namingOpen = e.target.open;
+          if (e.target.open && !state.naming) on.startNaming();
+        },
+      },
+      h('summary', { class: 'bs-naming-sum' }, icon('tag'), 'Name this block\'s fields'),
+      h('p', { class: 'bs-muted bs-small' }, 'Nothing names these fields yet, so authors see names like “Text 2”. Name them once in the block library and every author sees your names.'),
+      body,
+    );
+  }
+
   /* Whole views */
 
   function blockView() {
@@ -1168,6 +1350,7 @@ export default function createPanel(root, state, on) {
       health,
       banner,
       briefSection(),
+      namingSection(),
       optionsSection(),
       model.mode === 'items' ? itemsSection() : groupsSection(),
     ];
@@ -1200,6 +1383,7 @@ export default function createPanel(root, state, on) {
       state.target.index, state.model.name, state.model.mode, state.model.noun,
       state.model.variants, state.editable,
       state.ai?.available, state.ai?.busy, state.addingOption, [...state.open].sort(),
+      state.canName, state.namingOpen, state.naming?.step, state.naming?.error,
       state.rules?.variants, state.libraryVariants,
       [...optionDefs().values()].map((d) => [d.key, d.type, d.type === 'text' ? '' : optionNow(d.key)?.value ?? null, d.type === 'image' && !!on.optionBusy?.(d.key), (state.issues || []).filter((i) => i.target === `option:${d.key}`).length]),
       view().options.map((o) => [o.key, valuesFor(o.key).length ? o.value : '', (state.issues || []).filter((i) => i.target === `option:${o.key}`).length]),

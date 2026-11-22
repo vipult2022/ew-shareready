@@ -93,7 +93,16 @@ function describe(el, doc) {
   if (el.querySelector('img') || tag === 'IMG') return imageOf(el) || { type: 'raw' };
   if (tag === 'P') return iconOf(el) || buttonOf(el) || { type: 'text', value: cleanFlow(el.outerHTML, doc) };
   if (tag === 'UL' || tag === 'OL') return { type: 'text', value: cleanFlow(el.outerHTML, doc) };
+  if (tag === 'BLOCKQUOTE' && !el.querySelector('h1, h2, h3, h4, h5, h6, div, table, pre, video, iframe')) {
+    return { type: 'text', value: cleanFlow(el.outerHTML, doc) };
+  }
   return { type: 'raw' };
+}
+
+/** A short single paragraph, which before a heading is that heading's eyebrow. */
+function shortText(field, doc) {
+  return !/<(ul|ol|h[1-6]|blockquote)\b/.test(field.value)
+    && (field.value.match(/<p>/g) || []).length <= 1 && textOf(field.value, doc).length <= 40;
 }
 
 /** How many elements the block library's `fields` labels count for this node. */
@@ -104,8 +113,10 @@ function unitsOf(node) {
 
 /**
  * Splits a cell into fields. Each field keeps its original markup in `html` so an
- * unedited field is written back exactly as it was. Consecutive paragraphs and lists
- * form one rich text field; `units` counts the elements it covers.
+ * unedited field is written back exactly as it was. Consecutive paragraphs, lists and
+ * quotes form one rich text field; `units` counts the elements it covers. Headings
+ * before the text are fields of their own (heading, subheading); a heading after it
+ * is a subhead inside the text, unless the text is a short eyebrow above that heading.
  */
 function parseCell(cellEl, rowId, c, doc) {
   const nodes = [...cellEl.childNodes].filter(meaningful);
@@ -125,7 +136,9 @@ function parseCell(cellEl, rowId, c, doc) {
       const field = isElement(node) ? describe(node, doc)
         : { type: 'text', value: cleanFlow(`<p>${html}</p>`, doc) };
       const last = fields[fields.length - 1];
-      if (field.type === 'text' && last?.type === 'text') {
+      const subhead = field.type === 'heading' && last?.type === 'text'
+        && (fields.some((f) => f.type === 'heading') || !shortText(last, doc));
+      if ((field.type === 'text' || subhead) && last?.type === 'text') {
         last.html += html;
         last.value = cleanFlow(last.html, doc);
         last.units += unitsOf(node);
@@ -377,8 +390,7 @@ export function labelFields(fields, doc) {
         return headings === 1 ? 'Heading' : 'Subheading';
       case 'text': {
         const next = fields.slice(i + 1).find(Boolean);
-        const short = (fieldText(field, doc).length <= 40 && !/<(ul|ol)\b/.test(field.value)
-          && (field.value.match(/<p>/g) || []).length <= 1) || field.placeholder === 'Eyebrow';
+        const short = shortText(field, doc) || field.placeholder === 'Eyebrow';
         if (!seenHeading && next?.type === 'heading' && short) return 'Eyebrow';
         if (/^<(ul|ol)>/.test(field.value) && !/<p>/.test(field.value)) return 'List';
         texts += 1;
@@ -555,11 +567,12 @@ export function layout(model, doc) {
           let label = field ? labels[k] : templateLabels[c][k];
           if (field?.type === 'button') label = labels[k];
           if (c === titled && sample.type === 'text') label = 'Title';
+          const auto = label;
           if (sample.schemaLabel) label = sample.schemaLabel;
           if (field && own[slots[k]]) label = own[slots[k]];
           const at = slots.slice(0, k).filter((f) => f >= 0).length;
           return {
-            field, type: sample.type, label, c, slot: k, sample, at,
+            field, type: sample.type, label, auto, c, slot: k, sample, at,
           };
         });
       });
@@ -582,6 +595,7 @@ export function layout(model, doc) {
             field,
             type: field.type,
             label: named[k].schemaLabel || labels[k],
+            auto: labels[k],
             c: firstCell + i,
             slot: k,
             sample: field,

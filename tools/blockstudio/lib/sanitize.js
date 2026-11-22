@@ -140,7 +140,9 @@ function list(node) {
   return items.length ? `<${tag}>${items.join('')}</${tag}>` : '';
 }
 
-function flow(node, out) {
+const HEADING = /^H[1-6]$/;
+
+function flow(node, out, blocks) {
   let buffer = '';
   const flush = () => {
     const text = tidy(buffer);
@@ -163,13 +165,22 @@ function flow(node, out) {
       const html = list({ childNodes: [child], tagName: 'UL' });
       if (html) out.push(html);
     } else if (tag === 'HR') flush();
-    else if (!BLOCK.has(tag) && hasBlockChild(child)) {
+    else if (blocks && HEADING.test(tag) && !hasBlockChild(child)) {
+      flush();
+      const text = tidy([...child.childNodes].map(inline).join(''));
+      const name = tag.toLowerCase();
+      if (!isEmptyHtml(text)) out.push(`<${name}>${text}</${name}>`);
+    } else if (blocks && tag === 'BLOCKQUOTE') {
+      flush();
+      const inner = flow(child, [], false);
+      if (inner.length) out.push(`<blockquote>${inner.join('')}</blockquote>`);
+    } else if (!BLOCK.has(tag) && hasBlockChild(child)) {
       // Google Docs wraps a whole paste in <b style="font-weight:normal">.
       flush();
-      flow(child, out);
+      flow(child, out, blocks);
     } else if (BLOCK.has(tag)) {
       flush();
-      if (hasBlockChild(child)) flow(child, out);
+      if (hasBlockChild(child)) flow(child, out, blocks);
       else {
         buffer = [...child.childNodes].map(inline).join('');
         flush();
@@ -187,12 +198,14 @@ function container(html, doc) {
 }
 
 /**
- * Cleans HTML for a rich text field: paragraphs, lists and inline formatting only.
+ * Cleans HTML for a rich text field: paragraphs, lists, headings, quotes and inline
+ * formatting. With `blocks: false` headings and quotes become paragraphs.
  * @param {string} html
  * @param {Document} doc any document, used to parse the HTML
+ * @param {{blocks?: boolean}} [options]
  */
-export function cleanFlow(html, doc) {
-  return flow(container(html, doc), []).join('');
+export function cleanFlow(html, doc, { blocks = true } = {}) {
+  return flow(container(html, doc), [], blocks).join('');
 }
 
 /** Cleans HTML for a single-line field such as a heading: inline formatting only. */
