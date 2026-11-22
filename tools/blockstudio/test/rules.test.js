@@ -8,7 +8,7 @@ import {
 } from '../lib/check.js';
 import {
   parseRules, blockRules, parseLibraryOptions, parseValues, blocksLibraryUrls, makeFetcher,
-  loadSiteSettings, fieldRule, sheetRows,
+  loadSiteSettings, fieldRule, sheetRows, libraryVariants,
 } from '../lib/rules.js';
 import { fieldPrompt, altPrompt, briefPrompt } from '../lib/ai.js';
 
@@ -71,9 +71,15 @@ test('rules: the IMS token only goes to da.live and missing config is not an err
     if (url.endsWith('/config/o/s')) {
       return new Response(JSON.stringify({
         ':names': ['library', 'block-studio'],
-        library: { data: [{ title: 'Blocks', path: '/blocks.json' }] },
+        library: { data: [{ title: 'Blocks', path: 'https://content.da.live/o/s/library/blocks.json, /blocks.json' }] },
         'block-studio': { data: [{ block: 'cards', field: 'heading', max: '40' }] },
       }));
+    }
+    if (url.startsWith('https://content.da.live/') && !opts.headers.Authorization) {
+      return new Response('', { status: 401 });
+    }
+    if (url.endsWith('/library/blocks/table')) {
+      return new Response('<div><div class="table no-header"><div><div>a</div></div></div></div>');
     }
     if (url.endsWith('/blocks.json')) {
       return new Response(JSON.stringify({
@@ -85,10 +91,13 @@ test('rules: the IMS token only goes to da.live and missing config is not an err
     return new Response('', { status: 404 });
   };
   const fetcher = makeFetcher(() => 'TOKEN', fake);
-  const settings = await loadSiteSettings(fetcher, { org: 'o', site: 's' }, fetcher);
+  const settings = await loadSiteSettings(fetcher, { org: 'o', site: 's' });
   assert.equal(settings.rules[0].max, 40);
   assert.equal(settings.libraryOptions.get('cards').get('theme')[0].value, 'l');
-  assert.equal(settings.libraryBlocks[0].name, 'Cards');
+  assert.deepEqual(settings.libraryBlocks.map((b) => b.name), ['Cards', 'Cards']);
+  const tables = [{ name: 'Table', path: 'https://content.da.live/o/s/library/blocks/table' }];
+  assert.deepEqual(await libraryVariants(tables, 'table', fetcher, DOMParser), ['no-header']);
+  assert.ok(calls.some(([url]) => url.startsWith('https://content.da.live/')));
   calls.forEach(([url, auth]) => assert.equal(auth, url.includes('.da.live/') ? 'Bearer TOKEN' : undefined, url));
   const empty = await loadSiteSettings(makeFetcher(() => '', async () => { throw new Error('offline'); }), { org: 'o', site: 's' });
   assert.deepEqual([empty.rules, empty.loaded], [[], false]);
