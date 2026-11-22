@@ -96,6 +96,7 @@ test('rules: the IMS token only goes to da.live and missing config is not an err
   assert.equal(settings.rules[0].max, 40);
   assert.equal(settings.libraryOptions.get('cards').get('theme')[0].value, 'l');
   assert.deepEqual(settings.libraryBlocks.map((b) => b.name), ['Cards', 'Cards']);
+  assert.equal(settings.libraryIndex, 'https://content.da.live/o/s/library/blocks.json', 'the first index is the one Block Studio adds to');
   const tables = [{ name: 'Table', path: 'https://content.da.live/o/s/library/blocks/table' }];
   assert.deepEqual((await libraryVariants(tables, 'table', fetcher, DOMParser)).map((v) => v.value), ['no-header']);
   assert.ok(calls.some(([url]) => url.startsWith('https://content.da.live/')));
@@ -205,6 +206,12 @@ test('config: typed options and the fields sheet configure a block without code'
   assert.equal(fieldRule(rules, 'Card title', 'heading').required, true);
   assert.equal(fieldRule(rules, 'Card title', 'heading').max, 50, 'the type rule still applies to a named field');
   assert.equal(fieldRule(rules, 'Body', 'text').max, 120);
+  assert.equal(fieldRule(rules, 'Offer summary', 'text', 'Description').required, true, 'a renamed field keeps the rule for its automatic name');
+  const labelled = blockRules(parseRules([{
+    block: 'cards', field: 'heading', label: 'Headline', max: '60',
+  }]), 'cards', new Map());
+  assert.equal(fieldRule(labelled, 'Heading', 'heading').label, 'Headline');
+  assert.deepEqual([fieldRule(labelled, 'Card title', 'heading', 'Heading').label, fieldRule(labelled, 'Card title', 'heading', 'Heading').max], ['', 60], 'a library name wins over the rule\'s label, not its limits');
   assert.equal(rules.fields.get('theme').required, true, 'the block-studio sheet still applies');
   assert.equal(blockRules([], 'hero', new Map(), { optionDefs: defs }).optionDefs.get('spacing').type, 'select');
 });

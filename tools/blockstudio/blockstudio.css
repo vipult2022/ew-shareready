@@ -426,6 +426,109 @@ select.bs-input { padding-right: 4px; }
 .bs-brief > p,
 .bs-brief > .bs-inline { padding: 0 12px 10px; }
 
+.bs-naming {
+  border: 1px solid var(--bs-gray-200);
+  border-radius: var(--bs-radius-lg);
+  background: var(--bs-gray-50);
+}
+
+.bs-naming-sum {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--bs-accent-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.bs-naming-sum::-webkit-details-marker { display: none; }
+.bs-naming-sum .bs-i { width: 16px; height: 16px; }
+.bs-naming[open] .bs-naming-sum { padding-bottom: 4px; }
+
+.bs-naming > p,
+.bs-naming > .bs-alert { margin: 0 12px 10px; }
+
+.bs-naming-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 12px 10px;
+}
+
+.bs-naming-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--bs-gray-200);
+  border-radius: var(--bs-radius);
+  background: var(--bs-bg);
+}
+
+.bs-naming-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bs-naming-cell + .bs-naming-cell {
+  padding-top: 8px;
+  border-top: 1px dashed var(--bs-gray-200);
+}
+
+.bs-naming-col {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bs-gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bs-naming-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bs-naming-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.bs-naming-meta .bs-tag { flex: none; }
+
+.bs-naming-text {
+  overflow: hidden;
+  color: var(--bs-gray-600);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-naming-plan {
+  margin: 0 12px 10px;
+  padding: 8px 10px;
+  border-radius: var(--bs-radius);
+  font-size: 13px;
+  color: var(--bs-info-text);
+  background: var(--bs-info-subtle);
+}
+
+.bs-naming-plan .bs-label { color: inherit; }
+.bs-naming-plan ul { margin: 4px 0 0; padding-left: 18px; }
+.bs-naming-error { color: var(--bs-negative-text); background: var(--bs-negative-subtle); }
+
+.bs-naming-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 0 12px 10px;
+}
+
 .bs-ai-btn { width: 26px; height: 26px; color: var(--bs-brand); }
 .bs-ai-btn .bs-i { width: 15px; height: 15px; }
 
@@ -787,11 +890,33 @@ select.bs-input { padding-right: 4px; }
 .bs-rich > :last-child { margin-bottom: 0; }
 .bs-rich ul, .bs-rich ol { margin: 0 0 6px; padding-left: 20px; }
 .bs-rich a { color: var(--bs-accent-text); }
+.bs-rich :is(h1, h2, h3, h4, h5, h6) { margin: 10px 0 4px; line-height: 1.25; }
+.bs-rich > :is(h1, h2, h3, h4, h5, h6):first-child { margin-top: 0; }
+.bs-rich :is(h1, h2) { font-size: 18px; }
+.bs-rich h3 { font-size: 16px; }
+.bs-rich h4 { font-size: 15px; }
+.bs-rich :is(h5, h6) { font-size: 14px; }
+.bs-rich h6 { color: var(--bs-gray-700); }
+
+.bs-rich blockquote {
+  margin: 0 0 6px;
+  padding-left: 10px;
+  border-left: 3px solid var(--bs-gray-300);
+  color: var(--bs-gray-700);
+}
+
+.bs-rich code {
+  padding: 0 3px;
+  border-radius: 3px;
+  font: 0.9em ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bs-gray-100);
+}
 .bs-toolbar + .bs-link-form + .bs-rich { border-top-left-radius: 0; border-top-right-radius: 0; }
 .bs-toolbar + .bs-link-form:not([hidden]) + .bs-rich { border-top: 0; }
 
 .bs-toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 1px;
   align-items: center;
   margin-bottom: -6px;
@@ -817,7 +942,24 @@ select.bs-input { padding-right: 4px; }
 
 .bs-tool .bs-i { width: 15px; height: 15px; }
 .bs-tool:hover { color: var(--bs-gray-900); background: var(--bs-gray-200); }
+.bs-tool[aria-pressed="true"] { color: var(--bs-accent-text); background: var(--bs-accent-subtle); }
 .bs-tool-sep { width: 1px; height: 16px; margin: 0 3px; background: var(--bs-gray-300); }
+.bs-tool-break { flex-basis: 100%; height: 0; }
+
+.bs-format {
+  height: 26px;
+  max-width: 108px;
+  padding: 0 2px 0 6px;
+  border: 0;
+  border-radius: 5px;
+  font: 12px var(--bs-font);
+  color: var(--bs-gray-800);
+  background: none;
+  cursor: pointer;
+}
+
+.bs-format:hover { background: var(--bs-gray-200); }
+.bs-format:focus-visible { outline: 2px solid var(--bs-focus); outline-offset: -2px; }
 
 .bs-link-form {
   display: flex;

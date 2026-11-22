@@ -143,6 +143,39 @@ export async function demoLibraryFetch(url) {
   return new Response(doc || '', { status: doc ? 200 : 404 });
 }
 
+export const DEMO_LIBRARY_INDEX = 'demo:/docs/library/blocks.json';
+
+/**
+ * Reads and writes the demo block library in memory, as Document Authoring's source
+ * API would: the index as a multi-sheet (`blocks` and `editor`) and pages as HTML.
+ */
+export function demoLibraryStore() {
+  const sheet = (data) => ({
+    total: data.length, limit: data.length, offset: 0, data,
+  });
+  return {
+    async read(url) {
+      if (url !== DEMO_LIBRARY_INDEX) return DEMO_LIBRARY.docs[url] ?? null;
+      return JSON.stringify({
+        blocks: sheet(DEMO_LIBRARY.blocks),
+        editor: sheet(DEMO_LIBRARY.editor),
+        ':names': ['blocks', 'editor'],
+        ':version': 3,
+        ':type': 'multi-sheet',
+      });
+    },
+    async write(url, body) {
+      if (url !== DEMO_LIBRARY_INDEX) {
+        DEMO_LIBRARY.docs[url] = body;
+        return;
+      }
+      const json = JSON.parse(body);
+      DEMO_LIBRARY.blocks = json.blocks?.data || [];
+      DEMO_LIBRARY.editor = json.editor?.data || [];
+    },
+  };
+}
+
 /* Canned assistant edits */
 
 const ALT = {

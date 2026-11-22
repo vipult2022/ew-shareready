@@ -21,7 +21,7 @@ const norm = (text) => String(text ?? '').replace(/\s+/g, ' ').trim();
 
 /** The character limit for a slot: the rules sheet's `max`, else the default. */
 export function limitFor(slot, rules) {
-  const rule = fieldRule(rules, slot.label, slot.type);
+  const rule = fieldRule(rules, slot.label, slot.type, slot.auto);
   return Number(rule.max) || LIMITS[slot.type] || 0;
 }
 
@@ -109,7 +109,7 @@ export function checkBlock(view, rules, doc, images = new Map()) {
       add('warn', `row:${group.row.id}`, where, 'is empty');
     }
     slots.forEach((slot) => {
-      const rule = fieldRule(rules, slot.label, slot.type);
+      const rule = fieldRule(rules, slot.label, slot.type, slot.auto);
       const { field } = slot;
       if (!field) {
         if (rule.required) add('error', `slot:${group.row.id}:${slot.c}:${slot.slot}`, where, `needs a ${slot.label.toLowerCase()}`);

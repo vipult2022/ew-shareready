@@ -65,6 +65,26 @@ test('layout: labels fields and shows a missing button as an empty slot', () => 
   assert.equal(missing.at, 4);
 });
 
+test('model: headings after the text are subheads inside it; an eyebrow stays separate', () => {
+  const shape = (cell) => {
+    const { doc, model } = firstBlock(`<div class="hero"><div><div>${cell}</div></div></div>`);
+    const view = layout(model, doc);
+    return view.groups[0].cells[0].map((slot) => `${slot.label}:${slot.field.units}`).join(', ');
+  };
+  const long = '<p>A long opening paragraph that is clearly body copy, not an eyebrow.</p>';
+  assert.equal(shape('<h2>H</h2><p>P</p>'), 'Heading:1, Description:1');
+  assert.equal(shape('<p>New</p><h2>H</h2><p>P</p>'), 'Eyebrow:1, Heading:1, Description:1');
+  assert.equal(shape('<h2>H</h2><h3>S</h3><p>P</p>'), 'Heading:1, Subheading:1, Description:1');
+  assert.equal(shape('<h2>H</h2><p>P</p><h3>S</h3><p>Q</p><blockquote><p>Said</p></blockquote>'), 'Heading:1, Description:4');
+  assert.equal(shape(`${long}<h3>S</h3><p>Q</p>`), 'Description:3');
+  assert.equal(shape('<h2>H</h2><p>P</p><p><strong><a href="/x">Go</a></strong></p><h3>S</h3>'), 'Heading:1, Description:1, Primary button:1, Subheading:1');
+  const { doc, model } = firstBlock('<div class="hero"><div><div><h2>H</h2><p>P</p><h3>S</h3><p>Q</p></div></div></div>');
+  const text = findField(model, 'r0.0.1');
+  assert.equal(text.field.value, '<p>P</p><h3>S</h3><p>Q</p>');
+  applyOp(model, { t: 'set', id: 'r0.0.1', props: { value: '<p>P</p><h4>S2</h4><p>Q</p>' } }, doc);
+  assert.match(buildBlock(model, doc), /<h2>H<\/h2><p>P<\/p><h4>S2<\/h4><p>Q<\/p>/);
+});
+
 test('write-back: an unedited block is unchanged and one edit only touches its field', () => {
   const { doc, model } = firstBlock(CAROUSEL);
   const original = cleanBlock(blockElements(doc)[0]).outerHTML;
@@ -202,6 +222,8 @@ test('sanitize: cleans Word and Google Docs paste and unsafe links', () => {
   assert.equal(cleanFlow(gdocs, doc), '<p><strong>Rate</strong> 4.25%</p><ul><li>One</li></ul>');
   assert.equal(cleanFlow(`<p><a href="${SCRIPT_URL}">x</a><img src=x onerror=alert(1)><script>bad()</script></p>`, doc), '<p>x</p>');
   assert.equal(cleanInline('<h2>Head<br></h2>', doc), 'Head');
+  assert.equal(cleanFlow('<h3>Sub<br></h3><blockquote>Said <b>this</b></blockquote>', doc), '<h3>Sub</h3><blockquote><p>Said <strong>this</strong></p></blockquote>');
+  assert.equal(cleanFlow('<h3>Sub</h3><blockquote><p>Q</p></blockquote>', doc, { blocks: false }), '<p>Sub</p><p>Q</p>');
   assert.equal(safeUrl(' JaVa\nScript:alert(1)'), '');
   assert.equal(safeUrl('mailto:a@b.co'), 'mailto:a@b.co');
   assert.equal(safeUrl('/rates?x=1'), '/rates?x=1');
