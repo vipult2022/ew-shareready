@@ -59,7 +59,7 @@ Open a page in EW, then **Extensions › Block Studio**, and click inside any bl
 | Header | The block's name and variants, with **Undo** and **Redo** for everything done in the panel. In a rich text field, Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z do the same. |
 | Block health | "No issues" or "3 issues". Open it to see each issue; click one to jump to its field. Items with issues show a red or amber count. |
 | Fill from a brief | One line in ("Spring savings offers for young families"), and the assistant writes every field of the block. |
-| Block options | **Variant** chips: the block's documented variants (from the block library or the rules sheet) as toggles with their descriptions, or free-text chips when none are configured. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Other setting rows (`theme`, `autoplay`, …) show as a dropdown with friendly labels, or a text field, and **+ Add option** lists the known settings this block doesn't have yet. |
+| Block options | A **Variant** dropdown: Default plus the block's documented variants (from the block library or the rules sheet), with the chosen one's description. Authors can't type their own. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Other setting rows (`theme`, `autoplay`, …) show as a dropdown with friendly labels, or a text field, and **+ Add option** lists the known settings this block doesn't have yet. |
 | Item fields | When the library's `fields` sheet describes a repeating block's cells, each item uses those names ("Card title", "Card background"), limits and required flags, and offers to add any declared field it's missing. |
 | Items | Slides, cards, tabs or accordion rows as collapsible items, named from the block ("Slide 1", "Card 2") with their heading as a subtitle. Add, duplicate, move up or down, delete (with Undo). New items go in before the settings rows, which never move. |
 | Groups | Blocks whose rows differ (hero, columns) are shown row by row as fixed groups instead of items. |
@@ -150,7 +150,7 @@ Then use your own site's URLs in the `library` row (for example `https://main--{
 
 ## Configuration
 
-Everything is optional. With no configuration, Block Studio uses the default labels and limits, the variants and icons found on the page, and the site's `/icons` folder.
+Everything is optional. With no configuration, Block Studio uses the default labels and limits, the icons found on the page, and the site's `/icons` folder. Variants need the block library or the rules sheet: authors only choose documented variants.
 
 ### The `block-studio` sheet
 
@@ -170,7 +170,7 @@ Special fields:
 
 | `field` | `values` | Does |
 | --- | --- | --- |
-| `variants` | `media-left, media-right, full-width` | Variants suggested as chips |
+| `variants` | `media-left, media-right, full-width` | Variants added to the Variant dropdown |
 | `options` | `theme, autoplay` | Rows with these keys are always block options |
 | `items` | `faq, step`, or `all` | Rows with these keys are always items. `all` turns detection of options off. The `label` column names the items ("Slide") |
 | `icons` | `lock, piggy, phone` | Icons offered in the picker, in addition to the site's |
@@ -196,11 +196,11 @@ A block gets three kinds of configuration:
 
 | What | Where | Panel shows |
 | --- | --- | --- |
-| **Variants**: fixed looks, written as classes (`cards horizontal`) | The block's example page in the library | Toggle chips with the example's heading and description |
+| **Variants**: fixed looks, written as classes (`cards horizontal`) | The block's example page in the library | A dropdown of the documented looks, with the chosen one's description |
 | **Block options**: settings for the whole block (`theme`, `background`) | The library's `options` sheet | One typed control per option |
 | **Item fields**: the cells of each card, slide or tab | The library's `fields` sheet | Named fields, limits, required checks and "Add …" slots |
 
-**Variants.** Each example on a block's library page whose class has variants (`cards horizontal`) adds them. When the example uses one variant, the heading above it becomes its title and its `library-metadata` description is shown when it's selected. The rules sheet's `variants` field adds more. When a block has configured variants, authors choose from that list only; a variant on the page that isn't in the list is flagged so it can be removed.
+**Variants.** Each example on a block's library page whose class has variants is one choice in the **Variant** dropdown, with all its classes together: `cards horizontal` adds Horizontal and `cards icons compact` adds "Icons, Compact". The same classes in another order are the same choice, and an example without variants is the Default. The example's `library-metadata` description is shown under the dropdown when it's chosen. Each value in the rules sheet's `variants` field adds a single-class choice. Authors can only choose from this list; there's no free-text variant. A variant already on the page that isn't documented is shown as "(undocumented)" with a warning, so the author can pick a documented one or Default.
 
 **Block options.** The library's `options` sheet uses Block Inspector's columns (`blocks | key | values`), so an existing setup keeps working. Block Studio reads three more columns, which EW ignores:
 
@@ -254,7 +254,7 @@ export default function decorate(block) {
 }
 ```
 
-Style the option with `.cards[data-theme='dark']`. See [`blocks/cards/cards.js`](../../blocks/cards/cards.js) for a full example, including a third-column card background.
+Style the option with `.cards[data-theme='dark']`. When the row is absent, set the default yourself so both looks are explicit: the cards block sets `data-theme="light"` and its light rules keep the cards readable even inside a dark section. See [`blocks/cards/cards.js`](../../blocks/cards/cards.js) for a full example, including a third-column card background.
 
 ### Icons
 
