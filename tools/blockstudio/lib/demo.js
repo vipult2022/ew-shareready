@@ -49,6 +49,13 @@ const PAGE = `<main>
   <div class="columns">
     <div><div>${img('switch', 'A moving van outside a house')}</div><div><h2>Switch in seven days</h2><p>We move your balance and close your old account for you, at no cost.</p><p><a href="/products/savings/switch">How switching works</a></p></div></div>
   </div>
+</div>
+<div>
+  <h2>Common questions</h2>
+  <div class="accordion">
+    <div><div><p>How quickly can I open an account?</p></div><div><p>Most savers are set up in under ten minutes. You only need your ID and a Northwind current account.</p></div></div>
+    <div><div><p>Is my money protected?</p></div><div><p>Yes. Deposits are protected up to the scheme limit, and we never lend out your instant-access balance.</p></div></div>
+  </div>
   <div class="metadata">
     <div><div>Title</div><div>Savings accounts | Northwind Bank</div></div>
     <div><div>Description</div><div>Instant access and fixed-rate savings from Northwind Bank.</div></div>
@@ -111,7 +118,30 @@ export const DEMO_LIBRARY = {
       { value: 'compact', title: 'Cards, compact', description: 'Tighter spacing for short benefit lists.' },
     ],
   },
+  /** The `editor` sheet: blocks whose rows are repeating items. */
+  editor: [{ block: 'accordion', property: 'multi' }, { block: 'cards', property: 'multi' }],
+  /** The `data` sheet: blocks whose docs are read for variants and field names. */
+  blocks: [{ name: 'Accordion', path: 'demo:/docs/library/blocks/accordion' }],
+  /** A block doc whose `library-metadata` names the accordion's fields. */
+  docs: {
+    'demo:/docs/library/blocks/accordion': `<main><div>
+  <h2>Accordion</h2>
+  <div class="accordion">
+    <div><div><p>Can I pay in more than once?</p></div><div><p>Yes, as often as you like.</p></div></div>
+  </div>
+  <div class="library-metadata">
+    <div><div>description</div><div>Questions that open to show their answer.</div></div>
+    <div><div>fields</div><div><table><tr><td>Fields</td></tr><tr><td>Question</td><td>Answer</td></tr></table></div></div>
+  </div>
+</div></main>`,
+  },
 };
+
+/** Serves the demo block library's docs, as content.da.live would. */
+export async function demoLibraryFetch(url) {
+  const doc = DEMO_LIBRARY.docs[url];
+  return new Response(doc || '', { status: doc ? 200 : 404 });
+}
 
 /* Canned assistant edits */
 

@@ -6,6 +6,7 @@ import {
 } from '../lib/live.js';
 import {
   parseBlock, layout, applyOp, applyOps, buildBlock, pushOp, items, options, findField,
+  exampleFields,
 } from '../lib/model.js';
 import {
   cleanFlow, cleanInline, safeUrl, textToHtml,
@@ -257,4 +258,54 @@ test('config: a block with only a fields sheet stays a list of items', () => {
   assert.equal(mixed.model.mode, 'items', 'items with different cell counts');
   const second = layout(mixed.model, mixed.doc).groups[1].cells;
   assert.deepEqual(second[1].map((s) => [s.label, !!s.field]), [['Promo background', false]]);
+});
+
+test('names: a library example names fields; short first lines default to Title', () => {
+  const labelsOf = (model, doc) => layout(model, doc).groups
+    .map((g) => g.cells.map((c) => c.map((s) => s.label)));
+  const acc = firstBlock(`<div class="accordion">
+    <div><div>Can I open online?</div><div><p>Yes, in minutes.</p></div></div>
+    <div><div>Any fees?</div><div><p>No monthly fees.</p><p>None at all.</p></div></div></div>`);
+  assert.deepEqual(labelsOf(acc.model, acc.doc)[1], [['Title'], ['Description']], 'zero config');
+  const accEl = blockElements(acc.doc)[0];
+  const qa = exampleFields(accEl, [[['Question'], ['Answer']]]);
+  assert.deepEqual(qa.map((d) => [d.c, d.type, d.label, d.labelOnly, d.r]), [[0, 'text', 'Question', true, undefined], [1, 'text', 'Answer', true, undefined]]);
+  const pic = {
+    c: 2, type: 'image', label: 'Pic', labelOnly: true,
+  };
+  const named = parseBlock(accEl, { schema: [...qa, pic] });
+  assert.deepEqual(labelsOf(named, acc.doc), [[['Question'], ['Answer']], [['Question'], ['Answer']]], 'one label row names every item; names add no slots');
+  const perPanel = exampleFields(accEl, [[['Question'], ['Answer']], [['Question'], ['Answer']]]);
+  const longer = firstBlock(`<div class="accordion">${'<div><div>Q?</div><div><p>A.</p></div></div>'.repeat(3)}</div>`);
+  const longerModel = parseBlock(blockElements(longer.doc)[0], { schema: perPanel });
+  assert.deepEqual(labelsOf(longerModel, longer.doc)[2], [['Question'], ['Answer']], 'a row per example panel still names a third panel');
+  const faq = firstBlock('<div class="help"><div><div><h3>Q?</h3><p>A.</p></div></div></div>');
+  const faqEl = blockElements(faq.doc)[0];
+  assert.equal(parseBlock(faqEl).mode, 'groups');
+  assert.equal(parseBlock(faqEl, { multi: true }).mode, 'items', 'multi makes any block a list of items');
+  const multiDefs = exampleFields(accEl, [[['Question'], ['Answer']], [['Other'], ['Row']]], { multi: true });
+  assert.deepEqual(multiDefs.map((d) => [d.r, d.label]), [[undefined, 'Question'], [undefined, 'Answer']], 'multi: the first label row names every item');
+
+  const hero = firstBlock('<div class="hero"><div><div><h1>Bank</h1><p>Intro.</p><p>More.</p><p><strong><a href="/go">Go</a></strong></p></div></div></div>');
+  const heroEl = blockElements(hero.doc)[0];
+  const merged = exampleFields(heroEl, [[['Headline', 'Lead', 'Detail', 'CTA']]]);
+  assert.deepEqual(merged.map((d) => d.label), ['Headline', 'Lead & Detail', 'CTA'], 'merged paragraphs take their labels together');
+  assert.equal(parseBlock(heroEl, { schema: merged }).mode, 'groups', 'names never change the mode');
+  assert.deepEqual(labelsOf(parseBlock(heroEl, { schema: merged }), hero.doc), [[['Headline', 'Lead & Detail', 'CTA']]]);
+  const ignored = parseBlock(heroEl, { schema: exampleFields(heroEl, [[['IGNORE', 'Lead', 'ignore']]]) });
+  assert.deepEqual(labelsOf(ignored, hero.doc), [[['Heading', 'Lead', 'Primary button']]], 'IGNORE keeps the automatic name');
+  assert.deepEqual(exampleFields(heroEl, [[['A', 'B']]]), [], 'labels that do not line up are skipped');
+
+  const cols = firstBlock(`<div class="columns">
+    <div><div><h2>Left</h2><p>a</p></div><div><picture><img src="./c.jpg" alt="c"></picture></div></div>
+    <div><div><h3>Row 2</h3></div><div><p>x</p></div></div>
+    <div><div>theme</div><div>dark</div></div></div>`, { knownKeys: new Set(['theme']) });
+  const colsEl = blockElements(cols.doc)[0];
+  const perRow = exampleFields(colsEl, [[['Title', 'Text'], ['Photo']], [['Sub'], ['Note']], [['IGNORE'], ['Color']]], { knownKeys: new Set(['theme']) });
+  assert.deepEqual(perRow.map((d) => [d.r, d.c, d.label]), [
+    [0, 0, 'Title'], [0, 0, 'Text'], [0, 1, 'Photo'], [1, 0, 'Sub'], [1, 1, 'Note'],
+    [undefined, 0, 'Title'], [undefined, 0, 'Text'], [undefined, 1, 'Photo'],
+  ], 'one label row per row, option rows skipped; the first item also names later items');
+  const rows = labelsOf(parseBlock(colsEl, { knownKeys: new Set(['theme']), schema: perRow }), cols.doc);
+  assert.deepEqual([rows[0][0], rows[0][1][1], rows[1][0][0], rows[1][1][0]], [['Title', 'Text'], 'Photo', 'Sub', 'Note'], 'each row keeps its own names');
 });
