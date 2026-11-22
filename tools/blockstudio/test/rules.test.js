@@ -8,7 +8,7 @@ import {
 } from '../lib/check.js';
 import {
   parseRules, blockRules, parseLibraryOptions, parseValues, blocksLibraryUrls, makeFetcher,
-  loadSiteSettings, fieldRule, sheetRows, libraryVariants,
+  loadSiteSettings, fieldRule, sheetRows, libraryVariants, parseOptionDefs, parseItemFields,
 } from '../lib/rules.js';
 import { fieldPrompt, altPrompt, briefPrompt } from '../lib/ai.js';
 
@@ -96,7 +96,7 @@ test('rules: the IMS token only goes to da.live and missing config is not an err
   assert.equal(settings.libraryOptions.get('cards').get('theme')[0].value, 'l');
   assert.deepEqual(settings.libraryBlocks.map((b) => b.name), ['Cards', 'Cards']);
   const tables = [{ name: 'Table', path: 'https://content.da.live/o/s/library/blocks/table' }];
-  assert.deepEqual(await libraryVariants(tables, 'table', fetcher, DOMParser), ['no-header']);
+  assert.deepEqual((await libraryVariants(tables, 'table', fetcher, DOMParser)).map((v) => v.value), ['no-header']);
   assert.ok(calls.some(([url]) => url.startsWith('https://content.da.live/')));
   calls.forEach(([url, auth]) => assert.equal(auth, url.includes('.da.live/') ? 'Bearer TOKEN' : undefined, url));
   const empty = await loadSiteSettings(makeFetcher(() => '', async () => { throw new Error('offline'); }), { org: 'o', site: 's' });
@@ -160,4 +160,66 @@ test('ai: prompts name the block, item and field and ask for nothing else', () =
     block, brief: 'Spring savings push', noun: 'Slide', count: 3, options: ['theme'],
   }), /It has 3 slides.*settings rows \(theme\)/s);
   assert.throws(() => fieldPrompt({ action: 'nope', block, label: 'x' }));
+});
+
+test('config: typed options and the fields sheet configure a block without code', async () => {
+  const optionRows = [
+    {
+      blocks: 'cards', key: 'Theme', values: 'Light=light|Dark=dark', label: 'Theme', type: 'select', default: 'light',
+    },
+    {
+      blocks: 'cards', key: 'background', values: '', label: 'Block background', type: 'image',
+    },
+    { blocks: 'all', key: 'spacing', values: 'Small=s|Large=l' },
+    { blocks: 'hero', key: 'notes', values: '' },
+  ];
+  const defs = parseOptionDefs(optionRows);
+  assert.deepEqual([...defs.get('cards').keys()], ['theme', 'background', 'spacing']);
+  const theme = defs.get('cards').get('theme');
+  assert.deepEqual([theme.type, theme.default, theme.keyText, theme.values.map((v) => v.value)], ['select', 'light', 'theme', ['light', 'dark']]);
+  assert.equal(defs.get('cards').get('spacing').type, 'select', 'values without a type are a select');
+  assert.equal(defs.has('hero'), false, 'an untyped row with no values is skipped');
+  assert.deepEqual(parseLibraryOptions(optionRows).get('cards').get('background'), [], 'EW options keep typed rows');
+
+  const itemFields = parseItemFields([
+    {
+      block: 'cards', column: '2', name: 'title', type: 'heading', label: 'Card title', required: 'yes',
+    },
+    {
+      block: 'cards', column: '2', name: 'body', type: 'text', max: '120',
+    },
+    {
+      block: 'cards', column: '3', name: 'background', type: 'image', label: 'Card background',
+    },
+    { block: 'cards', column: '0', type: 'text' },
+    { block: 'cards', column: '1', type: 'video' },
+  ]);
+  assert.deepEqual(itemFields.get('cards').map((f) => [f.c, f.type, f.label, f.required, f.max]), [
+    [1, 'heading', 'Card title', true, 0], [1, 'text', 'Body', false, 120], [2, 'image', 'Card background', false, 0],
+  ]);
+
+  const rules = blockRules(parseRules(RULES_SHEET), 'Cards', new Map(), { optionDefs: defs, itemFields });
+  assert.deepEqual([...rules.imageKeys], ['background']);
+  assert.ok(rules.knownKeys.has('background') && rules.knownKeys.has('spacing'));
+  assert.equal(fieldRule(rules, 'Card title', 'heading').required, true);
+  assert.equal(fieldRule(rules, 'Card title', 'heading').max, 50, 'the type rule still applies to a named field');
+  assert.equal(fieldRule(rules, 'Body', 'text').max, 120);
+  assert.equal(rules.fields.get('theme').required, true, 'the block-studio sheet still applies');
+  assert.equal(blockRules([], 'hero', new Map(), { optionDefs: defs }).optionDefs.get('spacing').type, 'select');
+});
+
+test('config: library variants are the documented class combinations, with heading and description', async () => {
+  const doc = `<div><h2>Horizontal</h2><div class="cards horizontal"><div><div>a</div></div></div>
+    <div class="library-metadata"><div><div>description</div><div>Image beside the text.</div></div></div>
+    <div class="cards icons compact"><div><div>b</div></div></div>
+    <h3>Plain</h3><div class="cards"><div><div>c</div></div></div>
+    <h3>Same, reordered</h3><div class="cards compact icons"><div><div>d</div></div></div></div>`;
+  const fake = async (url) => new Response(url.endsWith('/da') ? `<body><header></header><main>${doc}</main></body>` : doc);
+  const variants = await libraryVariants([{ name: 'Cards', path: 'https://x.test/cards' }], 'cards', fake, DOMParser);
+  assert.deepEqual(variants, [
+    { value: 'horizontal', title: 'Horizontal', description: 'Image beside the text.' },
+    { value: 'icons compact', title: 'Icons, Compact', description: '' },
+  ], 'one choice per combination; the default example and a reordered duplicate add none');
+  const fromDa = await libraryVariants([{ name: 'Cards', path: 'https://content.da.live/o/s/da' }], 'cards', fake, DOMParser);
+  assert.deepEqual(fromDa.map((v) => v.value), ['horizontal', 'icons compact'], 'a whole DA document');
 });

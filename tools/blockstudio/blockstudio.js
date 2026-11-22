@@ -15,10 +15,13 @@ import {
 } from './lib/model.js';
 import {
   DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryVariants, parseRules,
+  parseLibraryOptions, parseOptionDefs, parseItemFields,
 } from './lib/rules.js';
 import { checkBlock } from './lib/check.js';
 import { fieldPrompt, altPrompt, briefPrompt } from './lib/ai.js';
-import { createDemoHost, DEMO_RULES, cannedEdit } from './lib/demo.js';
+import {
+  createDemoHost, DEMO_RULES, DEMO_LIBRARY, cannedEdit,
+} from './lib/demo.js';
 
 const SDK_TIMEOUT = 4000;
 const SETTINGS_TIMEOUT = 6000;
@@ -58,7 +61,7 @@ const state = {
   addingOption: '',
   showIssues: false,
   briefOpen: false,
-  variantSuggestions: [],
+  libraryVariants: [],
   icons: [],
   rulesFound: false,
   error: '',
@@ -68,7 +71,12 @@ let panel;
 let host = null;
 let context = {};
 let settings = {
-  rules: [], libraryOptions: new Map(), libraryBlocks: [], loaded: false,
+  rules: [],
+  libraryOptions: new Map(),
+  optionDefs: new Map(),
+  itemFields: new Map(),
+  libraryBlocks: [],
+  loaded: false,
 };
 let token = '';
 const fetcher = makeFetcher(() => token);
@@ -105,7 +113,12 @@ const render = (force) => panel.render(force);
 const blockAt = (index) => (index == null ? null : blockElements(liveDoc)[index] || null);
 const blockTitle = () => title(state.model?.name || 'selected');
 const hintsFor = (rules) => ({
-  knownKeys: rules.knownKeys, options: rules.options, items: rules.items, noun: rules.noun,
+  knownKeys: rules.knownKeys,
+  options: rules.options,
+  items: rules.items,
+  noun: rules.noun,
+  imageKeys: rules.imageKeys,
+  schema: rules.itemFields,
 });
 
 function setStatus(kind, text = '', actions = []) {
@@ -171,10 +184,12 @@ function iconUrl(name) {
   return `https://main--${context.repo}--${context.org}.aem.live/icons/${encodeURIComponent(name)}.svg`;
 }
 
+/**
+ * The variants authors can choose come from the block library (a fixed list, with
+ * descriptions) and the rules sheet. Authors can't add their own.
+ */
 function loadVariants(name) {
-  const fromPage = blockElements(liveDoc).filter((el) => blockName(el) === name)
-    .flatMap((el) => classesOf(el).slice(1));
-  state.variantSuggestions = [...new Set(fromPage)];
+  state.libraryVariants = settings.variants?.[name] || [];
   if (!settings.libraryBlocks?.length) return;
   let pending = variantCache.get(name);
   if (!pending) {
@@ -183,7 +198,7 @@ function loadVariants(name) {
   }
   pending.then((list) => {
     if (state.model?.name !== name || !list.length) return;
-    state.variantSuggestions = [...new Set([...state.variantSuggestions, ...list])];
+    state.libraryVariants = list;
     render();
   });
 }
@@ -317,6 +332,48 @@ async function upload(fieldId, file) {
   }
 }
 
+/** Uploads a picture for an image option (a block background) and sets the option. */
+async function uploadOption(key, file, keyText) {
+  if (!state.model || !state.editable) return;
+  if (!file.type.startsWith('image/')) {
+    panel.toast('Pick an image file (PNG, JPEG, GIF, WebP or SVG).');
+    return;
+  }
+  if (file.size > MAX_UPLOAD) {
+    panel.toast('That image is over 20 MB. Pick a smaller one.');
+    return;
+  }
+  const busy = `option:${key}`;
+  const { name } = state.model;
+  const index = state.target?.index;
+  uploading.add(busy);
+  render();
+  try {
+    const src = await storeImage(file);
+    const preview = URL.createObjectURL(file);
+    const info = { url: preview, bytes: file.size, loading: true };
+    images.set(src, info);
+    naturalSize(preview).then((size) => {
+      Object.assign(info, size, { loading: false });
+      render();
+    });
+    // The author may have opened another block while the image uploaded.
+    if (state.model?.name !== name || state.target?.index !== index) {
+      panel.toast('Another block was opened while the image uploaded. Open the block and choose the image again.');
+      return;
+    }
+    const old = state.view?.options.find((o) => o.key === key);
+    edit({
+      t: 'option', key, keyText, image: { src, alt: old?.alt || '' },
+    }, true);
+  } catch (error) {
+    panel.toast(`The image could not be uploaded (${error.message}). Try again.`);
+  } finally {
+    uploading.delete(busy);
+    render();
+  }
+}
+
 /* Following the page */
 
 function readHtml(html) {
@@ -362,7 +419,7 @@ function openBlock(el, index, same) {
     state.ai.undo = null;
     setStatus('idle');
   }
-  state.rules = blockRules(settings.rules, name, settings.libraryOptions);
+  state.rules = blockRules(settings.rules, name, settings.libraryOptions, settings);
   state.model = parseBlock(el, hintsFor(state.rules));
   state.target = { index };
   base = sig;
@@ -622,7 +679,7 @@ function discard() {
 
 /** Reads the block again as it is in the page and applies the unsaved edits on top. */
 function rebase(el, index) {
-  state.rules = blockRules(settings.rules, blockName(el), settings.libraryOptions);
+  state.rules = blockRules(settings.rules, blockName(el), settings.libraryOptions, settings);
   const model = parseBlock(el, hintsFor(state.rules));
   applyOps(model, ops, doc);
   state.model = model;
@@ -966,7 +1023,13 @@ function startDemo() {
   context = { ...demo.context };
   pageUrl = window.location.href;
   settings = {
-    rules: parseRules(DEMO_RULES), libraryOptions: new Map(), libraryBlocks: [], loaded: true,
+    rules: parseRules(DEMO_RULES),
+    libraryOptions: parseLibraryOptions(DEMO_LIBRARY.options),
+    optionDefs: parseOptionDefs(DEMO_LIBRARY.options),
+    itemFields: parseItemFields(DEMO_LIBRARY.fields),
+    variants: DEMO_LIBRARY.variants,
+    libraryBlocks: [],
+    loaded: true,
   };
   state.rulesFound = true;
   setupAi(demo.actions, demo.capabilities);
@@ -996,6 +1059,11 @@ function init() {
       t: 'option', key, value, keyText,
     }, commit),
     removeOption: (key) => edit({ t: 'remove-option', key }, true),
+    setOptionImage: (key, props, keyText) => edit({
+      t: 'option', key, keyText, image: props,
+    }, true),
+    uploadOption,
+    optionBusy: (key) => uploading.has(`option:${key}`),
     ai: askAi,
     undoAi,
     upload,

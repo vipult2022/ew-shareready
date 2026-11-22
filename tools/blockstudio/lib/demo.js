@@ -76,6 +76,43 @@ export const DEMO_RULES = [
   { block: '*', field: 'heading', max: '70' },
 ];
 
+/**
+ * The demo site's block library config: typed options (the `options` sheet with
+ * Block Studio's label | type | default columns), the `fields` sheet, and the variants
+ * its block docs describe.
+ */
+export const DEMO_LIBRARY = {
+  options: [
+    {
+      blocks: 'cards', key: 'theme', values: 'Light=light|Dark=dark', label: 'Theme', type: 'select', default: 'light',
+    },
+    {
+      blocks: 'cards', key: 'background', label: 'Block background', type: 'image',
+    },
+  ],
+  fields: [
+    {
+      block: 'cards', column: '1', name: 'icon', type: 'icon', label: 'Card icon',
+    },
+    {
+      block: 'cards', column: '2', name: 'title', type: 'heading', label: 'Card title', required: 'yes',
+    },
+    {
+      block: 'cards', column: '2', name: 'body', type: 'text', label: 'Card text', max: '120',
+    },
+    {
+      block: 'cards', column: '3', name: 'background', type: 'image', label: 'Card background',
+    },
+  ],
+  variants: {
+    cards: [
+      { value: 'icons', title: 'Cards with icons', description: 'A small icon above each card instead of a photo.' },
+      { value: 'horizontal', title: 'Cards, horizontal', description: 'Image on the left and text on the right, one card per row.' },
+      { value: 'compact', title: 'Cards, compact', description: 'Tighter spacing for short benefit lists.' },
+    ],
+  },
+};
+
 /* Canned assistant edits */
 
 const ALT = {

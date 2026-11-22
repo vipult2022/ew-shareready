@@ -112,6 +112,143 @@
   outline-offset: 2px;
 }
 
+/* Light theme (the default): light cards with dark text, even in a dark section */
+.cards[data-theme='light'] .cards-card-body h2,
+.cards[data-theme='light'] .cards-card-body h3,
+.cards[data-theme='light'] .cards-card-body h4 {
+  color: var(--heading-color);
+}
+
+.cards[data-theme='light'] .cards-card-body :any-link:not(.button, p:last-child > :only-child) {
+  color: var(--link-color);
+}
+
+/* Card background (third column): the image fills the card, text sits on a scrim */
+.cards > ul > li.has-bg {
+  position: relative;
+  min-height: 280px;
+  background-color: var(--dark-section-color);
+}
+
+.cards > ul > li.has-bg > :not(.cards-card-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.cards .cards-card-bg {
+  position: absolute;
+  inset: 0;
+  line-height: 0;
+}
+
+.cards .cards-card-bg img {
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+}
+
+/* Dark theme (`theme | dark` row) and cards over a block background share light text */
+.cards[data-theme='dark'] > ul > li {
+  border-color: rgb(255 255 255 / 14%);
+  background-color: var(--dark-section-color);
+  box-shadow: none;
+}
+
+.cards[data-theme='dark'] .cards-card-image {
+  border-bottom-color: rgb(255 255 255 / 14%);
+  background-color: #12335a;
+}
+
+.cards[data-theme='dark'] .cards-card-body,
+.cards > ul > li.has-bg .cards-card-body {
+  color: #d7e0ea;
+}
+
+.cards > ul > li.has-bg .cards-card-body {
+  justify-content: flex-end;
+  background: linear-gradient(to top, rgb(11 37 69 / 92%) 30%, rgb(11 37 69 / 20%));
+}
+
+.cards[data-theme='dark'] .cards-card-body h2,
+.cards[data-theme='dark'] .cards-card-body h3,
+.cards[data-theme='dark'] .cards-card-body h4,
+.cards[data-theme='dark'] .cards-card-body strong,
+.cards > ul > li.has-bg .cards-card-body h2,
+.cards > ul > li.has-bg .cards-card-body h3,
+.cards > ul > li.has-bg .cards-card-body h4,
+.cards > ul > li.has-bg .cards-card-body strong {
+  color: #fff;
+}
+
+.cards[data-theme='dark'] .cards-card-body :any-link:not(.button, p:last-child > :only-child),
+.cards > ul > li.has-bg .cards-card-body :any-link:not(.button, p:last-child > :only-child) {
+  color: #8fe0d8;
+}
+
+.cards[data-theme='dark'] .cards-card-body > p:last-child:has(> a:only-child),
+.cards > ul > li.has-bg .cards-card-body > p:last-child:has(> a:only-child) {
+  border-top-color: rgb(255 255 255 / 20%);
+}
+
+.cards[data-theme='dark'] .cards-card-body > p:last-child > a:only-child,
+.cards > ul > li.has-bg .cards-card-body > p:last-child > a:only-child {
+  border-color: #fff;
+  color: #fff;
+}
+
+.cards[data-theme='dark'] .cards-card-body > p:last-child > a:only-child:hover,
+.cards > ul > li.has-bg .cards-card-body > p:last-child > a:only-child:hover {
+  background-color: #fff;
+  color: var(--dark-section-color);
+}
+
+/* Block background (`background | <image>` row) behind the whole grid */
+.cards.has-bg {
+  position: relative;
+  overflow: hidden;
+  padding: 32px;
+  border-radius: 16px;
+}
+
+.cards.has-bg > ul {
+  position: relative;
+  z-index: 1;
+}
+
+.cards > .cards-bg {
+  position: absolute;
+  inset: 0;
+  line-height: 0;
+}
+
+.cards > .cards-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Horizontal variant: one card per row, image beside the text */
+.cards.horizontal > ul {
+  grid-template-columns: 1fr;
+}
+
+@media (width >= 600px) {
+  .cards.horizontal > ul > li {
+    flex-direction: row;
+  }
+
+  .cards.horizontal .cards-card-image {
+    flex: 0 0 40%;
+    border-right: 1px solid #eaeaea;
+    border-bottom: 0;
+  }
+
+  .cards.horizontal .cards-card-image img {
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cards > ul > li,
   .cards .cards-card-body > p:last-child > a:only-child {
