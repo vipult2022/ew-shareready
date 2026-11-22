@@ -96,10 +96,16 @@ function describe(el, doc) {
   return { type: 'raw' };
 }
 
+/** How many elements the block library's `fields` labels count for this node. */
+function unitsOf(node) {
+  if (!isElement(node)) return 0;
+  return node.tagName === 'BLOCKQUOTE' ? node.children.length : 1;
+}
+
 /**
  * Splits a cell into fields. Each field keeps its original markup in `html` so an
  * unedited field is written back exactly as it was. Consecutive paragraphs and lists
- * form one rich text field.
+ * form one rich text field; `units` counts the elements it covers.
  */
 function parseCell(cellEl, rowId, c, doc) {
   const nodes = [...cellEl.childNodes].filter(meaningful);
@@ -109,7 +115,9 @@ function parseCell(cellEl, rowId, c, doc) {
     if (nodes.length) {
       const field = iconOf(cellEl) || buttonOf(cellEl)
         || { type: 'text', value: cleanFlow(`<p>${cellEl.innerHTML}</p>`, doc) };
-      fields.push({ ...field, html: cellEl.innerHTML, inline: true });
+      fields.push({
+        ...field, html: cellEl.innerHTML, inline: true, units: 1,
+      });
     }
   } else {
     nodes.forEach((node) => {
@@ -120,9 +128,12 @@ function parseCell(cellEl, rowId, c, doc) {
       if (field.type === 'text' && last?.type === 'text') {
         last.html += html;
         last.value = cleanFlow(last.html, doc);
+        last.units += unitsOf(node);
         return;
       }
-      fields.push({ ...field, html, inline: false });
+      fields.push({
+        ...field, html, inline: false, units: unitsOf(node),
+      });
     });
   }
   fields.forEach((field, f) => {
@@ -182,8 +193,10 @@ function overlap(a, b) {
  * @param {string[]} [hints.options] keys the rules sheet forces to be options
  * @param {string[]|'all'} [hints.items] keys forced to be items ('all' = no options)
  * @param {string} [hints.noun] item name from the rules sheet
+ * @param {boolean} [hints.multi] the library's `editor` sheet marks it as repeating items
  * @param {Set<string>} [hints.imageKeys] option keys whose value is a picture
- * @param {object[]} [hints.schema] the block's `fields` sheet rows ({c, type, label})
+ * @param {object[]} [hints.schema] the block's `fields` sheet rows ({c, type, label}), and
+ *   names from its block library example (`labelOnly`, which only rename fields)
  */
 export function parseBlock(element, hints = {}) {
   const el = cleanBlock(element);
@@ -219,7 +232,8 @@ export function parseBlock(element, hints = {}) {
     };
   });
   const content = rows.filter((row) => row.kind === 'item');
-  const repeater = REPEATER.test(name) || !!hints.noun || !!hints.schema?.length;
+  const repeater = REPEATER.test(name) || !!hints.noun || !!hints.multi
+    || !!hints.schema?.some((def) => !def.labelOnly);
   let mode = 'groups';
   if (content.length >= 2) {
     const sameCells = content.every((row) => row.cells.length === content[0].cells.length);
@@ -246,6 +260,68 @@ export function items(model) {
 
 export function options(model) {
   return model.rows.filter((row) => row.kind === 'option');
+}
+
+const IGNORE = /^ignore$/i;
+
+/**
+ * Names a cell's fields from its labels, which name each paragraph, heading, list or
+ * picture in order. Consecutive paragraphs are one field here, so it takes their labels
+ * together ("Title & Body"). Labels that don't line up give null.
+ */
+function nameFields(fields, labels) {
+  const units = fields.map((field) => field.units ?? 1);
+  let groups;
+  if (labels.length === units.reduce((a, b) => a + b, 0)) {
+    let at = 0;
+    groups = units.map((count) => {
+      at += count;
+      return labels.slice(at - count, at);
+    });
+  } else if (labels.length === fields.length) groups = labels.map((label) => [label]);
+  else return null;
+  return fields.map((field, i) => ({
+    type: field.type,
+    label: [...new Set(groups[i].map(norm).filter((label) => label && !IGNORE.test(label)))].join(' & '),
+  }));
+}
+
+/**
+ * Field names from a block library example and its `library-metadata` `fields` table
+ * (Block Inspector's format): label rows mirror the example's rows and cells. For a
+ * `multi` block (or one label row) the first row names every item, however many there
+ * are. Otherwise the rows name the example's rows in order, and in a block of items the
+ * first item's names also name any items after them. IGNORE or an empty label keeps
+ * the automatic name, and a cell whose labels don't line up with its content is skipped.
+ * @param {Element} blockEl the example block
+ * @param {string[][][]} labelRows label rows → cells → labels
+ * @param {object} [hints] the block's parse hints
+ * @returns {object[]} [{c, r?, type, label, labelOnly}]
+ */
+export function exampleFields(blockEl, labelRows, hints = {}) {
+  if (!labelRows?.length) return [];
+  const model = parseBlock(blockEl, hints);
+  const content = items(model);
+  const shared = labelRows.length === 1 || !!hints.multi;
+  const defs = [];
+  (shared ? labelRows.slice(0, 1) : labelRows).forEach((cells, j) => {
+    const row = shared ? content.find((item) => item.cells.length === cells.length) : model.rows[j];
+    if (row?.kind !== 'item' || row.cells.length !== cells.length) return;
+    const at = shared ? {} : { r: content.indexOf(row) };
+    cells.forEach((labels, c) => {
+      nameFields(row.cells[c].fields, labels)?.forEach(({ type, label }) => {
+        defs.push({
+          c, ...at, type, label, labelOnly: true,
+        });
+      });
+    });
+  });
+  if (!shared && model.mode === 'items') {
+    // Items beyond the example's rows take the first item's names.
+    const first = defs.find((def) => def.r != null)?.r;
+    defs.push(...defs.filter((def) => def.r === first).map(({ r, ...def }) => def));
+  }
+  return defs;
 }
 
 export function findField(model, id) {
@@ -363,33 +439,92 @@ const itemTitle = (noun, n, fields, doc) => {
 };
 
 /**
- * Names a column's slots from the `fields` sheet: each definition takes the next slot of
- * its type. With `insert`, a definition no slot matches is added as an empty slot, so
- * every item offers it ("Add card background").
+ * Pairs definitions with slots of the same type, keeping both in order and pairing as
+ * many as possible, so an optional field (an eyebrow) that's missing doesn't shift names.
+ * → slot index per definition, or -1.
+ */
+function align(types, defs) {
+  const dp = Array.from({ length: defs.length + 1 }, () => new Array(types.length + 1).fill(0));
+  for (let a = defs.length - 1; a >= 0; a -= 1) {
+    for (let b = types.length - 1; b >= 0; b -= 1) {
+      dp[a][b] = defs[a].type === types[b] ? dp[a + 1][b + 1] + 1
+        : Math.max(dp[a + 1][b], dp[a][b + 1]);
+    }
+  }
+  const match = defs.map(() => -1);
+  let a = 0;
+  let b = 0;
+  while (a < defs.length && b < types.length) {
+    if (defs[a].type === types[b]) {
+      match[a] = b;
+      a += 1;
+      b += 1;
+    } else if (dp[a + 1][b] >= dp[a][b + 1]) a += 1;
+    else b += 1;
+  }
+  return match;
+}
+
+/**
+ * Names a column's slots from the `fields` sheet: each definition names the slot of its
+ * type it lines up with. With `insert`, a definition no slot matches is added as an
+ * empty slot, so every item offers it ("Add card background"). Names from the block
+ * library (`labelOnly`) only rename; an empty one (IGNORE) keeps the automatic name.
  */
 function withSchema(template, defs, insert) {
   const out = template.map((sample) => ({ ...sample }));
-  let i = 0;
-  defs.forEach((def) => {
-    let k = i;
-    while (k < out.length && out[k].type !== def.type) k += 1;
-    if (k < out.length) {
-      out[k].schemaLabel = def.label;
-      i = k + 1;
-    } else if (insert) {
-      out.splice(i, 0, { type: def.type, schemaLabel: def.label, schema: true });
-      i += 1;
+  const match = align(out.map((sample) => sample.type), defs);
+  const result = [];
+  let next = 0;
+  defs.forEach((def, d) => {
+    if (match[d] >= 0) {
+      while (next <= match[d]) {
+        result.push(out[next]);
+        next += 1;
+      }
+      if (def.label) result[result.length - 1].schemaLabel = def.label;
+    } else if (insert && !def.labelOnly) {
+      result.push({ type: def.type, schemaLabel: def.label, schema: true });
     }
   });
-  return out;
+  return [...result, ...out.slice(next)];
 }
 
-const schemaFor = (model, c) => (model.schema || []).filter((def) => def.c === c);
+/** The definitions for cell `c` of content row `r` (definitions without `r` fit every row). */
+/** Definitions for column c: shared ones, plus row r's own when r is given. */
+const schemaFor = (model, c, r) => (model.schema || [])
+  .filter((def) => def.c === c && (def.r == null || def.r === r));
+
+/** Row r's own names (from a library example with a label row per row), per field. */
+const rowNames = (model, c, r, fields) => {
+  const defs = (model.schema || []).filter((def) => def.c === c && def.r === r);
+  return defs.length ? withSchema(fields, defs, false).map((field) => field.schemaLabel) : [];
+};
+
+const shortLine = (field, doc) => field.type === 'text' && fieldText(field, doc).length <= 80
+  && (field.value.match(/<p>/g) || []).length <= 1 && !/<(ul|ol)\b/.test(field.value);
+
+/**
+ * With no headings, an item whose first text column is one short line and whose later
+ * columns hold more text (an accordion's question and answer) is titled by that line.
+ */
+function titleColumn(templates, rows, doc) {
+  if (templates.some((template) => template.some((sample) => !sample.schema && sample.type === 'heading'))) return -1;
+  const c = templates.findIndex((template) => template.some((sample) => sample.type === 'text'));
+  if (c < 0) return -1;
+  const own = templates[c].filter((sample) => !sample.schema);
+  const later = templates.slice(c + 1).some((template) => template.some((sample) => sample.type === 'text'));
+  if (own.length !== 1 || own[0].type !== 'text' || !later) return -1;
+  const fits = rows.every((row) => (row.cells[c]?.fields || [])
+    .every((field) => shortLine(field, doc)));
+  return fits ? c : -1;
+}
 
 /**
  * What the panel shows: options, then items (or groups) with labelled slots. A slot
  * with no field is a field this item is missing compared with the others, or one the
- * block's `fields` sheet declares.
+ * block's `fields` sheet declares. Names come from the `fields` sheet, then the block
+ * library's example, then the content.
  */
 export function layout(model, doc) {
   const rows = items(model);
@@ -398,7 +533,7 @@ export function layout(model, doc) {
     const cellCount = Math.max(
       0,
       ...rows.map((row) => row.cells.length),
-      ...(model.schema || []).map((def) => def.c + 1),
+      ...(model.schema || []).filter((def) => !def.labelOnly).map((def) => def.c + 1),
     );
     const templates = Array.from(
       { length: cellCount },
@@ -408,16 +543,20 @@ export function layout(model, doc) {
       template.map((sample) => (sample.schema ? null : sample)),
       doc,
     ));
+    const titled = titleColumn(templates, rows, doc);
     rows.forEach((row, n) => {
       const cells = templates.map((template, c) => {
         const fields = row.cells[c]?.fields || [];
         const slots = matchSlots(fields, template);
         const labels = labelFields(slots.map((f) => (f >= 0 ? fields[f] : null)), doc);
+        const own = rowNames(model, c, n, fields);
         return template.map((sample, k) => {
           const field = slots[k] >= 0 ? fields[slots[k]] : null;
           let label = field ? labels[k] : templateLabels[c][k];
           if (field?.type === 'button') label = labels[k];
+          if (c === titled && sample.type === 'text') label = 'Title';
           if (sample.schemaLabel) label = sample.schemaLabel;
+          if (field && own[slots[k]]) label = own[slots[k]];
           const at = slots.slice(0, k).filter((f) => f >= 0).length;
           return {
             field, type: sample.type, label, c, slot: k, sample, at,
@@ -438,7 +577,7 @@ export function layout(model, doc) {
       parts.forEach(({ cells: partCells, c: firstCell }) => {
         const cells = partCells.map((cell, i) => {
           const labels = labelFields(cell.fields, doc);
-          const named = withSchema(cell.fields, schemaFor(model, firstCell + i), false);
+          const named = withSchema(cell.fields, schemaFor(model, firstCell + i, n), false);
           return cell.fields.map((field, k) => ({
             field,
             type: field.type,

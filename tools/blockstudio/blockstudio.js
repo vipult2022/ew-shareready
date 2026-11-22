@@ -14,13 +14,14 @@ import {
   parseBlock, layout, applyOp, applyOps, pushOp, buildBlock, items, options, findField, ICON_TOKEN,
 } from './lib/model.js';
 import {
-  DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryVariants, parseRules,
-  parseLibraryOptions, parseOptionDefs, parseItemFields,
+  DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryBlock, exampleFieldsFor,
+  withLibraryFields, parseRules, parseLibraryOptions, parseOptionDefs, parseItemFields,
+  parseMultiBlocks,
 } from './lib/rules.js';
 import { checkBlock } from './lib/check.js';
 import { fieldPrompt, altPrompt, briefPrompt } from './lib/ai.js';
 import {
-  createDemoHost, DEMO_RULES, DEMO_LIBRARY, cannedEdit,
+  createDemoHost, DEMO_RULES, DEMO_LIBRARY, demoLibraryFetch, cannedEdit,
 } from './lib/demo.js';
 
 const SDK_TIMEOUT = 4000;
@@ -75,11 +76,13 @@ let settings = {
   libraryOptions: new Map(),
   optionDefs: new Map(),
   itemFields: new Map(),
+  multiBlocks: new Set(),
   libraryBlocks: [],
   loaded: false,
 };
 let token = '';
 const fetcher = makeFetcher(() => token);
+let libraryFetch = fetcher;
 let pageUrl = '';
 
 let lastHtml = '';
@@ -105,7 +108,8 @@ let aiSnap = null;
 let aiTimer = null;
 let pageIcons = [];
 let siteIcons = [];
-const variantCache = new Map();
+const libraryCache = new Map();
+const libraryLoaded = new Map();
 
 /* Small helpers */
 
@@ -117,6 +121,7 @@ const hintsFor = (rules) => ({
   options: rules.options,
   items: rules.items,
   noun: rules.noun,
+  multi: rules.multi,
   imageKeys: rules.imageKeys,
   schema: rules.itemFields,
 });
@@ -185,20 +190,53 @@ function iconUrl(name) {
 }
 
 /**
- * The variants authors can choose come from the block library (a fixed list, with
- * descriptions) and the rules sheet. Authors can't add their own.
+ * The block library's documentation for a block: the variants authors can choose (a
+ * fixed list, with descriptions) and the field names its examples give. Fetched once.
+ */
+function fetchLibrary(name) {
+  if (!settings.libraryBlocks?.length) return null;
+  let pending = libraryCache.get(name);
+  if (!pending) {
+    const hints = hintsFor(blockRules(settings.rules, name, settings.libraryOptions, settings));
+    pending = libraryBlock(settings.libraryBlocks, name, libraryFetch, { hints })
+      .catch(() => ({ variants: [], examples: [] }))
+      .then((lib) => {
+        libraryLoaded.set(name, lib);
+        return lib;
+      });
+    libraryCache.set(name, pending);
+  }
+  return pending;
+}
+
+/** A block's rules, with field names from its block library example once loaded. */
+function rulesFor(el) {
+  const name = blockName(el);
+  const rules = blockRules(settings.rules, name, settings.libraryOptions, settings);
+  const named = exampleFieldsFor(libraryLoaded.get(name)?.examples, classesOf(el).slice(1));
+  rules.itemFields = withLibraryFields(rules.itemFields, named);
+  return rules;
+}
+
+/**
+ * The variants authors can choose come from the block library and the rules sheet.
+ * Authors can't add their own. The first time a block opens, its library loads after it
+ * and renames its fields.
  */
 function loadVariants(name) {
-  state.libraryVariants = settings.variants?.[name] || [];
-  if (!settings.libraryBlocks?.length) return;
-  let pending = variantCache.get(name);
-  if (!pending) {
-    pending = libraryVariants(settings.libraryBlocks, name, fetcher).catch(() => []);
-    variantCache.set(name, pending);
-  }
-  pending.then((list) => {
-    if (state.model?.name !== name || !list.length) return;
-    state.libraryVariants = list;
+  const known = libraryLoaded.get(name);
+  state.libraryVariants = known?.variants.length ? known.variants : settings.variants?.[name] || [];
+  const pending = fetchLibrary(name);
+  if (!pending || known) return;
+  pending.then((lib) => {
+    if (state.model?.name !== name) return;
+    if (lib.variants.length) state.libraryVariants = lib.variants;
+    const named = exampleFieldsFor(lib.examples, state.model.variants);
+    if (named.length) {
+      state.rules.itemFields = withLibraryFields(state.rules.itemFields, named);
+      state.model.schema = state.rules.itemFields;
+      derive();
+    }
     render();
   });
 }
@@ -382,6 +420,8 @@ function readHtml(html) {
   liveDoc = parseHtml(html);
   state.blocks = outline(liveDoc);
   collectPageIcons();
+  // Load the library for the page's blocks now, so their fields are named when opened.
+  new Set(blockElements(liveDoc).map(blockName)).forEach(fetchLibrary);
 }
 
 function closeBlock() {
@@ -419,7 +459,7 @@ function openBlock(el, index, same) {
     state.ai.undo = null;
     setStatus('idle');
   }
-  state.rules = blockRules(settings.rules, name, settings.libraryOptions, settings);
+  state.rules = rulesFor(el);
   state.model = parseBlock(el, hintsFor(state.rules));
   state.target = { index };
   base = sig;
@@ -679,7 +719,7 @@ function discard() {
 
 /** Reads the block again as it is in the page and applies the unsaved edits on top. */
 function rebase(el, index) {
-  state.rules = blockRules(settings.rules, blockName(el), settings.libraryOptions, settings);
+  state.rules = rulesFor(el);
   const model = parseBlock(el, hintsFor(state.rules));
   applyOps(model, ops, doc);
   state.model = model;
@@ -1027,10 +1067,12 @@ function startDemo() {
     libraryOptions: parseLibraryOptions(DEMO_LIBRARY.options),
     optionDefs: parseOptionDefs(DEMO_LIBRARY.options),
     itemFields: parseItemFields(DEMO_LIBRARY.fields),
+    multiBlocks: parseMultiBlocks(DEMO_LIBRARY.editor),
     variants: DEMO_LIBRARY.variants,
-    libraryBlocks: [],
+    libraryBlocks: DEMO_LIBRARY.blocks,
     loaded: true,
   };
+  libraryFetch = demoLibraryFetch;
   state.rulesFound = true;
   setupAi(demo.actions, demo.capabilities);
   state.phase = 'empty';

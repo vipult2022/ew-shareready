@@ -60,7 +60,7 @@ Open a page in EW, then **Extensions › Block Studio**, and click inside any bl
 | Block health | "No issues" or "3 issues". Open it to see each issue; click one to jump to its field. Items with issues show a red or amber count. |
 | Fill from a brief | One line in ("Spring savings offers for young families"), and the assistant writes every field of the block. |
 | Block options | A **Variant** dropdown: Default plus the block's documented variants (from the block library or the rules sheet), with the chosen one's description. Authors can't type their own. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Other setting rows (`theme`, `autoplay`, …) show as a dropdown with friendly labels, or a text field, and **+ Add option** lists the known settings this block doesn't have yet. |
-| Item fields | When the library's `fields` sheet describes a repeating block's cells, each item uses those names ("Card title", "Card background"), limits and required flags, and offers to add any declared field it's missing. |
+| Item fields | Each field is named from the block library: the `fields` table in an example's `library-metadata` ("Question", "Answer") or the library's `fields` sheet ("Card title", "Card background"), which also adds limits, required flags and slots for any declared field an item is missing. |
 | Items | Slides, cards, tabs or accordion rows as collapsible items, named from the block ("Slide 1", "Card 2") with their heading as a subtitle. Add, duplicate, move up or down, delete (with Undo). New items go in before the settings rows, which never move. |
 | Groups | Blocks whose rows differ (hero, columns) are shown row by row as fixed groups instead of items. |
 
@@ -192,15 +192,40 @@ Example, as used by the demo:
 
 Block Studio has no per-block code. A new block is configured in the site's **block library** (the **Blocks** row of the `library` sheet; see [Set up the library](https://www.aem.live/docs/ew/administering/set-up-library)), so the same panel works on any project. The library can be published pages (`/library/blocks.json`) or kept in DA (`https://content.da.live/{org}/{site}/library/blocks.json`); DA-hosted files are read with your EW sign-in.
 
-A block gets three kinds of configuration:
+A block gets four kinds of configuration:
 
 | What | Where | Panel shows |
 | --- | --- | --- |
 | **Variants**: fixed looks, written as classes (`cards horizontal`) | The block's example page in the library | A dropdown of the documented looks, with the chosen one's description |
 | **Block options**: settings for the whole block (`theme`, `background`) | The library's `options` sheet | One typed control per option |
+| **Field names**: what each field in an example is | A `fields` table in the example's `library-metadata`, plus `multi` in the `editor` sheet for repeating blocks | "Question" and "Answer" instead of "Title" and "Description" |
 | **Item fields**: the cells of each card, slide or tab | The library's `fields` sheet | Named fields, limits, required checks and "Add …" slots |
 
 **Variants.** Each example on a block's library page whose class has variants is one choice in the **Variant** dropdown, with all its classes together: `cards horizontal` adds Horizontal and `cards icons compact` adds "Icons, Compact". The same classes in another order are the same choice, and an example without variants is the Default. The example's `library-metadata` description is shown under the dropdown when it's chosen. Each value in the rules sheet's `variants` field adds a single-class choice. Authors can only choose from this list; there's no free-text variant. A variant already on the page that isn't documented is shown as "(undocumented)" with a warning, so the author can pick a documented one or Default.
+
+**Field names.** Block Studio names fields automatically (see [How blocks are read](#how-blocks-are-read)), so an accordion's question and answer show as **Title** and **Description**. To give them real names, add a `fields` row to the `library-metadata` block under the example on the block's library page. Its value is a table in [Block Inspector](https://github.com/adobe-rnd/ew-extensions)'s format, so a library set up for Block Inspector already works:
+
+- The first row is a single **Fields** cell.
+- For a block of repeating items (cards, accordion, carousel), mark it `multi` in the library's `editor` sheet (below) and add **one** row of labels for the first item. It names every item, so adding a card or an FAQ never needs a library change.
+- For any other block (hero, columns), one row of labels per row of the example, with the same number of cells, since each row is a different thing.
+- In each cell, one paragraph per field, in order: a heading, a picture, a list, a button or a paragraph of text is one field each. Block Studio edits consecutive paragraphs as one rich text field, which takes their labels together ("Intro & Details").
+- `IGNORE` (or an empty paragraph) keeps the automatic name. In a row-per-row table, label option rows (`theme | dark`) `IGNORE`.
+
+For an accordion:
+
+| library-metadata | |
+| --- | --- |
+| description | Questions that open to show their answer. |
+| fields | (a table:) **Fields**, then one row: **Question** \| **Answer** |
+
+The library's `editor` sheet (Block Inspector's, in the same `blocks.json` as `blocks`) lists the repeating blocks:
+
+| block | property |
+| --- | --- |
+| accordion | multi |
+| cards | multi |
+
+Without it, Block Studio still treats one label row as naming every item, and in a block of items the first item's labels also name items beyond the example. Each variant's example can name its fields; a block with no example for its variant uses the default example's names. When labels don't line up with the example's content, that cell keeps its automatic names. The `fields` sheet below wins for any column it describes.
 
 **Block options.** The library's `options` sheet uses Block Inspector's columns (`blocks | key | values`), so an existing setup keeps working. Block Studio reads three more columns, which EW ignores:
 
@@ -269,7 +294,7 @@ The icon picker lists the SVG files in the `/icons` folder of the site's GitHub 
 | The other rows, when the block is a known repeater (cards, carousel, tabs, accordion, …) or the rows have the same cells and similar content | **Items** |
 | Otherwise | **Groups**, one per row (hero, columns) |
 
-Inside a cell, consecutive paragraphs and lists form one rich text field, `h1`–`h6` a heading, a picture an image, a link alone in its paragraph a button (`strong` = Primary, `em` = Secondary, both = Accent, neither = Plain link), and `:name:` an icon. Labels come from position and type: the short text before the heading is the **Eyebrow**, the first heading the **Heading** and the next a **Subheading**, the text after it the **Description**, a list the **List**, and a button is named by its style (**Primary button**, **Secondary button**, **Link**). Repeated labels are numbered (**Primary button 2**), and these names are what the rules sheet's `field` column matches.
+Inside a cell, consecutive paragraphs and lists form one rich text field, `h1`–`h6` a heading, a picture an image, a link alone in its paragraph a button (`strong` = Primary, `em` = Secondary, both = Accent, neither = Plain link), and `:name:` an icon. Labels come from position and type: the short text before the heading is the **Eyebrow**, the first heading the **Heading** and the next a **Subheading**, the text after it the **Description**, a list the **List**, and a button is named by its style (**Primary button**, **Secondary button**, **Link**). Repeated labels are numbered (**Primary button 2**). In a block of items with no headings, a cell holding one short line in every item (an accordion's question) is the **Title**. Names from the block library replace these (see [Field names](#configure-a-block-from-the-block-library)), and the names shown are what the rules sheet's `field` column matches.
 
 Block Studio writes back only what you changed. Unedited fields, rows and cells keep their exact original HTML.
 
@@ -309,7 +334,7 @@ flowchart LR
 | `tools/blockstudio/lib/model.js` | Reads a block into items, options and fields; applies edits; writes it back |
 | `tools/blockstudio/lib/live.js` | Finds blocks in the live page and strips EW's markup |
 | `tools/blockstudio/lib/check.js` | Checks and character limits |
-| `tools/blockstudio/lib/rules.js` | The `block-studio` sheet and the block library's `options` and `fields` sheets and variants |
+| `tools/blockstudio/lib/rules.js` | The `block-studio` sheet and the block library's `options` and `fields` sheets, variants and field names |
 | `tools/blockstudio/lib/sanitize.js` | Cleans rich text and pasted HTML |
 | `tools/blockstudio/lib/ai.js` | Prompts for the EW assistant |
 | `tools/blockstudio/lib/dom.js` | Small DOM helpers |

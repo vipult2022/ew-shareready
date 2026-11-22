@@ -6,7 +6,7 @@
  *    sheet gives dropdown values and its block pages give variant suggestions.
  */
 
-import { optionKey, toClass } from './model.js';
+import { exampleFields, optionKey, toClass } from './model.js';
 import { parseHtml, blockElements, classesOf } from './live.js';
 
 export const DA_ADMIN = 'https://admin.da.live';
@@ -103,6 +103,7 @@ export function blockRules(rules, name, libraryOptions, schema = {}) {
     if (!result.values.has(optKey)) result.values.set(optKey, def.values);
   });
   result.imageKeys = new Set([...defs.values()].filter((def) => def.type === 'image').map((def) => def.key));
+  result.multi = !!schema?.multiBlocks?.has?.(key);
   result.itemFields = schema?.itemFields?.get?.(key) || [];
   result.itemFields.forEach((def) => {
     const slug = toClass(def.label);
@@ -189,6 +190,16 @@ export function parseOptionDefs(rows) {
 }
 
 /**
+ * The `editor` sheet (Block Inspector's): block | property. `multi` marks a block whose
+ * rows are repeating items (cards, accordion), so one `fields` label row names them all.
+ * → Set of block names.
+ */
+export function parseMultiBlocks(rows) {
+  return new Set((rows || []).filter((row) => /^multi$/i.test(String(row.property || '').trim()))
+    .map((row) => toClass(String(row.block || '').replace(/\(.*\)/, ''))).filter(Boolean));
+}
+
+/**
  * The `fields` sheet: block | column | name | type | label | required | max | hint.
  * Describes the cells of each item of a repeating block (a card, a slide), so missing
  * fields can be added and named. → Map(block → [{c, name, type, label, …}]).
@@ -267,35 +278,64 @@ export async function loadSiteSettings(fetcher, context, fetchImpl = fetcher) {
     libraryOptions: parseLibraryOptions(optionRows),
     optionDefs: parseOptionDefs(optionRows),
     itemFields: parseItemFields(indexes.flatMap((json) => json.fields?.data || [])),
+    multiBlocks: parseMultiBlocks(indexes.flatMap((json) => json.editor?.data || [])),
     libraryBlocks: indexes.flatMap(firstSheet).map(lower).filter((row) => row.name && row.path),
     loaded: !!siteJson,
   };
 }
 
 const isHeading = (el) => /^H[1-6]$/.test(el?.tagName || '');
+const cellsOf = (row) => [...row.children].filter((cell) => /^(TD|TH|DIV)$/.test(cell.tagName));
 
-/** The `library-metadata` block after an example: key | value rows. */
+/**
+ * The `fields` value of `library-metadata` (Block Inspector's format): a table whose
+ * "Fields" header row is followed by label rows that mirror the example's rows and
+ * cells, with one paragraph per label. → label rows → cells → labels.
+ */
+function fieldLabelRows(value) {
+  const table = value?.querySelector('table');
+  const nested = value?.querySelector('div.fields');
+  let rows = [];
+  if (table) rows = [...table.querySelectorAll('tr')].map(cellsOf);
+  else if (nested) rows = [...nested.children].map(cellsOf);
+  if (rows[0]?.length === 1 && /^fields$/i.test(rows[0][0].textContent.trim())) rows = rows.slice(1);
+  const labels = (cell) => (cell.children.length
+    ? [...cell.children].map((el) => el.textContent.trim()) : [cell.textContent.trim()]);
+  return rows.filter((cells) => cells.length).map((cells) => cells.map(labels));
+}
+
+/** The `library-metadata` block after an example: key | value rows; `fields` is a table. */
 function exampleMeta(el) {
   let next = el.nextElementSibling;
   while (next && next.tagName !== 'DIV') next = next.nextElementSibling;
   if (!next || !classesOf(next).includes('library-metadata')) return {};
-  return Object.fromEntries([...next.children].map((row) => [
-    String(row.children[0]?.textContent || '').trim().toLowerCase(),
-    String(row.children[1]?.textContent || '').trim(),
-  ]));
+  const meta = {};
+  [...next.children].forEach((row) => {
+    const key = String(row.children[0]?.textContent || '').trim().toLowerCase();
+    if (key === 'fields') meta.fields = fieldLabelRows(row.children[1]);
+    else if (key) meta[key] = String(row.children[1]?.textContent || '').trim();
+  });
+  return meta;
 }
 
 /**
- * The variants the block library documents for a block, as [{value, title, description}].
- * Each example with classes after the block name is one variant (`value` is those
- * classes, such as "icons compact"); its heading and `library-metadata` description
- * describe it. Authors can choose only these.
+ * What the block library documents for a block. `variants` are the choices authors get,
+ * as [{value, title, description}]: each example with classes after the block name is
+ * one variant (`value` is those classes, such as "icons compact"), described by its
+ * heading and `library-metadata` description. `examples` are the field names each
+ * example's `library-metadata` `fields` table gives, as [{id, fields}] (`id` is the
+ * sorted classes, '' for the default example).
+ * @param {object} [opts]
+ * @param {typeof DOMParser} [opts.Parser]
+ * @param {object} [opts.hints] the block's parse hints, so options are told apart the same way
  */
-export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Parser = DOMParser) {
+export async function libraryBlock(libraryBlocks, name, fetchImpl = fetch, opts = {}) {
+  const { Parser = DOMParser, hints = {} } = opts;
   const key = toClass(name);
   const entries = (libraryBlocks || []).filter((row) => toClass(row.name) === key
     || toClass(row.name).replace(/s$/, '') === key.replace(/s$/, ''));
   const found = new Map();
+  const examples = [];
   await Promise.all(entries.map(async (entry) => {
     try {
       const url = /\.(aem|hlx)\.(page|live)\//.test(entry.path) ? `${entry.path.replace(/\.html$/, '')}.plain.html` : entry.path;
@@ -306,12 +346,16 @@ export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Pa
       const doc = parseHtml(/<main[\s>]/i.test(text) ? text : `<main>${text}</main>`, Parser);
       blockElements(doc).forEach((el) => {
         const [blockName, ...classes] = classesOf(el);
+        if (blockName !== key) return;
         const variants = [...new Set(classes)];
-        if (blockName !== key || !variants.length) return;
         // The same classes in another order are the same variant.
         const id = [...variants].sort().join(' ');
-        const prev = el.previousElementSibling;
         const meta = exampleMeta(el);
+        if (meta.fields?.length) {
+          examples.push({ id, fields: exampleFields(el, meta.fields, hints) });
+        }
+        if (!variants.length) return;
+        const prev = el.previousElementSibling;
         const known = found.get(id);
         found.set(id, {
           value: known?.value || variants.join(' '),
@@ -324,5 +368,28 @@ export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Pa
       // A missing example page only means fewer suggestions.
     }
   }));
-  return [...found.values()];
+  return { variants: [...found.values()], examples };
+}
+
+/** The variants the block library documents for a block (see `libraryBlock`). */
+export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Parser = DOMParser) {
+  return (await libraryBlock(libraryBlocks, name, fetchImpl, { Parser })).variants;
+}
+
+/**
+ * The field names for a block with these variants: from the example with the same
+ * classes, else the default example, else the first example that names its fields.
+ */
+export function exampleFieldsFor(examples, variants = []) {
+  const named = (examples || []).filter((example) => example.fields?.length);
+  const id = [...new Set(variants.map(toClass))].sort().join(' ');
+  const match = named.find((example) => example.id === id)
+    || named.find((example) => !example.id) || named[0];
+  return match?.fields || [];
+}
+
+/** The `fields` sheet's columns win; the block library names the other columns. */
+export function withLibraryFields(itemFields, libraryFields) {
+  const columns = new Set((itemFields || []).map((def) => def.c));
+  return [...(itemFields || []), ...(libraryFields || []).filter((def) => !columns.has(def.c))];
 }

@@ -9,6 +9,7 @@ import {
 import {
   parseRules, blockRules, parseLibraryOptions, parseValues, blocksLibraryUrls, makeFetcher,
   loadSiteSettings, fieldRule, sheetRows, libraryVariants, parseOptionDefs, parseItemFields,
+  libraryBlock, exampleFieldsFor, withLibraryFields, parseMultiBlocks,
 } from '../lib/rules.js';
 import { fieldPrompt, altPrompt, briefPrompt } from '../lib/ai.js';
 
@@ -222,4 +223,30 @@ test('config: library variants are the documented class combinations, with headi
   ], 'one choice per combination; the default example and a reordered duplicate add none');
   const fromDa = await libraryVariants([{ name: 'Cards', path: 'https://content.da.live/o/s/da' }], 'cards', fake, DOMParser);
   assert.deepEqual(fromDa.map((v) => v.value), ['horizontal', 'icons compact'], 'a whole DA document');
+});
+
+test('config: the library-metadata fields table names an example\'s fields', async () => {
+  const meta = (labels) => `<div class="library-metadata"><div><div>fields</div><div><table>
+    <tr><td>Fields</td></tr><tr>${labels.map((cell) => `<td>${cell.map((l) => `<p>${l}</p>`).join('')}</td>`).join('')}</tr>
+  </table></div></div></div>`;
+  const doc = `<div><div class="accordion"><div><div>Q?</div><div><p>A.</p></div></div></div>${meta([['Question'], ['Answer']])}
+    <h2>Steps</h2><div class="accordion steps"><div><div>Step</div><div><p>Do it.</p></div></div></div>${meta([['Step'], ['How']])}</div>`;
+  const lib = await libraryBlock([{ name: 'Accordion', path: 'https://x.test/accordion' }], 'accordion', async () => new Response(doc), { Parser: DOMParser });
+  assert.deepEqual(lib.variants.map((v) => v.value), ['steps']);
+  assert.deepEqual(lib.examples.map((e) => [e.id, e.fields.map((f) => f.label)]), [['', ['Question', 'Answer']], ['steps', ['Step', 'How']]]);
+  assert.deepEqual(exampleFieldsFor(lib.examples, ['steps']).map((f) => f.label), ['Step', 'How'], 'the example with the same classes');
+  assert.deepEqual(exampleFieldsFor(lib.examples, ['wide']).map((f) => f.label), ['Question', 'Answer'], 'else the default example');
+  assert.deepEqual(exampleFieldsFor([], ['wide']), []);
+  const sheet = [{ c: 1, type: 'text', label: 'Reply' }];
+  assert.deepEqual(withLibraryFields(sheet, exampleFieldsFor(lib.examples)).map((f) => f.label), ['Reply', 'Question'], 'the fields sheet wins per column');
+});
+
+test('config: the editor sheet marks repeating blocks as multi', () => {
+  const multi = parseMultiBlocks([
+    { block: 'Accordion', property: 'multi' }, { block: 'cards (dark)', property: ' Multi ' },
+    { block: 'hero', property: 'other' }, { block: '', property: 'multi' },
+  ]);
+  assert.deepEqual([...multi], ['accordion', 'cards']);
+  assert.equal(blockRules([], 'Accordion', new Map(), { multiBlocks: multi }).multi, true);
+  assert.equal(blockRules([], 'hero', new Map(), { multiBlocks: multi }).multi, false);
 });
