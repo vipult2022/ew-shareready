@@ -399,6 +399,18 @@ npx -y @adobe/aem-cli up              # serves the repo on localhost:3000
 - **Locally:** open http://localhost:3000/tools/blockstudio.html?demo=1.
 - **Inside EW:** add `?ref=local` to the EW URL to load the extension from `localhost:3000`.
 
+### Design principles
+
+Block Studio is one panel for every EDS project, both new sites and sites already in production. Every change and new feature must keep it that way:
+
+1. **No project code.** Nothing in the code names a site, block or brand. Block names, labels, rules and presets come from configuration. Built-in word lists (repeating-block names, setting words, item nouns) are fallbacks that configuration can override.
+2. **Works with zero config.** Every feature has a sensible automatic behaviour when its configuration is missing. Configuration only improves the result.
+3. **Uses what projects already have.** Read the standard places first: the block library (`blocks`, `options`, `fields`, `editor`, `library-metadata`), `query-index.json`, the DA admin APIs and the site config. A library set up for Block Inspector keeps working.
+4. **Opt-in, never breaking.** New configuration is a new sheet or column that EW ignores. Existing content is never migrated or rewritten; only the block the author edits changes.
+5. **Hidden when unavailable.** A feature that needs something the project or user doesn't have (the EW assistant, write access, a query index) hides itself or explains why, and the rest keeps working.
+6. **A small site-code contract.** The only site code a project may need is [`scripts/block-options.js`](../../scripts/block-options.js), and only for blocks with option rows.
+7. **Tested both ways.** Test each feature with no configuration, as a new project would have, and with a Block Inspector-style library, as an existing project would have.
+
 ## Marketplace listing
 
 | Field | Value |
