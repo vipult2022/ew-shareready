@@ -2,7 +2,7 @@
 /**
  * Pre-ship checks for an Experience Workspace extension in tools/{name}.
  *
- *   node .github/skills/building-ew-extensions/scripts/check-extension.mjs --name my-tool \
+ *   node <skills>/building-ew-extensions/scripts/check-extension.mjs --name my-tool \
  *     [--root .] [--deny "customer-a,customer-b"]
  *
  * Errors (exit code 1): missing entry files, no static DA SDK import, files that would be

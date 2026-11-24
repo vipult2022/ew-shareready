@@ -66,7 +66,7 @@ open "http://localhost:3000/tools/{name}.html?demo=1"
 ```bash
 npm run lint      # ESLint (airbnb-base) + Stylelint
 npm test          # every node --test folder
-node .github/skills/building-ew-extensions/scripts/check-extension.mjs --name {name}
+node <skills>/building-ew-extensions/scripts/check-extension.mjs --name {name}
 ```
 
 The PR description must include `https://{branch}--{site}--{org}.aem.page/{path}` test links, or the repo's PR checks reject it. Fill in the repo's PR template.

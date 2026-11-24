@@ -2,7 +2,7 @@
 /**
  * Scaffolds a new Experience Workspace extension from ../assets/template.
  *
- *   node .github/skills/building-ew-extensions/scripts/new-extension.mjs \
+ *   node <skills>/building-ew-extensions/scripts/new-extension.mjs \
  *     --name my-tool --title "My Tool" [--worker] [--prefix mt] [--root .] [--dry-run]
  *
  * Creates tools/{name}.html and tools/{name}/ (controller, panel, CSS, lib, sample data,
@@ -139,7 +139,7 @@ Next:
   4. No worker: if your service needs a secret or blocks browser CORS, rerun with --worker in a new name, or copy the worker from the template.`}
   5. Register it in da.live/config#/{org}/{site} → library sheet:
      ${args.title} | https://main--{site}--{org}.aem.page/tools/${args.name}.html | …/tools/${args.name}/icon.svg | inline
-  6. Test in EW with ?ref=local, fill tools/${args.name}/README.md, then run check-extension.mjs --name ${args.name}`);
+  6. Test in EW with ?ref=local, fill tools/${args.name}/README.md, then run: node ${join(HERE, 'check-extension.mjs')} --name ${args.name}`);
 }
 
 main();

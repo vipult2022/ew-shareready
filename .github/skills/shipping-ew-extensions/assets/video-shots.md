@@ -32,6 +32,6 @@
 
 ## After recording
 
-1. Compress it: `sh .github/skills/shipping-ew-extensions/scripts/compress-video.sh ~/Desktop/raw.mov ~/Desktop/{name}-demo.mp4`
+1. Compress it: `sh <skills>/shipping-ew-extensions/scripts/compress-video.sh ~/Desktop/raw.mov ~/Desktop/{name}-demo.mp4`
 2. Check a contact sheet for private data.
 3. Drag the MP4 into `tools/{name}/README.md` on GitHub, just under the title paragraph.

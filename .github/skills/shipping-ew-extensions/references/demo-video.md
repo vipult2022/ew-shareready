@@ -44,8 +44,8 @@ Start from `assets/video-shots.md`. Rules:
 GitHub's upload limit is 10 MB on free plans (100 MB on paid plans). Keep the video under 10 MB so it works anywhere:
 
 ```sh
-sh .github/skills/shipping-ew-extensions/scripts/compress-video.sh ~/Desktop/raw.mov ~/Desktop/{name}-demo.mp4        # 1920 wide, 20 fps
-sh .github/skills/shipping-ew-extensions/scripts/compress-video.sh ~/Desktop/raw.mov ~/Desktop/{name}-demo.mp4 1280 15 # smaller
+sh <skills>/shipping-ew-extensions/scripts/compress-video.sh ~/Desktop/raw.mov ~/Desktop/{name}-demo.mp4        # 1920 wide, 20 fps
+sh <skills>/shipping-ew-extensions/scripts/compress-video.sh ~/Desktop/raw.mov ~/Desktop/{name}-demo.mp4 1280 15 # smaller
 ```
 
 Reference results: Notion, 1:45 → 4.2 MB (1920 wide, 30 fps, CRF 22); Figma → 7.8 MB (1920 wide, 20 fps, CRF 23); ShareReady → 6.6 MB (1080p, 20 fps, CRF 23).

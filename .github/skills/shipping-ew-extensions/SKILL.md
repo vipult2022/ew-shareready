@@ -11,13 +11,15 @@ metadata:
 
 An extension is "done" when a stranger can **understand it in 10 seconds, try it in 1 minute with no account, and install it in about 10 minutes** from the README alone. Build it first with the `building-ew-extensions` skill. This skill covers everything after the code works.
 
+**Paths:** `<skills>` below means the folder that holds this skill, the same as for `building-ew-extensions`. Run every script from the **site repo root**.
+
 ## Ship checklist
 
 Copy this checklist and track it:
 
 ```
 Ship progress for {name}:
-- [ ] 1. Pre-ship check is green: node .github/skills/building-ew-extensions/scripts/check-extension.mjs --name {name} [--deny "customer,words"]
+- [ ] 1. Pre-ship check is green: node <skills>/building-ew-extensions/scripts/check-extension.mjs --name {name} [--deny "customer,words"]
 - [ ] 2. npm run lint and npm test pass. Demo works at /tools/{name}.html?demo=1 with no console errors.
 - [ ] 3. README complete (references/readme.md): hook, video, screenshots, Try it, Install, Config, Security, Limits, Troubleshooting, Development, Marketplace listing.
 - [ ] 4. Screenshots in tools/{name}/docs/ (panel at about 340 px wide, 2× scale), with real alt text.

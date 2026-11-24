@@ -11,6 +11,8 @@ metadata:
 
 An EW extension is a plain HTML/JS page in the site's code repo (`tools/{name}.html` + `tools/{name}/`). EW loads it in an iframe and talks to it through the DA App SDK (`postMessage` over a `MessagePort`). There is no build step and no framework. Secrets never go in the browser: any third-party call that needs a key goes through a small worker.
 
+**Paths:** `<skills>` below means the folder that holds this skill. That is `.github/skills` in a repo, `~/.copilot/skills` or `~/.claude/skills` for personal skills, or the installed plugin's `skills/` folder. Run every script from the **site repo root**.
+
 ## Pick the surface first
 
 | Author need | Surface | Config sheet | `experience` | Can edit the page? |
@@ -28,7 +30,7 @@ Copy this checklist and track it:
 ```
 EW extension progress:
 - [ ] 1. Write the author story: problem → clicks → result. Pick the surface(s). Name the third party and anything that needs a secret.
-- [ ] 2. Scaffold: node .github/skills/building-ew-extensions/scripts/new-extension.mjs --name {name} --title "{Title}" [--worker]
+- [ ] 2. Scaffold: node <skills>/building-ew-extensions/scripts/new-extension.mjs --name {name} --title "{Title}" [--worker]
 - [ ] 3. Put pure logic in tools/{name}/lib/*.js with node:test unit tests. lib/ never imports the SDK.
 - [ ] 4. Demo mode (?demo=1) with a fixture shaped exactly like the live or worker response.
 - [ ] 5. Panel UI with loading, setup-needed, empty, error, busy and demo states. Render data with text nodes, never innerHTML.
@@ -36,7 +38,7 @@ EW extension progress:
 - [ ] 7. Worker, only if a secret or a CORS-blocked API is involved: IMS check, org allow-list, CORS, rate limit.
 - [ ] 8. Config: a site sheet `{name}` (key | value) that URL params can override. With no config the feature works or hides itself.
 - [ ] 9. Verify: npm run lint, npm test, demo in a browser, then ?ref=local inside EW, then a branch preview.
-- [ ] 10. Check: node .github/skills/building-ew-extensions/scripts/check-extension.mjs --name {name}
+- [ ] 10. Check: node <skills>/building-ew-extensions/scripts/check-extension.mjs --name {name}
 - [ ] 11. Ship the README, Marketplace image, demo link and video with the shipping-ew-extensions skill.
 ```
 

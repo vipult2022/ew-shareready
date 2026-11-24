@@ -26,5 +26,5 @@ Edge Delivery Services. Read a block first. Omissions are in the repo or known.
 - A PR without a `{branch}--ew-shareready--vipult2022.aem.page/{path}` link is rejected.
 - All committed files are served. Use `.hlxignore`.
 - Skills: `/plugin marketplace add adobe/skills`, then `aem-edge-delivery-services` (24 skills, incl. `docs-search`).
-- Repo skills in `.github/skills/`: `building-ew-extensions` (scaffold, SDK rules, checker) and `shipping-ew-extensions` (README, Marketplace, video, PR).
-- Keep them current: when extension work uncovers a new gotcha, SDK behaviour, pattern or third-party recipe, add it to the matching skill reference (and the template or checker if it applies) in the same PR.
+- Repo skills in `.github/skills/`: `building-ew-extensions` (scaffold, SDK rules, checker) and `shipping-ew-extensions` (README, Marketplace, video, PR). They are a copy; the master is `vipult2022/agent-skills` (`plugins/ew-extensions/skills/`).
+- Keep them current: when extension work uncovers a new gotcha, SDK behaviour, pattern or third-party recipe, add it to the matching skill (and the template or checker if it applies) in `vipult2022/agent-skills`, then re-sync the copy here.

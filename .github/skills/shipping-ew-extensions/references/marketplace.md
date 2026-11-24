@@ -37,7 +37,7 @@ Draw it in HTML and CSS. The advantage is that it can be edited, versioned and r
 3. Keep only 3 to 6 real words, such as a status pill, a button label or a block name. Everything else is grey lines.
 4. Render it:
    ```sh
-   node .github/skills/shipping-ew-extensions/scripts/render-image.mjs \
+   node <skills>/shipping-ew-extensions/scripts/render-image.mjs \
      --html tools/{name}/docs/marketplace.html --out tools/{name}/marketplace.png
    ```
 5. Look at it at 300 px wide, because that is roughly the card size. If you can't tell what it does, simplify it.
