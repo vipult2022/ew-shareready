@@ -1,0 +1,22 @@
+# __TITLE__ worker: holds the service secret, so it never reaches the browser.
+# Deploy from this folder with:  npx wrangler deploy
+#
+# Secret (never commit it, never put it in [vars]):
+#   npx wrangler secret put SERVICE_TOKEN
+
+name = "__NAME__"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[vars]
+# Required. Comma-separated orgs ("my-org") or sites ("my-org/my-site") this worker serves.
+# Empty means the worker refuses every request with a setup error.
+ALLOWED_ORGS = ""
+# Required. Base URL of the service's API.
+SERVICE_URL = "https://api.example.com"
+# Optional. Path that lists items. Default: /items
+# ITEMS_PATH = "/items"
+# Optional. Comma-separated origins allowed to call the worker. Wildcards (*) are allowed.
+# Default: https://da.live, https://*.da.live, https://*.aem.page, https://*.aem.live,
+# http://localhost:3000
+# ALLOWED_ORIGINS = ""
