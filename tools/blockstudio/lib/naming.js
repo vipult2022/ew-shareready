@@ -10,7 +10,8 @@ import { escapeHtml } from './dom.js';
 import {
   parseBlock, layout, labelFields, fieldText, nounFor, toClass,
 } from './model.js';
-import { DA_ADMIN, fieldRule } from './rules.js';
+import { DA_ADMIN, fieldRule, fieldRuleRows } from './rules.js';
+import { limitFor } from './check.js';
 import {
   parseHtml, blockElements, classesOf, cleanBlock, previewUrl,
 } from './live.js';
@@ -70,16 +71,26 @@ function itemLabel(noun, label) {
 const clip = (text, max = 60) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 
 /**
- * Suggested names for each field of an example block. A block of items is named by its
- * first item, which names every item; other blocks are named row by row, and their
- * settings rows are left out. A rule from the site's `block-studio` sheet keeps its
- * label; other names in an item start with the item's noun (from the rules, the code,
- * or the block name).
- * @returns {{multi: boolean, noun: string, rows: object[]}} rows are
- *   {option: true, size} or {n, title, cells: [[{type, label, auto, units, text}]]}
+ * Names for each field of an example block. A block of items is named by its first
+ * item, which names every item; other blocks are named row by row, and their settings
+ * rows are left out. Each field says where its current name comes from (`source`:
+ * 'library', 'sheet', 'rule' or 'auto'). Once the library or the `fields` sheet names
+ * the block (`named`), the labels are those names as they are, and other fields are
+ * left empty so they keep their automatic name. Otherwise they are suggestions: a rule
+ * from the site's `block-studio` sheet keeps its label, and other names in an item
+ * start with the item's noun (from the rules, the code, or the block name). Names from
+ * the `fields` sheet are `locked`: only the sheet changes them. Each field also has the
+ * limits the example's `field-rules` table (`opts.fieldRules`) sets for it (`max`,
+ * `required`, `hint`) and the limit it has without them (`maxDefault`, from `baseRules`).
+ * @returns {{multi: boolean, noun: string, named: boolean, rows: object[]}} rows are
+ *   {option: true, size} or
+ *   {n, title, cells: [[{type, label, shown, auto, source, locked, units, text,
+ *   max, required, hint, maxDefault}]]}
  */
 export function suggestNames(blockEl, hints = {}, opts = {}) {
-  const { rules = null, codeNoun: fromCode = '' } = opts;
+  const {
+    rules = null, baseRules = rules, fieldRules = [], codeNoun: fromCode = '',
+  } = opts;
   const model = parseBlock(blockEl, hints);
   const doc = blockEl.ownerDocument;
   const view = layout(model, doc);
@@ -90,36 +101,98 @@ export function suggestNames(blockEl, hints = {}, opts = {}) {
     return cell.fields.map((field, f) => {
       const slot = slots.find((s) => s.field === field);
       const label = slot?.label || fallback[f];
-      const ruled = fieldRule(rules, label, field.type, slot?.auto || label).label;
-      const auto = ruled || label;
+      const plain = slot?.auto || label;
+      const shown = fieldRule(rules, label, field.type, plain).label || label;
       return {
         type: field.type,
-        label: ruled || (multi ? itemLabel(noun, label) : label),
-        auto,
+        shown,
+        plain,
+        auto: fieldRule(rules, plain, field.type).label || plain,
+        source: slot?.source || (shown !== plain ? 'rule' : 'auto'),
         units: field.units ?? 1,
         text: clip(fieldText(field, doc)),
+        maxDefault: limitFor({ label: shown, type: field.type, auto: plain }, baseRules),
       };
     });
   };
+  let rows;
   if (multi) {
     const first = view.groups[0];
-    if (!first) return { multi, noun, rows: [] };
-    const cells = first.row.cells.map((cell, c) => nameCell(cell, first.cells[c] || []));
-    return { multi, noun, rows: [{ n: 1, title: `Every ${noun.toLowerCase()}`, cells }] };
+    rows = first ? [{
+      n: 1,
+      title: `Every ${noun.toLowerCase()}`,
+      cells: first.row.cells.map((cell, c) => nameCell(cell, first.cells[c] || [])),
+    }] : [];
+  } else {
+    const content = model.rows.filter((row) => row.kind === 'item');
+    rows = model.rows.map((row) => {
+      if (row.kind === 'option') return { option: true, size: 2 };
+      const slots = view.groups.filter((group) => group.row === row)
+        .flatMap((group) => group.cells.flat());
+      const n = content.indexOf(row) + 1;
+      return {
+        n,
+        title: content.length > 1 ? `Row ${n}` : 'Content',
+        cells: row.cells.map((cell, c) => nameCell(cell, slots.filter((slot) => slot.c === c))),
+      };
+    });
   }
-  const content = model.rows.filter((row) => row.kind === 'item');
-  const rows = model.rows.map((row) => {
-    if (row.kind === 'option') return { option: true, size: 2 };
-    const slots = view.groups.filter((group) => group.row === row)
-      .flatMap((group) => group.cells.flat());
-    const n = content.indexOf(row) + 1;
-    return {
-      n,
-      title: content.length > 1 ? `Row ${n}` : 'Content',
-      cells: row.cells.map((cell, c) => nameCell(cell, slots.filter((slot) => slot.c === c))),
-    };
+  const fields = rows.flatMap((row) => (row.cells || []).flat());
+  const named = fields.some((field) => ['library', 'sheet'].includes(field.source));
+  fields.forEach((field) => {
+    field.locked = field.source === 'sheet';
+    if (named) field.label = ['library', 'sheet'].includes(field.source) ? field.shown : '';
+    else if (field.source === 'rule') field.label = field.shown;
+    else field.label = multi ? itemLabel(noun, field.shown) : field.shown;
+    const keys = [field.label, field.shown, field.plain].map(toClass).filter(Boolean);
+    const own = fieldRules.find((rule) => keys.includes(rule.field)) || {};
+    Object.assign(field, {
+      max: own.max || '', required: !!own.required, hint: own.hint || '',
+    });
+    delete field.plain;
   });
-  return { multi, noun, rows };
+  return {
+    multi, noun, named, rows,
+  };
+}
+
+const tidy = (text) => String(text ?? '').replace(/\s+/g, ' ').trim();
+const maxOf = (value) => Math.max(0, Number.parseInt(value, 10) || 0);
+
+/** The names and limits as they stand, to tell whether an author changed any. */
+export const namesKey = (rows) => JSON.stringify(rows.map((row) => (row.cells || [])
+  .map((fields) => fields.map((field) => [
+    tidy(field.label), maxOf(field.max), !!field.required, tidy(field.hint),
+  ]))));
+
+/**
+ * Each field's limits, by the name it is saved under (its name, else its automatic
+ * name), for fields that set any. → [{field, max, required, hint}]
+ */
+export function fieldLimits(rows) {
+  const seen = new Map();
+  rows.flatMap((row) => (row.cells || []).flat()).forEach((field) => {
+    const name = tidy(field.label) || tidy(field.auto);
+    const limit = { max: maxOf(field.max), required: !!field.required, hint: tidy(field.hint) };
+    if (!name || seen.has(toClass(name)) || (!limit.max && !limit.required && !limit.hint)) return;
+    seen.set(toClass(name), { field: name, ...limit });
+  });
+  return [...seen.values()];
+}
+
+/**
+ * The `field-rules` table: a "Field rules" header, a `Field | Max | Required | Hint`
+ * row, then a row per field with limits. '' when no field has any.
+ */
+export function fieldRulesTable(rows) {
+  const limits = fieldLimits(rows);
+  if (!limits.length) return '';
+  const tr = (cells) => `<tr>${cells.map((text) => `<td><p>${escapeHtml(String(text))}</p></td>`).join('')}</tr>`;
+  const body = limits.map((limit) => tr([
+    limit.field, limit.max || '', limit.required ? 'yes' : '', limit.hint,
+  ]));
+  return `<table><tbody><tr><td colspan="4"><p>Field rules</p></td></tr>${
+    tr(['Field', 'Max', 'Required', 'Hint'])}${body.join('')}</tbody></table>`;
 }
 
 /* The library page */
@@ -177,20 +250,27 @@ const nextDiv = (el) => {
 };
 
 /**
- * The library page with the `fields` table in the example's `library-metadata`. Adds
- * the metadata, the example (a new section with a heading) or the whole page as needed.
- * @returns {{html: string, action: 'create-page'|'add-example'|'add-fields'|'replace-fields'}}
+ * The library page with the `fields` table in the example's `library-metadata`, and its
+ * `field-rules` table (`rulesTable`) when one is given: added, replaced, or removed when
+ * it is '' and the page has one. Adds the metadata, the example (a new section with a
+ * heading) or the whole page as needed. Other metadata rows are kept.
+ * @returns {{html: string, action: 'create-page'|'add-example'|'add-fields'|'replace-fields',
+ *   rulesAction: ''|'add-rules'|'replace-rules'|'remove-rules'}}
  */
 export function withFieldsTable(pageHtml, opts, Parser = DOMParser) {
   const {
-    name, title, variants = [], table, exampleHtml,
+    name, title, variants = [], table, exampleHtml, rulesTable = '',
   } = opts;
-  const meta = `<div class="library-metadata">${metaRow('fields', table)}</div>`;
+  const rulesRow = rulesTable ? metaRow('field-rules', rulesTable) : '';
+  const meta = `<div class="library-metadata">${metaRow('fields', table)}${rulesRow}</div>`;
+  const rulesAction = rulesTable ? 'add-rules' : '';
   const section = `<div><h2>${escapeHtml(title)}</h2>${exampleHtml}${meta}</div>`;
   if (!String(pageHtml || '').trim()) {
     return {
       html: `<body><header></header><main>${section}</main><footer></footer></body>`,
       action: 'create-page',
+      rulesAction,
+      hadRules: false,
     };
   }
   const doc = parseHtml(pageHtml, Parser);
@@ -198,14 +278,17 @@ export function withFieldsTable(pageHtml, opts, Parser = DOMParser) {
   if (!main) throw new Error('The library page is not a Document Authoring page, so it was left as it is');
   const example = pickExample(doc, name, variants);
   let action;
+  let old = null;
+  let rulesDone = rulesAction;
   if (!example) {
     main.insertAdjacentHTML('beforeend', section);
     action = 'add-example';
   } else {
     const next = nextDiv(example);
     const metaEl = classesOf(next)[0] === 'library-metadata' ? next : null;
-    const row = metaEl && [...metaEl.children]
-      .find((r) => /^fields$/i.test(r.children[0]?.textContent.trim() || ''));
+    const rowOf = (key) => metaEl && [...metaEl.children]
+      .find((r) => r.children[0]?.textContent.trim().toLowerCase() === key);
+    const row = rowOf('fields');
     if (row?.children[1]) {
       row.children[1].innerHTML = table;
       action = 'replace-fields';
@@ -216,11 +299,27 @@ export function withFieldsTable(pageHtml, opts, Parser = DOMParser) {
       example.insertAdjacentHTML('afterend', meta);
       action = 'add-fields';
     }
+    old = rowOf('field-rules');
+    if (old) {
+      const same = (html) => JSON.stringify(fieldRuleRows(parseHtml(`<div>${html}</div>`, Parser).body));
+      if (!rulesTable) {
+        old.remove();
+        rulesDone = 'remove-rules';
+      } else {
+        rulesDone = same(old.children[1]?.innerHTML || '') === same(rulesTable) ? '' : 'replace-rules';
+        if (old.children[1]) old.children[1].innerHTML = rulesTable;
+        else old.insertAdjacentHTML('beforeend', `<div>${rulesTable}</div>`);
+      }
+    } else if (rulesTable && metaEl) {
+      metaEl.insertAdjacentHTML('beforeend', rulesRow);
+    }
   }
   const body = doc.querySelector('body');
   const html = body?.contains(main) ? body.outerHTML
     : `<body><header></header>${main.outerHTML}<footer></footer></body>`;
-  return { html, action };
+  return {
+    html, action, rulesAction: rulesDone, hadRules: !!example && !!old,
+  };
 }
 
 /* The library index (blocks.json) */
@@ -318,6 +417,13 @@ export function daSource(href) {
   };
 }
 
+/** Where a library page opens in Document Authoring, or '' for a sheet or another host. */
+export function daEditUrl(href) {
+  const source = daSource(href);
+  if (!source?.url.endsWith('.html')) return '';
+  return `https://da.live/edit#${source.url.slice(`${DA_ADMIN}/source`.length).replace(/\.html$/, '')}`;
+}
+
 const shownPath = (href) => daSource(href)?.path || String(href).replace(/^[a-z]+:/, '');
 
 /**
@@ -374,6 +480,22 @@ const ACTIONS = {
   'replace-fields': (title, where) => `Replace the field names of the ${title} example in ${where}`,
 };
 
+const RULE_ACTIONS = {
+  'add-rules': (title) => `Add the field limits to the ${title} example`,
+  'replace-rules': (title) => `Replace the field limits of the ${title} example`,
+  'remove-rules': (title) => `Remove the field limits from the ${title} example`,
+};
+
+/**
+ * What saving does to the `field-rules` table once an author changed the limits, given
+ * whether the library page has one (`hadRules`).
+ */
+export function limitsChange(rows, hadRules, title) {
+  const has = fieldLimits(rows).length > 0;
+  if (!has) return hadRules ? RULE_ACTIONS['remove-rules'](title) : '';
+  return RULE_ACTIONS[hadRules ? 'replace-rules' : 'add-rules'](title);
+}
+
 /**
  * What saving will change, without saving: the new page and index, and a list of
  * changes and notes to show before saving.
@@ -381,19 +503,26 @@ const ACTIONS = {
  */
 export function planNames(pageHtml, indexJson, opts, Parser = DOMParser) {
   const { title, pageUrl, indexUrl } = opts;
-  const page = withFieldsTable(pageHtml, { ...opts, table: fieldsTable(opts.rows) }, Parser);
+  const page = withFieldsTable(pageHtml, {
+    ...opts, table: fieldsTable(opts.rows), rulesTable: fieldRulesTable(opts.rows),
+  }, Parser);
   const index = withLibraryRows(indexJson, { ...opts, path: pageUrl });
   const changes = [ACTIONS[page.action](title, shownPath(pageUrl))];
+  const rulesChange = page.rulesAction ? RULE_ACTIONS[page.rulesAction](title) : '';
+  if (rulesChange) changes.push(rulesChange);
   if (index.addedBlock) changes.push(`List ${title} in the block library (${shownPath(indexUrl)})`);
   if (index.addedMulti) {
     changes.push(`Mark ${title} as repeating, so one row of names covers every ${String(opts.noun || 'item').toLowerCase()}`);
   }
-  const notes = ['If the library page is open in Document Authoring, reload it before you edit it.'];
+  const notes = [
+    'The names apply to every author, on every page that uses this block.',
+    'If the library page is open in Document Authoring, reload it before you edit it.',
+  ];
   if (/\.(aem|hlx)\.(page|live)\//.test(pageUrl)) {
-    notes.unshift('Other authors see the names after the library page is previewed.');
+    notes.splice(1, 0, 'Other authors see the names after the library page is previewed.');
   }
   return {
-    page, index, action: page.action, changes, notes,
+    page, index, action: page.action, changes, notes, rulesChange, hadRules: page.hadRules,
   };
 }
 

@@ -69,8 +69,10 @@ export function parseRules(rows) {
 
 /**
  * The rules that apply to one block, with block rows overriding `all` rows.
- * `schema` adds the block library's typed options (`optionDefs`) and the `fields`
- * sheet (`itemFields`), so a new block is configured without changing Block Studio.
+ * `schema` adds the block library's typed options (`optionDefs`), the `fields` sheet
+ * (`itemFields`) and the example's `field-rules` table (`fieldRules`), so a new block is
+ * configured without changing Block Studio. The `field-rules` table beats `all` rows
+ * and the `fields` sheet; the block's own rows in the rules sheet still win.
  */
 export function blockRules(rules, name, libraryOptions, schema = {}) {
   const key = toClass(name);
@@ -92,6 +94,7 @@ export function blockRules(rules, name, libraryOptions, schema = {}) {
     }
   };
   (rules || []).filter((row) => row.block === 'all').forEach(merge);
+  (schema?.fieldRules || []).forEach(merge);
   (rules || []).filter((row) => row.block === key).forEach(merge);
   const library = libraryOptions?.get?.(key) || libraryOptions?.get?.('all');
   library?.forEach((values, optKey) => {
@@ -314,7 +317,38 @@ function fieldLabelRows(value) {
   return rows.filter((cells) => cells.length).map((cells) => cells.map(labels));
 }
 
-/** The `library-metadata` block after an example: key | value rows; `fields` is a table. */
+const RULE_COLUMNS = ['field', 'max', 'required', 'hint'];
+
+/**
+ * The `field-rules` value of `library-metadata`: a table with a `Field | Max | Required |
+ * Hint` header (any order; without one, columns are in that order) and a row per field,
+ * named as the panel names it. → [{field (slug), max, required, hint}]
+ */
+export function fieldRuleRows(value) {
+  const table = value?.querySelector('table');
+  let rows = table ? [...table.querySelectorAll('tr')].map((row) => cellsOf(row)
+    .map((cell) => cell.textContent.replace(/\s+/g, ' ').trim())) : [];
+  if (rows[0]?.length === 1 && /^field[- ]?rules$/i.test(rows[0][0])) rows = rows.slice(1);
+  let columns = RULE_COLUMNS;
+  const head = (rows[0] || []).map((text) => text.toLowerCase());
+  if (head.includes('field')) {
+    columns = head;
+    rows = rows.slice(1);
+  }
+  return rows.map((cells) => Object.fromEntries(columns.map((col, i) => [col, cells[i] || ''])))
+    .filter((row) => toClass(row.field))
+    .map((row) => ({
+      field: toClass(row.field),
+      max: Number.parseInt(row.max, 10) || 0,
+      required: truthy(row.required),
+      hint: row.hint || '',
+    }));
+}
+
+/**
+ * The `library-metadata` block after an example: key | value rows; `fields` and
+ * `field-rules` are tables. EW reads only the keys it knows, so it ignores these.
+ */
 function exampleMeta(el) {
   let next = el.nextElementSibling;
   while (next && next.tagName !== 'DIV') next = next.nextElementSibling;
@@ -323,6 +357,7 @@ function exampleMeta(el) {
   [...next.children].forEach((row) => {
     const key = String(row.children[0]?.textContent || '').trim().toLowerCase();
     if (key === 'fields') meta.fields = fieldLabelRows(row.children[1]);
+    else if (key === 'field-rules') meta.rules = fieldRuleRows(row.children[1]);
     else if (key) meta[key] = String(row.children[1]?.textContent || '').trim();
   });
   return meta;
@@ -333,8 +368,8 @@ function exampleMeta(el) {
  * as [{value, title, description}]: each example with classes after the block name is
  * one variant (`value` is those classes, such as "icons compact"), described by its
  * heading and `library-metadata` description. `examples` are the field names each
- * example's `library-metadata` `fields` table gives, as [{id, fields}] (`id` is the
- * sorted classes, '' for the default example).
+ * example's `library-metadata` `fields` table gives and the limits its `field-rules`
+ * table sets, as [{id, fields, rules}] (`id` is the sorted classes, '' for the default).
  * @param {object} [opts]
  * @param {typeof DOMParser} [opts.Parser]
  * @param {object} [opts.hints] the block's parse hints, so options are told apart the same way
@@ -361,8 +396,12 @@ export async function libraryBlock(libraryBlocks, name, fetchImpl = fetch, opts 
         // The same classes in another order are the same variant.
         const id = [...variants].sort().join(' ');
         const meta = exampleMeta(el);
-        if (meta.fields?.length) {
-          examples.push({ id, fields: exampleFields(el, meta.fields, hints) });
+        if (meta.fields?.length || meta.rules?.length) {
+          examples.push({
+            id,
+            fields: meta.fields?.length ? exampleFields(el, meta.fields, hints) : [],
+            rules: meta.rules || [],
+          });
         }
         if (!variants.length) return;
         const prev = el.previousElementSibling;
@@ -390,12 +429,20 @@ export async function libraryVariants(libraryBlocks, name, fetchImpl = fetch, Pa
  * The field names for a block with these variants: from the example with the same
  * classes, else the default example, else the first example that names its fields.
  */
-export function exampleFieldsFor(examples, variants = []) {
-  const named = (examples || []).filter((example) => example.fields?.length);
+function exampleFor(examples, variants, part) {
+  const found = (examples || []).filter((example) => example[part]?.length);
   const id = [...new Set(variants.map(toClass))].sort().join(' ');
-  const match = named.find((example) => example.id === id)
-    || named.find((example) => !example.id) || named[0];
-  return match?.fields || [];
+  return found.find((example) => example.id === id)
+    || found.find((example) => !example.id) || found[0];
+}
+
+export function exampleFieldsFor(examples, variants = []) {
+  return exampleFor(examples, variants, 'fields')?.fields || [];
+}
+
+/** The `field-rules` for a block with these variants, matched like its field names. */
+export function exampleRulesFor(examples, variants = []) {
+  return exampleFor(examples, variants, 'rules')?.rules || [];
 }
 
 /** The `fields` sheet's columns win; the block library names the other columns. */

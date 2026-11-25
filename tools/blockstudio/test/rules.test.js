@@ -9,7 +9,7 @@ import {
 import {
   parseRules, blockRules, parseLibraryOptions, parseValues, blocksLibraryUrls, makeFetcher,
   loadSiteSettings, fieldRule, sheetRows, libraryVariants, parseOptionDefs, parseItemFields,
-  libraryBlock, exampleFieldsFor, withLibraryFields, parseMultiBlocks,
+  libraryBlock, exampleFieldsFor, withLibraryFields, parseMultiBlocks, exampleRulesFor,
 } from '../lib/rules.js';
 import { fieldPrompt, altPrompt, briefPrompt } from '../lib/ai.js';
 
@@ -246,6 +246,46 @@ test('config: the library-metadata fields table names an example\'s fields', asy
   assert.deepEqual(exampleFieldsFor([], ['wide']), []);
   const sheet = [{ c: 1, type: 'text', label: 'Reply' }];
   assert.deepEqual(withLibraryFields(sheet, exampleFieldsFor(lib.examples)).map((f) => f.label), ['Reply', 'Question'], 'the fields sheet wins per column');
+});
+
+test('config: the library-metadata field-rules table sets limits, under the block\'s own rows', async () => {
+  const doc = `<div><div class="accordion"><div><div>Q?</div><div><p>A.</p></div></div></div>
+    <div class="library-metadata"><div><div>description</div><div>FAQs.</div></div><div><div>field-rules</div><div><table>
+    <tr><td>Field rules</td></tr><tr><td>Hint</td><td>Field</td><td>Max</td></tr>
+    <tr><td>Keep it short</td><td>Question</td><td>80</td></tr><tr><td></td><td>Answer</td><td>x</td></tr>
+  </table></div></div></div>
+    <div class="accordion steps"><div><div>Step</div><div><p>Do it.</p></div></div></div>
+    <div class="library-metadata"><div><div>field-rules</div><div><table>
+    <tr><td>Step</td><td>40</td><td>yes</td><td></td></tr>
+  </table></div></div></div></div>`;
+  const lib = await libraryBlock([{ name: 'Accordion', path: 'https://x.test/accordion' }], 'accordion', async () => new Response(doc), { Parser: DOMParser });
+  assert.deepEqual(exampleRulesFor(lib.examples), [
+    {
+      field: 'question', max: 80, required: false, hint: 'Keep it short',
+    },
+    {
+      field: 'answer', max: 0, required: false, hint: '',
+    },
+  ], 'columns by header, in any order');
+  assert.deepEqual(exampleRulesFor(lib.examples, ['steps']), [{
+    field: 'step', max: 40, required: true, hint: '',
+  }], 'without a header: Field, Max, Required, Hint');
+  assert.deepEqual(exampleFieldsFor(lib.examples), [], 'limits alone name nothing');
+  const fieldRules = exampleRulesFor(lib.examples);
+  const sheet = parseRules([
+    {
+      block: 'all', field: 'question', max: '200', required: 'yes',
+    },
+    { block: 'accordion', field: 'question', hint: 'Ask one thing' },
+  ]);
+  const rule = fieldRule(blockRules(sheet, 'accordion', null, { fieldRules }), 'Question', 'text');
+  assert.equal(rule.max, 80, 'the library beats "all" rows');
+  assert.equal(rule.required, true, 'what it leaves out still comes from them');
+  assert.equal(rule.hint, 'Ask one thing', 'the block\'s own rows win');
+  const itemFields = new Map([['accordion', [{
+    c: 0, type: 'text', label: 'Question', max: 120,
+  }]]]);
+  assert.equal(fieldRule(blockRules([], 'accordion', null, { itemFields, fieldRules }), 'Question', 'text').max, 80, 'and the fields sheet');
 });
 
 test('config: the editor sheet marks repeating blocks as multi', () => {

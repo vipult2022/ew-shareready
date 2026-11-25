@@ -494,9 +494,14 @@ function withSchema(template, defs, insert) {
         result.push(out[next]);
         next += 1;
       }
-      if (def.label) result[result.length - 1].schemaLabel = def.label;
+      if (def.label) {
+        result[result.length - 1].schemaLabel = def.label;
+        result[result.length - 1].schemaSource = def.labelOnly ? 'library' : 'sheet';
+      }
     } else if (insert && !def.labelOnly) {
-      result.push({ type: def.type, schemaLabel: def.label, schema: true });
+      result.push({
+        type: def.type, schemaLabel: def.label, schemaSource: 'sheet', schema: true,
+      });
     }
   });
   return [...result, ...out.slice(next)];
@@ -536,7 +541,7 @@ function titleColumn(templates, rows, doc) {
  * What the panel shows: options, then items (or groups) with labelled slots. A slot
  * with no field is a field this item is missing compared with the others, or one the
  * block's `fields` sheet declares. Names come from the `fields` sheet, then the block
- * library's example, then the content.
+ * library's example, then the content; a slot's `source` is 'sheet', 'library' or ''.
  */
 export function layout(model, doc) {
   const rows = items(model);
@@ -569,10 +574,14 @@ export function layout(model, doc) {
           if (c === titled && sample.type === 'text') label = 'Title';
           const auto = label;
           if (sample.schemaLabel) label = sample.schemaLabel;
-          if (field && own[slots[k]]) label = own[slots[k]];
+          let source = sample.schemaLabel ? sample.schemaSource : '';
+          if (field && own[slots[k]]) {
+            label = own[slots[k]];
+            source = 'library';
+          }
           const at = slots.slice(0, k).filter((f) => f >= 0).length;
           return {
-            field, type: sample.type, label, auto, c, slot: k, sample, at,
+            field, type: sample.type, label, auto, source, c, slot: k, sample, at,
           };
         });
       });
@@ -596,6 +605,7 @@ export function layout(model, doc) {
             type: field.type,
             label: named[k].schemaLabel || labels[k],
             auto: labels[k],
+            source: named[k].schemaLabel ? named[k].schemaSource : '',
             c: firstCell + i,
             slot: k,
             sample: field,
