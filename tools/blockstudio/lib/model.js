@@ -202,8 +202,7 @@ function overlap(a, b) {
  * Reads a block element into a model.
  * @param {Element} element the block div (may carry EW instrumentation)
  * @param {object} [hints]
- * @param {Set<string>} [hints.knownKeys] option keys known from the options or rules sheets
- * @param {string[]} [hints.options] keys the rules sheet forces to be options
+ * @param {Set<string>} [hints.knownKeys] option keys the library's options sheet defines
  * @param {string[]|'all'} [hints.items] keys forced to be items ('all' = no options)
  * @param {string} [hints.noun] item name from the rules sheet
  * @param {boolean} [hints.multi] the library's `editor` sheet marks it as repeating items
@@ -218,7 +217,6 @@ export function parseBlock(element, hints = {}) {
   const rowEls = [...el.children].filter((row) => row.tagName === 'DIV');
   const candidates = rowEls.map((rowEl) => optionOf(rowEl, hints.imageKeys));
   const known = hints.knownKeys || new Set();
-  const forced = new Set((hints.options || []).map(optionKey));
   const itemsAll = hints.items === 'all';
   const forcedItems = new Set(Array.isArray(hints.items) ? hints.items.map(optionKey) : []);
   const hasContent = candidates.some((c) => !c);
@@ -227,7 +225,7 @@ export function parseBlock(element, hints = {}) {
   const allLower = candidates.every((c) => c && lowerSlug(c.keyText));
   const isOption = candidates.map((cand, i) => {
     if (!cand || itemsAll || forcedItems.has(cand.key)) return false;
-    if (forced.has(cand.key) || known.has(cand.key)) return true;
+    if (known.has(cand.key)) return true;
     if (!hasContent) return allLower && rowEls.length <= 8;
     const edge = i < lead || i > tail;
     return edge && (lowerSlug(cand.keyText) || SETTING_WORDS.has(cand.key));

@@ -59,7 +59,7 @@ Open a page in EW, then **Extensions › Block Studio**, and click inside any bl
 | Header | The block's name and variants, with **Undo** and **Redo** for everything done in the panel. In a rich text field, Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z do the same. |
 | Block health | "No issues" or "3 issues". Open it to see each issue; click one to jump to its field. Items with issues show a red or amber count. |
 | Fill from a brief | One line in ("Spring savings offers for young families"), and the assistant writes every field of the block. |
-| Block options | A **Variant** dropdown: Default plus the block's documented variants (from the block library or the rules sheet), with the chosen one's description. Authors can't type their own. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Other setting rows (`theme`, `autoplay`, …) show as a dropdown with friendly labels, or a text field, and **+ Add option** lists the known settings this block doesn't have yet. |
+| Block options | A **Variant** dropdown: Default plus the block's documented variants (from the block library or the rules sheet), with the chosen one's description. Authors can't type their own. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Authors can't add other options. A settings row already in the block that the sheet doesn't define (typed into the table, or copied from another page) is shown read-only with a **Remove** button and the warning "… is not in the library's options sheet". |
 | Item fields | Each field is named automatically from the content, or from the block library: the `fields` table in an example's `library-metadata` ("Question", "Answer"), which you can also edit from the panel's Field names card. |
 | Items | Slides, cards, tabs or accordion rows as collapsible items, named from the block ("Slide 1", "Card 2") with their heading as a subtitle. Add, duplicate, move up or down, delete (with Undo). New items go in before the settings rows, which never move. |
 | Groups | Blocks whose rows differ (hero, columns) are shown row by row as fixed groups instead of items. |
@@ -90,12 +90,13 @@ The assistant edits the page itself, so the change is visible straight away. The
 | Check | Level |
 | --- | --- |
 | Empty heading, button with no text or no link URL, image with no picture | Error |
-| Required field or setting empty or missing (from the rules sheet) | Error |
+| Required field empty or missing (from the rules sheet) | Error |
 | Over the character limit (Heading 70, Text 300, Button 25, Alt 125, or the rules sheet's `max`) | Warning |
 | Image without alt text, or alt text that looks like a file name (`IMG_2041.jpg`) | Warning |
 | Link to `localhost`, to a preview site (`*.aem.page`, `*.aem.live`), over `http://`, or with a link type that isn't allowed | Warning |
 | Image file over 5 MB, or under 400 px wide | Warning |
-| Setting with no value, or a value that isn't in its list | Warning |
+| Block option with no value, or a value that isn't in its list | Warning |
+| Settings row the library's `options` sheet doesn't define (only when the site has the sheet) | Warning |
 | Icon not picked, or not one of the site's icons (when the rules sheet lists them) | Warning |
 | Empty item | Warning |
 
@@ -150,7 +151,7 @@ Then use your own site's URLs in the `library` row (for example `https://main--{
 
 ## Configuration
 
-Everything is optional. With no configuration, Block Studio uses the default labels and limits, the icons found on the page, and the site's `/icons` folder. Variants need the block library or the rules sheet: authors only choose documented variants.
+Everything is optional. With no configuration, Block Studio uses the default labels and limits, the icons found on the page, and the site's `/icons` folder. Variants need the block library or the rules sheet: authors only choose documented variants. Block options need the library's [`options` sheet](#configure-a-block-from-the-block-library): without it, settings rows in a block are shown read-only.
 
 ### The `block-studio` sheet
 
@@ -159,19 +160,18 @@ Add a sheet named **`block-studio`** to the site config (`https://da.live/config
 | Column | Meaning |
 | --- | --- |
 | `block` | Block name (`carousel`, `cards`), or `*` for every block |
-| `field` | Field label, as a slug (`heading`, `eyebrow`, `primary-button`, `description`), or a field type (`heading`, `text`, `button`, `image`), or a setting key (`theme`), or one of the special fields below |
-| `label` | For a setting: the label shown in the panel. Ignored for fields; [field names](#configure-a-block-from-the-block-library) come only from the block library |
+| `field` | Field label, as a slug (`heading`, `eyebrow`, `primary-button`, `description`), or a field type (`heading`, `text`, `button`, `image`), or one of the special fields below |
+| `label` | For an `items` row: the name of one item ("Slide"). Ignored for fields; [field names](#configure-a-block-from-the-block-library) come only from the block library |
 | `max` | Character limit |
 | `required` | `yes` to report an empty field as an error |
 | `hint` | Help text shown under the field |
-| `values` | For a setting: the allowed values, as `Label=value\|Label 2=value-2`, or a comma list |
+| `values` | For a special field: its list |
 
 Special fields:
 
 | `field` | `values` | Does |
 | --- | --- | --- |
 | `variants` | `media-left, media-right, full-width` | Variants added to the Variant dropdown |
-| `options` | `theme, autoplay` | Rows with these keys are always block options |
 | `items` | `faq, step`, or `all` | Rows with these keys are always items. `all` turns detection of options off. The `label` column names the items ("Slide") |
 | `icons` | `lock, piggy, phone` | Icons offered in the picker, in addition to the site's |
 | `editors` | `ana@example.com, @example.com` | Block `*` only. Who can change field names and limits in the panel: emails, or `@domain` for everyone at a domain. See [Who can change field names](#who-can-change-field-names) |
@@ -180,8 +180,6 @@ Example, as used by the demo:
 
 | block | field | label | max | required | hint | values |
 | --- | --- | --- | --- | --- | --- | --- |
-| carousel | theme | Background | | yes | The colour behind the slides. | `No background=none\|Light surface=surface-light\|Brand tint=surface-tint\|Dark surface=surface-dark` |
-| carousel | autoplay | Autoplay | | | | `Off=off\|Every 5 seconds=5s\|Every 8 seconds=8s` |
 | carousel | variants | | | | | `media-left, media-right, full-width` |
 | carousel | items | Slide | | | | |
 | carousel | description | | 160 | | One or two short sentences. | |
@@ -283,7 +281,7 @@ Saving writes, in DA:
 
 The panel uses the new names straight away. EW's own library list picks up a new block after the library is previewed, or on the next reload. The card doesn't show when the site has no block library, or on blocks that only hold options. When the library isn't in DA, or you can't write to it, the card only lists the names.
 
-**Block options.** The library's `options` sheet uses Block Inspector's columns (`blocks | key | values`), so an existing setup keeps working. Block Studio reads three more columns, which EW ignores:
+**Block options.** The library's `options` sheet is the only place block options are defined, so authors only ever see settings the block's code reads. It uses Block Inspector's columns (`blocks | key | values`), so an existing setup keeps working. Block Studio reads three more columns, which EW ignores:
 
 | Column | Meaning |
 | --- | --- |
@@ -298,6 +296,10 @@ The panel uses the new names straight away. EW's own library list picks up a new
 | --- | --- | --- | --- | --- | --- |
 | cards | theme | `Light=light\|Dark=dark` | Theme | select | light |
 | cards | background | | Block background | image | |
+| carousel | autoplay | `Off=off\|Every 5 seconds=5s` | Autoplay | select | off |
+| all | spacing | `Small=s\|Large=l` | Spacing | | |
+
+An `all` row adds the option to every block, after the block's own. A row with no `values` needs a `type`.
 
 #### Block Inspector's fields sheet
 
@@ -328,7 +330,7 @@ The icon picker lists the SVG files in the `/icons` folder of the site's GitHub 
 | Row | Becomes |
 | --- | --- |
 | Two short plain cells at the top or bottom of the block, with a lowercase key (`theme \| surface-light`) or a common setting word (`Style`, `Theme`, `Layout`) | A **block option** |
-| A row whose key is in the rules sheet's `options` or in the library's `options` sheet, wherever it is | A **block option** |
+| A row whose key is in the library's `options` sheet, wherever it is | A **block option** |
 | The other rows, when the block is a known repeater (cards, carousel, tabs, accordion, …) or the rows have the same cells and similar content | **Items** |
 | Otherwise | **Groups**, one per row (hero, columns) |
 
@@ -400,9 +402,9 @@ flowchart LR
 | **Open this page in Experience Workspace** | The panel is open in an editor that doesn't share the live page. Open the page in EW (`https://da.live/canvas#/{org}/{site}/{path}`) and pick Block Studio from **Extensions**. |
 | **Click inside a block** | The cursor isn't in a block. Click any cell of the block. Section metadata and page metadata aren't editable here. |
 | **Click the … block in the page to save your changes** | You clicked outside the block with changes waiting. Click the block again to save them, or **Discard**. |
-| A setting shows up as an item | Add a `block-studio` row with `field` `options` and `values` set to its key, for example `theme`. |
+| A setting shows up as an item, or is read-only | Add it to the block library's `options` sheet, with its `values` or a `type`. |
 | Rows show up as settings | Add a row with `field` `items` and `values` set to the keys, or `all`. |
-| No dropdown for a setting | Add its `values` to the `block-studio` sheet, or to the block library's `options` sheet. |
+| No dropdown for a setting | Add its `values` to the block library's `options` sheet. |
 | No ✦ buttons | The site doesn't have the EW assistant, or this EW version doesn't report finished chat turns. |
 | The image upload fails | You need write access to the page in DA. Images over 20 MB are refused. |
 | The rules sheet seems ignored | The sheet must be named `block-studio`, with a `field` column. Reload the panel after saving the config. |

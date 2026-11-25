@@ -164,19 +164,19 @@ export function checkBlock(view, rules, doc, images = new Map()) {
     });
   });
 
-  const present = new Set(view.options.map((option) => option.key));
   view.options.forEach((option) => {
     const target = `option:${option.key}`;
-    const values = rules?.values?.get(option.key);
+    if (!rules?.optionDefs?.has(option.key)) {
+      if (rules?.optionSheet) {
+        add('warn', target, 'Block options', `${option.keyText} is not in the library's options sheet`);
+      }
+      return;
+    }
+    const values = rules.values?.get(option.key);
     if (!option.value) add('warn', target, 'Block options', `${option.keyText} has no value`);
     else if (values?.length
       && !values.some((v) => v.value === option.value || v.title === option.value)) {
       add('warn', target, 'Block options', `${option.keyText} “${option.value}” is not one of the allowed values`);
-    }
-  });
-  rules?.fields?.forEach((rule, key) => {
-    if (rule.required && rules.values?.has(key) && !present.has(key)) {
-      add('error', `option-missing:${key}`, 'Block options', `${rule.label || key} is required`);
     }
   });
   const rank = (issue) => (issue.level === 'error' ? 0 : 1);

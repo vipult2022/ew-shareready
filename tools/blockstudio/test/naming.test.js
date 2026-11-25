@@ -23,7 +23,7 @@ const CAROUSEL = `<div class="carousel media-left">
 const CAROUSEL_RULES = blockRules(parseRules([
   { block: 'carousel', field: 'description', max: '160' },
   { block: 'carousel', field: 'eyebrow', label: 'Kicker' },
-]), 'carousel', new Map());
+]), 'carousel');
 const CAROUSEL_HINTS = { noun: 'Slide', knownKeys: new Set(['theme']) };
 
 const HERO = `<div class="hero">

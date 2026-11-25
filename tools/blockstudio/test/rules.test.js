@@ -7,7 +7,7 @@ import {
   checkBlock, counter, linkIssue, altIssue, imageIssue, limitFor, healthText,
 } from '../lib/check.js';
 import {
-  parseRules, blockRules, parseLibraryOptions, parseValues, blocksLibraryUrls, makeFetcher,
+  parseRules, blockRules, parseValues, blocksLibraryUrls, makeFetcher,
   loadSiteSettings, fieldRule, sheetRows, libraryVariants, parseOptionDefs, parseItemFields,
   libraryBlock, exampleFieldsFor, withLibraryFields, parseMultiBlocks, exampleRulesFor,
   namingEditors, canEditNames, imsEmail, IMS_PROFILE,
@@ -30,35 +30,39 @@ const RULES_SHEET = [
   { block: 'carousel', field: 'options', values: 'theme, autoplay' },
 ];
 
+const OPTION_DEFS = parseOptionDefs([{ blocks: 'cards', key: 'theme', values: 'Light surface=surface-light|Dark surface=surface-dark' }]);
+
 const setup = (rulesRows = RULES_SHEET) => {
   const doc = parseHtml(CARDS, DOMParser);
-  const rules = blockRules(parseRules(rulesRows), 'cards');
+  const rules = blockRules(parseRules(rulesRows), 'cards', { optionDefs: OPTION_DEFS });
   const model = parseBlock(blockElements(doc)[0], {
-    knownKeys: rules.knownKeys, options: rules.options, items: rules.items, noun: rules.noun,
+    knownKeys: rules.knownKeys, items: rules.items, noun: rules.noun,
   });
   return {
     doc, rules, model, view: layout(model, doc),
   };
 };
 
-test('rules: block rows override "all" rows and set nouns, values and options', () => {
+test('rules: block rows override "all" rows; options come only from the options sheet', () => {
   const { rules, model } = setup();
   assert.equal(model.noun, 'Offer');
   assert.deepEqual(rules.values.get('theme').map((v) => v.value), ['surface-light', 'surface-dark']);
   assert.ok(rules.knownKeys.has('theme'));
   assert.equal(fieldRule(rules, 'Heading', 'heading').max, 50);
   assert.equal(fieldRule(rules, 'Description 2', 'text').required, true);
-  assert.deepEqual(blockRules(parseRules(RULES_SHEET), 'Carousel').options, ['theme', 'autoplay']);
+  const sheetOnly = blockRules(parseRules(RULES_SHEET), 'cards');
+  assert.deepEqual([sheetOnly.knownKeys.size, sheetOnly.values.size], [0, 0], 'block-studio rows define no options');
+  assert.equal(blockRules(parseRules(RULES_SHEET), 'carousel').knownKeys.size, 0, 'nor does its options row');
   assert.deepEqual(parseValues('Light, Dark'), [{ title: 'Light', value: 'Light' }, { title: 'Dark', value: 'Dark' }]);
 });
 
 test('rules: reads Block Inspector options sheets and library URLs', () => {
-  const lib = parseLibraryOptions([
+  const lib = parseOptionDefs([
     { blocks: 'all', key: 'Spacing', values: 'Small=s|Large=l' },
     { blocks: 'Cards, carousel', key: 'theme', values: 'Light=surface-light' },
   ]);
   assert.deepEqual([...lib.get('cards').keys()].sort(), ['spacing', 'theme']);
-  const rules = blockRules([], 'columns', lib);
+  const rules = blockRules([], 'columns', { optionDefs: lib });
   assert.deepEqual(rules.values.get('spacing').map((v) => v.value), ['s', 'l']);
   assert.deepEqual(blocksLibraryUrls([{ title: 'Blocks', path: '/docs/library/blocks.json, https://x.test/b.json' }], { org: 'o', site: 's', ref: 'local' }), [
     'https://main--s--o.aem.live/docs/library/blocks.json', 'https://x.test/b.json',
@@ -95,7 +99,7 @@ test('rules: the IMS token only goes to da.live and missing config is not an err
   const fetcher = makeFetcher(() => 'TOKEN', fake);
   const settings = await loadSiteSettings(fetcher, { org: 'o', site: 's' });
   assert.equal(settings.rules[0].max, 40);
-  assert.equal(settings.libraryOptions.get('cards').get('theme')[0].value, 'l');
+  assert.equal(settings.optionDefs.get('cards').get('theme').values[0].value, 'l');
   assert.deepEqual(settings.libraryBlocks.map((b) => b.name), ['Cards', 'Cards']);
   assert.equal(settings.libraryIndex, 'https://content.da.live/o/s/library/blocks.json', 'the first index is the one Block Studio adds to');
   const tables = [{ name: 'Table', path: 'https://content.da.live/o/s/library/blocks/table' }];
@@ -127,12 +131,15 @@ test('checks: buttons, links, alt text, limits, empty fields and option values',
   assert.equal(healthText([]), 'No issues');
 });
 
-test('checks: required options and small helpers', () => {
-  const doc = parseHtml('<main><div><div class="cards"><div><div><h3>One</h3><p>Hi</p></div></div><div><div><h3>Two</h3><p>Yo</p></div></div></div></div></main>', DOMParser);
-  const rules = blockRules(parseRules(RULES_SHEET), 'cards');
-  const model = parseBlock(blockElements(doc)[0], { knownKeys: rules.knownKeys });
-  const issues = checkBlock(layout(model, doc), rules, doc);
-  assert.deepEqual(issues.map((i) => i.target), ['option-missing:theme']);
+test('checks: an option row the options sheet does not define, and small helpers', () => {
+  const doc = parseHtml('<main><div><div class="cards"><div><div><h3>One</h3><p>Hi</p></div></div><div><div><h3>Two</h3><p>Yo</p></div></div><div><div>colour</div><div>red</div></div></div></div></main>', DOMParser);
+  const optionIssues = (schema) => {
+    const rules = blockRules([], 'cards', schema);
+    const model = parseBlock(blockElements(doc)[0], { knownKeys: rules.knownKeys });
+    return checkBlock(layout(model, doc), rules, doc).map((i) => `${i.target} ${i.message}`);
+  };
+  assert.deepEqual(optionIssues({ optionDefs: OPTION_DEFS }), ['option:colour colour is not in the library\'s options sheet']);
+  assert.deepEqual(optionIssues({}), [], 'a site with no options sheet gets no warning');
   assert.deepEqual(counter(62, 70), { length: 62, max: 70, state: 'ok' });
   assert.equal(counter(63, 70).state, 'near');
   assert.equal(counter(71, 70).state, 'over');
@@ -182,7 +189,6 @@ test('config: typed options and the fields sheet configure a block without code'
   assert.deepEqual([theme.type, theme.default, theme.keyText, theme.values.map((v) => v.value)], ['select', 'light', 'theme', ['light', 'dark']]);
   assert.equal(defs.get('cards').get('spacing').type, 'select', 'values without a type are a select');
   assert.equal(defs.has('hero'), false, 'an untyped row with no values is skipped');
-  assert.deepEqual(parseLibraryOptions(optionRows).get('cards').get('background'), [], 'EW options keep typed rows');
 
   const itemFields = parseItemFields([
     {
@@ -201,7 +207,7 @@ test('config: typed options and the fields sheet configure a block without code'
     [1, 'heading', 'Card title', true, 0], [1, 'text', 'Body', false, 120], [2, 'image', 'Card background', false, 0],
   ]);
 
-  const rules = blockRules(parseRules(RULES_SHEET), 'Cards', new Map(), { optionDefs: defs, itemFields });
+  const rules = blockRules(parseRules(RULES_SHEET), 'Cards', { optionDefs: defs, itemFields });
   assert.deepEqual([...rules.imageKeys], ['background']);
   assert.ok(rules.knownKeys.has('background') && rules.knownKeys.has('spacing'));
   assert.equal(fieldRule(rules, 'Card title', 'heading').required, true);
@@ -210,10 +216,9 @@ test('config: typed options and the fields sheet configure a block without code'
   assert.equal(fieldRule(rules, 'Offer summary', 'text', 'Description').required, true, 'a renamed field keeps the rule for its automatic name');
   const labelled = blockRules(parseRules([{
     block: 'cards', field: 'heading', label: 'Headline', max: '60',
-  }]), 'cards', new Map());
+  }]), 'cards');
   assert.deepEqual([fieldRule(labelled, 'Heading', 'heading').label, fieldRule(labelled, 'Heading', 'heading').max], [undefined, 60], 'a rule sets limits, never a field\'s name');
-  assert.equal(rules.fields.get('theme').required, true, 'the block-studio sheet still applies');
-  assert.equal(blockRules([], 'hero', new Map(), { optionDefs: defs }).optionDefs.get('spacing').type, 'select');
+  assert.equal(blockRules([], 'hero', { optionDefs: defs }).optionDefs.get('spacing').type, 'select');
 });
 
 test('config: library variants are the documented class combinations, with heading and description', async () => {
@@ -278,14 +283,14 @@ test('config: the library-metadata field-rules table sets limits, under the bloc
     },
     { block: 'accordion', field: 'question', hint: 'Ask one thing' },
   ]);
-  const rule = fieldRule(blockRules(sheet, 'accordion', null, { fieldRules }), 'Question', 'text');
+  const rule = fieldRule(blockRules(sheet, 'accordion', { fieldRules }), 'Question', 'text');
   assert.equal(rule.max, 80, 'the library beats "all" rows');
   assert.equal(rule.required, true, 'what it leaves out still comes from them');
   assert.equal(rule.hint, 'Ask one thing', 'the block\'s own rows win');
   const itemFields = new Map([['accordion', [{
     c: 0, type: 'text', label: 'Question', max: 120,
   }]]]);
-  assert.equal(fieldRule(blockRules([], 'accordion', null, { itemFields, fieldRules }), 'Question', 'text').max, 80, 'and the fields sheet');
+  assert.equal(fieldRule(blockRules([], 'accordion', { itemFields, fieldRules }), 'Question', 'text').max, 80, 'and the fields sheet');
 });
 
 test('config: the editor sheet marks repeating blocks as multi', () => {
@@ -294,8 +299,8 @@ test('config: the editor sheet marks repeating blocks as multi', () => {
     { block: 'hero', property: 'other' }, { block: '', property: 'multi' },
   ]);
   assert.deepEqual([...multi], ['accordion', 'cards']);
-  assert.equal(blockRules([], 'Accordion', new Map(), { multiBlocks: multi }).multi, true);
-  assert.equal(blockRules([], 'hero', new Map(), { multiBlocks: multi }).multi, false);
+  assert.equal(blockRules([], 'Accordion', { multiBlocks: multi }).multi, true);
+  assert.equal(blockRules([], 'hero', { multiBlocks: multi }).multi, false);
 });
 
 test('config: the editors row limits who can change field names', async () => {
@@ -306,7 +311,7 @@ test('config: the editors row limits who can change field names', async () => {
   ]);
   const editors = namingEditors(rules);
   assert.deepEqual(editors, ['ana@northwind.example', '@admins.northwind.example']);
-  assert.equal(blockRules(rules, 'cards', null).fields.has('editors'), false, 'not a field');
+  assert.equal(blockRules(rules, 'cards').fields.has('editors'), false, 'not a field');
 
   assert.equal(canEditNames([], ''), true, 'no list: DA permissions decide');
   assert.equal(canEditNames(editors, 'ANA@northwind.example'), true);

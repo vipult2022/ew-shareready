@@ -1,9 +1,9 @@
 /**
  * Site configuration Block Studio reads. Everything is optional:
- *  - the `block-studio` sheet in the site config: labels, limits, required fields,
- *    hints, option values and overrides, per block;
+ *  - the `block-studio` sheet in the site config: limits, required fields and hints,
+ *    item names, variants and icons, per block;
  *  - the "Blocks" library row (the same one Block Inspector uses): its `options`
- *    sheet gives dropdown values and its block pages give variant suggestions.
+ *    sheet defines block options and its block pages give variants and field names.
  */
 
 import { exampleFields, optionKey, toClass } from './model.js';
@@ -106,38 +106,33 @@ export async function imsEmail(token, fetchImpl = fetch) {
  * (`itemFields`) and the example's `field-rules` table (`fieldRules`), so a new block is
  * configured without changing Block Studio. The `field-rules` table beats `all` rows
  * and the `fields` sheet; the block's own rows in the rules sheet still win.
+ * Block options come only from the library's `options` sheet (`optionDefs`).
  */
-export function blockRules(rules, name, libraryOptions, schema = {}) {
+export function blockRules(rules, name, schema = {}) {
   const key = toClass(name);
   const fields = new Map();
   const result = {
-    fields, options: null, items: null, variants: [], noun: '', icons: [], values: new Map(),
+    fields, items: null, variants: [], noun: '', icons: [], values: new Map(),
   };
   const merge = (row) => {
-    if (row.field === 'options') result.options = list(row.values).map(optionKey);
-    else if (row.field === 'items') {
+    if (row.field === 'items') {
       result.items = /^all$/i.test(row.values) ? 'all' : list(row.values).map(optionKey);
       if (row.label) result.noun = row.label;
     } else if (row.field === 'variants') result.variants = list(row.values).map(toClass);
     else if (row.field === 'icons') result.icons = list(row.values).map(toClass);
-    else if (row.field !== 'editors') {
-      const set = Object.fromEntries(Object.entries(row).filter(([, v]) => v));
+    else if (!['editors', 'options'].includes(row.field)) {
+      const set = Object.fromEntries(Object.entries(row).filter(([k, v]) => v && k !== 'values'));
       fields.set(row.field, { ...(fields.get(row.field) || {}), ...set });
-      if (row.values) result.values.set(row.field, parseValues(row.values));
     }
   };
   (rules || []).filter((row) => row.block === 'all').forEach(merge);
   (schema?.fieldRules || []).forEach(merge);
   (rules || []).filter((row) => row.block === key).forEach(merge);
-  const library = libraryOptions?.get?.(key) || libraryOptions?.get?.('all');
-  library?.forEach((values, optKey) => {
-    if (!result.values.has(optKey)) result.values.set(optKey, values);
-  });
+  // byBlock already merged the `all` definitions into each block's own.
   const defs = schema?.optionDefs?.get?.(key) || schema?.optionDefs?.get?.('all') || new Map();
   result.optionDefs = defs;
-  defs.forEach((def, optKey) => {
-    if (!result.values.has(optKey)) result.values.set(optKey, def.values);
-  });
+  result.optionSheet = !!schema?.optionDefs?.size;
+  defs.forEach((def, optKey) => result.values.set(optKey, def.values));
   result.imageKeys = new Set([...defs.values()].filter((def) => def.type === 'image').map((def) => def.key));
   result.multi = !!schema?.multiBlocks?.has?.(key);
   result.itemFields = schema?.itemFields?.get?.(key) || [];
@@ -149,7 +144,7 @@ export function blockRules(rules, name, libraryOptions, schema = {}) {
     // The rules sheet's row for the field wins, then this sheet, then the rule for its type.
     fields.set(slug, { ...(fields.get(def.type) || {}), ...set, ...(fields.get(slug) || {}) });
   });
-  result.knownKeys = new Set([...result.values.keys(), ...(result.options || [])]);
+  result.knownKeys = new Set(defs.keys());
   return result;
 }
 
@@ -198,21 +193,10 @@ function byBlock(rows, read) {
 }
 
 /**
- * Block Inspector's `options` sheet: blocks | key | values → Map(block → Map(key → values)).
- * Rows with a `type` but no values (text, image, toggle) are kept with no values.
- */
-export function parseLibraryOptions(rows) {
-  return byBlock(rows, (row) => {
-    const typed = OPTION_TYPES.includes(String(row.type || '').toLowerCase());
-    if (!row.blocks || !row.key || (!row.values && !typed)) return null;
-    return [optionKey(row.key), optionValues(row.values)];
-  });
-}
-
-/**
- * Typed options from the same sheet, with Block Studio's extra columns (EW ignores them):
- * blocks | key | values | label | type | default → Map(block → Map(key → definition)).
- * Every definition is shown as a control, in sheet order.
+ * The library's `options` sheet (Block Inspector's blocks | key | values), with Block
+ * Studio's extra columns (EW ignores them): label | type | default
+ * → Map(block → Map(key → definition)). Every definition is shown as a control, in sheet
+ * order; these are the only options a block has.
  */
 export function parseOptionDefs(rows) {
   return byBlock(rows, (row) => {
@@ -319,7 +303,6 @@ export async function loadSiteSettings(fetcher, context, fetchImpl = fetcher) {
   const optionRows = indexes.flatMap((json) => json.options?.data || []);
   return {
     rules: parseRules(rules),
-    libraryOptions: parseLibraryOptions(optionRows),
     optionDefs: parseOptionDefs(optionRows),
     itemFields: parseItemFields(indexes.flatMap((json) => json.fields?.data || [])),
     multiBlocks: parseMultiBlocks(indexes.flatMap((json) => json.editor?.data || [])),

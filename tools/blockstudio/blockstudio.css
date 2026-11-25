@@ -748,21 +748,10 @@ select.bs-input { padding-right: 4px; }
 
 .bs-option .bs-label { overflow: hidden; text-overflow: ellipsis; }
 .bs-option-issues { grid-column: 1 / -1; }
-.bs-add-option { align-self: flex-start; }
 
-.bs-add-option-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: var(--bs-radius);
-  background: var(--bs-gray-50);
-}
-
-.bs-option-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+.bs-option .bs-input[readonly] {
+  color: var(--bs-gray-700);
+  background: var(--bs-gray-75);
 }
 
 /* Items */
