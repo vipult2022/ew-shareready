@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs';
 import { DOMParser } from 'linkedom';
 import { parseHtml, blockElements, classesOf } from '../lib/live.js';
 import {
-  parseRules, blockRules, libraryBlock, exampleFieldsFor,
+  parseRules, blockRules, libraryBlock, exampleFieldsFor, exampleRulesFor,
 } from '../lib/rules.js';
 import {
   codeNoun, suggestNames, fieldsTable, pickExample, exampleFromBlock, withFieldsTable,
-  withLibraryRows, daSource, libraryPageFor, planNames, saveNames,
+  withLibraryRows, daSource, daEditUrl, libraryPageFor, planNames, saveNames, namesKey,
+  fieldRulesTable, limitsChange,
 } from '../lib/naming.js';
 
 const blockOf = (html) => blockElements(parseHtml(`<main><div>${html}</div></main>`, DOMParser))[0];
@@ -76,6 +77,80 @@ test('naming: the fields table reads back as the names, and an empty name keeps 
   const lib = await libraryBlock([{ name: 'Carousel', path: 'https://content.da.live/o/s/library/blocks/carousel' }], 'carousel', async () => new Response(page.html), { Parser: DOMParser, hints: CAROUSEL_HINTS });
   assert.deepEqual(exampleFieldsFor(lib.examples, ['media-left']).map((f) => f.label), ['Slide image', '', 'Account <name>', 'Slide description', 'Primary button']);
   assert.deepEqual(lib.variants, [], 'the example is the default one, not a new variant');
+});
+
+test('naming: once named, the names are shown as they are, with where each comes from', async () => {
+  const names = suggestNames(blockOf(CAROUSEL), CAROUSEL_HINTS, { rules: CAROUSEL_RULES });
+  assert.equal(names.named, false);
+  names.rows[0].cells[1][0].label = '';
+  names.rows[0].cells[1][1].label = 'Title';
+  const page = withFieldsTable(null, {
+    name: 'carousel', title: 'Carousel', table: fieldsTable(names.rows), exampleHtml: exampleFromBlock(blockOf(CAROUSEL), 'https://main--s--o.aem.page/savings'),
+  }, DOMParser);
+  const lib = await libraryBlock([{ name: 'Carousel', path: 'https://content.da.live/o/s/library/blocks/carousel' }], 'carousel', async () => new Response(page.html), { Parser: DOMParser, hints: CAROUSEL_HINTS });
+  const schema = exampleFieldsFor(lib.examples, ['media-left']);
+  const hints = { ...CAROUSEL_HINTS, schema };
+  const again = suggestNames(blockOf(CAROUSEL), hints, { rules: CAROUSEL_RULES });
+  assert.equal(again.named, true);
+  assert.deepEqual(
+    labelsOf(again.rows),
+    [[['Slide image'], ['', 'Title', 'Slide description', 'Primary button']]],
+    'not rewritten to "Slide title"; unnamed stays empty',
+  );
+  const text = again.rows[0].cells[1];
+  assert.deepEqual(text.map((f) => f.source), ['rule', 'library', 'library', 'library']);
+  assert.deepEqual(text.map((f) => f.shown), ['Kicker', 'Title', 'Slide description', 'Primary button']);
+  assert.equal(text[0].auto, 'Kicker', 'an empty name shows the rule\'s');
+  assert.equal(namesKey(again.rows), namesKey(names.rows), 'nothing changed');
+
+  const sheet = suggestNames(blockOf(CAROUSEL), { ...CAROUSEL_HINTS, schema: [{ c: 1, type: 'heading', label: 'Headline' }] }, { rules: CAROUSEL_RULES });
+  const heading = sheet.rows[0].cells[1][1];
+  assert.deepEqual([heading.label, heading.source, heading.locked], ['Headline', 'sheet', true]);
+  assert.equal(sheet.rows[0].cells[0][0].source, 'auto');
+});
+
+test('naming: limits are saved as a field-rules table beside the names, and read back', async () => {
+  const names = suggestNames(blockOf(CAROUSEL), CAROUSEL_HINTS, { rules: CAROUSEL_RULES });
+  const [kicker, title, description] = names.rows[0].cells[1];
+  assert.deepEqual([description.max, description.maxDefault], ['', 160], 'the default comes from the rules sheet');
+  assert.equal(fieldRulesTable(names.rows), '', 'no limits, no table');
+  const before = namesKey(names.rows);
+  Object.assign(title, { max: '40', required: true, hint: 'Say <what> it is' });
+  Object.assign(kicker, { label: '', hint: 'One or two words' });
+  assert.notEqual(namesKey(names.rows), before, 'a limit is a change');
+  const table = fieldRulesTable(names.rows);
+  assert.match(table, /<td><p>Slide title<\/p><\/td><td><p>40<\/p><\/td><td><p>yes<\/p><\/td><td><p>Say &lt;what&gt; it is<\/p><\/td>/);
+  assert.match(table, /<td><p>Kicker<\/p><\/td><td><p><\/p><\/td>/, 'an unnamed field by its automatic name');
+
+  const opts = {
+    name: 'carousel', title: 'Carousel', rows: names.rows, pageUrl: 'https://content.da.live/o/s/library/blocks/carousel', indexUrl: 'https://content.da.live/o/s/library/blocks.json', exampleHtml: exampleFromBlock(blockOf(CAROUSEL), 'https://main--s--o.aem.page/savings'),
+  };
+  const plan = planNames(null, null, opts, DOMParser);
+  assert.equal(plan.rulesChange, 'Add the field limits to the Carousel example');
+  assert.ok(plan.changes.includes(plan.rulesChange));
+  const read = async (html) => libraryBlock([{ name: 'Carousel', path: opts.pageUrl }], 'carousel', async () => new Response(html), { Parser: DOMParser, hints: CAROUSEL_HINTS });
+  const lib = await read(plan.page.html);
+  const fieldRules = exampleRulesFor(lib.examples, ['media-left']);
+  assert.deepEqual(fieldRules.map((r) => [r.field, r.max, r.required, r.hint]), [
+    ['kicker', 0, false, 'One or two words'], ['slide-title', 40, true, 'Say <what> it is'],
+  ]);
+  const hints = { ...CAROUSEL_HINTS, schema: exampleFieldsFor(lib.examples, ['media-left']) };
+  const again = suggestNames(blockOf(CAROUSEL), hints, { rules: CAROUSEL_RULES, fieldRules });
+  const text = again.rows[0].cells[1];
+  assert.deepEqual([text[1].max, text[1].required, text[1].hint], [40, true, 'Say <what> it is'], 'the form opens with them');
+  assert.equal(text[0].hint, 'One or two words');
+  assert.equal(namesKey(again.rows), namesKey(names.rows), 'nothing changed');
+
+  const same = planNames(plan.page.html, null, { ...opts, rows: again.rows }, DOMParser);
+  assert.deepEqual([same.rulesChange, same.hadRules], ['', true], 'saving the same limits is not a change');
+  text[1].max = '50';
+  assert.equal(limitsChange(again.rows, true, 'Carousel'), 'Replace the field limits of the Carousel example');
+  text.forEach((field) => Object.assign(field, { max: '', required: false, hint: '' }));
+  const cleared = planNames(plan.page.html, null, { ...opts, rows: again.rows }, DOMParser);
+  assert.equal(cleared.rulesChange, 'Remove the field limits from the Carousel example');
+  assert.doesNotMatch(cleared.page.html, /field-rules/);
+  assert.match(cleared.page.html, /<p>fields<\/p>/, 'the names stay');
+  assert.equal(limitsChange(again.rows, false, 'Carousel'), '');
 });
 
 test('naming: the table goes in the example\'s library-metadata, adding what is missing', () => {
@@ -178,6 +253,8 @@ test('naming: library URLs map to their DA source, and a new page sits beside th
   assert.equal(daSource('https://content.da.live/o/s/docs/').url, 'https://admin.da.live/source/o/s/docs/index.html');
   assert.equal(daSource('demo:/docs/library/blocks/hero'), null);
   assert.equal(daSource('https://example.com/docs/x'), null);
+  assert.equal(daEditUrl('https://main--s--o.aem.page/docs/library/blocks/hero'), 'https://da.live/edit#/o/s/docs/library/blocks/hero');
+  assert.equal(daEditUrl('https://content.da.live/o/s/library/blocks.json'), '', 'sheets do not open in the editor');
 
   const rows = [{ name: 'Cards', path: 'https://content.da.live/o/s/library/blocks/cards' }];
   const index = 'https://content.da.live/o/s/library/blocks.json';
@@ -207,8 +284,9 @@ test('naming: saving writes the page, then the list only if it changed', async (
   };
   const plan = planNames(null, null, opts, DOMParser);
   assert.deepEqual(plan.changes, ['Create /library/blocks/hero with an example Hero block and its field names', 'List Hero in the block library (/library/blocks)']);
-  assert.equal(plan.notes.length, 1, 'no preview needed for a DA library');
-  assert.equal(planNames(null, null, { ...opts, pageUrl: 'https://main--s--o.aem.page/docs/hero' }, DOMParser).notes.length, 2);
+  assert.equal(plan.notes.length, 2, 'no preview needed for a DA library');
+  assert.match(plan.notes[0], /every author/);
+  assert.equal(planNames(null, null, { ...opts, pageUrl: 'https://main--s--o.aem.page/docs/hero' }, DOMParser).notes.length, 3);
 
   const store = fakeStore({ [indexUrl]: JSON.stringify({ data: [{ name: 'Cards', path: '/cards' }] }) });
   const saved = await saveNames(store, opts, DOMParser);

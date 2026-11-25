@@ -16,14 +16,14 @@ import {
 } from './lib/model.js';
 import {
   DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryBlock, exampleFieldsFor,
-  withLibraryFields, parseRules, parseLibraryOptions, parseOptionDefs, parseItemFields,
-  parseMultiBlocks,
+  exampleRulesFor, withLibraryFields, parseRules, parseLibraryOptions, parseOptionDefs,
+  parseItemFields, parseMultiBlocks,
 } from './lib/rules.js';
 import { checkBlock } from './lib/check.js';
 import { fieldPrompt, altPrompt, briefPrompt } from './lib/ai.js';
 import {
   codeNoun, suggestNames, pickExample, exampleFromBlock, libraryPageFor, daStore, daSource,
-  planNames, saveNames,
+  planNames, saveNames, daEditUrl, namesKey, fieldLimits,
 } from './lib/naming.js';
 import {
   createDemoHost, DEMO_RULES, DEMO_LIBRARY, DEMO_LIBRARY_INDEX, demoLibraryFetch,
@@ -71,7 +71,7 @@ const state = {
   libraryVariants: [],
   icons: [],
   rulesFound: false,
-  canName: false,
+  names: null,
   naming: null,
   namingOpen: false,
   error: '',
@@ -149,7 +149,7 @@ function derive() {
   if (!state.model) return;
   state.view = layout(state.model, doc);
   state.issues = checkBlock(state.view, state.rules, doc, images);
-  state.canName = namingAllowed();
+  state.names = namesInfo();
 }
 
 /** Where the block with this signature is now, preferring the index it had. */
@@ -221,13 +221,36 @@ function fetchLibrary(name) {
   return pending;
 }
 
-/** A block's rules, with field names from its block library example once loaded. */
-function rulesFor(el) {
-  const name = blockName(el);
-  const rules = blockRules(settings.rules, name, settings.libraryOptions, settings);
-  const named = exampleFieldsFor(libraryLoaded.get(name)?.examples, classesOf(el).slice(1));
-  rules.itemFields = withLibraryFields(rules.itemFields, named);
+/**
+ * A block's rules, with the field names and `field-rules` limits from its block library
+ * example once loaded.
+ */
+function blockRulesFor(name, variants) {
+  const examples = libraryLoaded.get(name)?.examples;
+  const fieldRules = exampleRulesFor(examples, variants);
+  const schema = { ...settings, fieldRules };
+  const rules = blockRules(settings.rules, name, settings.libraryOptions, schema);
+  rules.itemFields = withLibraryFields(rules.itemFields, exampleFieldsFor(examples, variants));
   return rules;
+}
+
+const rulesFor = (el) => blockRulesFor(blockName(el), classesOf(el).slice(1));
+
+/**
+ * For naming: the block's rules, its rules without the library's `field-rules` (the
+ * limits a field has without them) and those `field-rules`.
+ */
+function limitRules(name) {
+  const { variants } = state.model;
+  const fieldRules = exampleRulesFor(libraryLoaded.get(name)?.examples, variants);
+  const baseRules = blockRules(settings.rules, name, settings.libraryOptions, settings);
+  return { rules: state.rules, baseRules, fieldRules };
+}
+
+/** Applies the block library's names and limits once it has loaded. */
+function refreshRules() {
+  state.rules = blockRulesFor(state.model.name, state.model.variants);
+  state.model.schema = state.rules.itemFields;
 }
 
 /**
@@ -243,11 +266,7 @@ function loadVariants(name) {
   pending.then((lib) => {
     if (state.model?.name !== name) return;
     if (lib.variants.length) state.libraryVariants = lib.variants;
-    const named = exampleFieldsFor(lib.examples, state.model.variants);
-    if (named.length) {
-      state.rules.itemFields = withLibraryFields(state.rules.itemFields, named);
-      state.model.schema = state.rules.itemFields;
-    }
+    refreshRules();
     derive();
     render();
   });
@@ -256,18 +275,21 @@ function loadVariants(name) {
 /* Naming a block's fields in the block library */
 
 /**
- * A block can have its fields named when the signed-in person can change the block
- * library and nothing names them yet: no library example, no `fields` sheet rows.
+ * The Field names card, shown when the site has a block library and the block has
+ * fields: `named` when the library or the `fields` sheet names them, `edit` when the
+ * signed-in person can change the library, `link` to open the library page in DA.
  */
-function namingAllowed() {
+function namesInfo() {
   const { model } = state;
-  if (!model || !state.editable || !libraryStore || !settings.libraryIndex) return false;
-  if (state.mode !== 'demo' && !libraryWritable) return false;
+  if (!model || !settings.libraryIndex) return null;
   const { name } = model;
-  if (settings.libraryBlocks?.length && !libraryLoaded.has(name)) return false;
-  if (exampleFieldsFor(libraryLoaded.get(name)?.examples, model.variants).length) return false;
-  if (settings.itemFields?.get?.(toClass(name))?.length) return false;
-  return model.rows.some((row) => row.kind === 'item' && row.cells.some((cell) => cell.fields.length));
+  if (settings.libraryBlocks?.length && !libraryLoaded.has(name)) return null;
+  if (!model.rows.some((row) => row.kind === 'item' && row.cells.some((cell) => cell.fields.length))) return null;
+  const named = exampleFieldsFor(libraryLoaded.get(name)?.examples, model.variants).length > 0
+    || !!settings.itemFields?.get?.(toClass(name))?.length;
+  const canEdit = !!libraryStore && state.editable && (state.mode === 'demo' || libraryWritable);
+  const page = libraryPageFor(settings.libraryBlocks, settings.libraryIndex, name);
+  return { named, edit: canEdit, link: page.listed && state.mode !== 'demo' ? daEditUrl(page.url) : '' };
 }
 
 async function checkLibraryWritable() {
@@ -288,9 +310,26 @@ async function blockCodeNoun(name) {
 
 const blockOf = (html) => blockElements(parseHtml(`<main><div>${html}</div></main>`))[0] || null;
 
+/** Without write access the card lists the names the block's fields have now. */
+function readNames() {
+  const current = blockAt(state.target?.index);
+  state.naming = current
+    ? {
+      step: 'ready',
+      readOnly: true,
+      ...suggestNames(current, hintsFor(state.rules), limitRules(state.model.name)),
+    }
+    : { step: 'failed', error: "The block could not be read, so its field names can't be shown" };
+  render();
+}
+
 async function startNaming() {
-  const { model } = state;
-  if (!model || state.naming || !state.canName) return;
+  const { model, names } = state;
+  if (!model || state.naming || !names) return;
+  if (!names.edit) {
+    readNames();
+    return;
+  }
   const { name } = model;
   const naming = { step: 'loading', error: '' };
   state.naming = naming;
@@ -314,7 +353,7 @@ async function startNaming() {
     const example = libraryExample || blockOf(exampleHtml);
     if (!example) throw new Error("The block could not be read, so its fields can't be named");
     const suggestion = suggestNames(example, hintsFor(state.rules), {
-      rules: state.rules, codeNoun: noun,
+      ...limitRules(name), codeNoun: noun,
     });
     const opts = {
       name,
@@ -329,7 +368,15 @@ async function startNaming() {
     const plan = planNames(pageHtml, indexJson, { ...opts, rows: suggestion.rows });
     if (state.naming !== naming) return;
     Object.assign(naming, {
-      step: 'ready', ...suggestion, opts, changes: plan.changes, notes: plan.notes,
+      step: 'ready',
+      ...suggestion,
+      opts,
+      changes: plan.changes.filter((change) => change !== plan.rulesChange),
+      rulesChange: plan.rulesChange,
+      hadRules: plan.hadRules,
+      limits: JSON.stringify(fieldLimits(suggestion.rows)),
+      notes: plan.notes,
+      saved: namesKey(suggestion.rows),
     });
   } catch (error) {
     if (state.naming !== naming) return;
@@ -369,9 +416,7 @@ async function saveNaming() {
     }
     if (state.model?.name === name) {
       if (lib.variants.length) state.libraryVariants = lib.variants;
-      const named = exampleFieldsFor(lib.examples, state.model.variants);
-      state.rules.itemFields = withLibraryFields(state.rules.itemFields, named);
-      state.model.schema = state.rules.itemFields;
+      refreshRules();
       derive();
     }
     render();

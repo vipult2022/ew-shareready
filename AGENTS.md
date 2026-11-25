@@ -11,6 +11,12 @@ Edge Delivery Services. Read a block first. Omissions are in the repo or known.
 - Scope CSS to `.blockname`; `-wrapper`/`-container` are section classes.
 - `fragment/fragment.js` is the only cross-block import. Otherwise use `/scripts/`.
 
+## Block Studio (`tools/blockstudio`) is generic
+- It must work on any EDS project, new or already live, with no code changes. Read the rules in its README under "Design principles".
+- No site, block or brand names in code. Built-in word lists are only fallbacks, and config must be able to override them.
+- Config comes from the block library sheets and `block-studio` sheet. New config means new sheets or columns that EW ignores.
+- With no config, every feature still works or hides itself. Never migrate or rewrite existing content.
+
 ## Outdated
 - `fstab.yaml`, `helix-query.yaml`, `paths.json` are retired. Config lives at tools.aem.live.
 
@@ -20,3 +26,5 @@ Edge Delivery Services. Read a block first. Omissions are in the repo or known.
 - A PR without a `{branch}--ew-shareready--vipult2022.aem.page/{path}` link is rejected.
 - All committed files are served. Use `.hlxignore`.
 - Skills: `/plugin marketplace add adobe/skills`, then `aem-edge-delivery-services` (24 skills, incl. `docs-search`).
+- Repo skills in `.github/skills/`: `building-ew-extensions` (scaffold, SDK rules, checker) and `shipping-ew-extensions` (README, Marketplace, video, PR). They are a copy; the master is `vipult2022/agent-skills` (`plugins/ew-extensions/skills/`).
+- Keep them current: when extension work uncovers a new gotcha, SDK behaviour, pattern or third-party recipe, add it to the matching skill (and the template or checker if it applies) in `vipult2022/agent-skills`, then re-sync the copy here.

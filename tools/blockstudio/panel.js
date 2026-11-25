@@ -8,6 +8,7 @@ import {
 import { fieldText, toClass } from './lib/model.js';
 import { TEXT_ACTIONS, LANGUAGES } from './lib/ai.js';
 import { fieldRule } from './lib/rules.js';
+import { namesKey, fieldLimits, limitsChange } from './lib/naming.js';
 
 const DOCS_URL = 'https://github.com/vipult2022/ew-shareready/tree/main/tools/blockstudio#readme';
 
@@ -1244,7 +1245,7 @@ export default function createPanel(root, state, on) {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
     return h(
       'details',
-      { class: 'bs-brief', open: state.briefOpen ? true : undefined, ontoggle: (e) => { state.briefOpen = e.target.open; } },
+      { class: 'bs-brief', open: state.briefOpen ? true : undefined, ontoggle: (e) => { if (e.target.isConnected) state.briefOpen = e.target.open; } },
       h('summary', { class: 'bs-brief-sum' }, icon('spark'), 'Fill from a brief'),
       h('p', { class: 'bs-muted bs-small' }, 'One line in, every field written by the assistant. You can undo it in one click.'),
       h('div', { class: 'bs-inline' }, input, h('button', {
@@ -1255,6 +1256,86 @@ export default function createPanel(root, state, on) {
 
   /* Naming the block's fields */
 
+  const SOURCES = {
+    library: ['Block library', 'Named in the block library'],
+    sheet: ['Fields sheet', 'Named by the fields sheet of the block library'],
+    rule: ['Site rule', 'Named by a rule in the block-studio sheet'],
+    auto: ['Automatic', 'Named by Block Studio from the content'],
+  };
+  const sourceTag = (source) => {
+    const [text, tip] = SOURCES[source] || SOURCES.auto;
+    return h('span', { class: `bs-tag bs-source bs-source-${source || 'auto'}`, title: tip }, text);
+  };
+
+  // Images and icons have no characters to count.
+  const counted = (field) => !['image', 'icon'].includes(field.type);
+  const limitText = (field) => [
+    counted(field) ? `Max ${Number(field.max) || field.maxDefault || 'none'}` : '',
+    field.required ? 'Required' : '',
+    field.hint ? `Hint: ${field.hint}` : '',
+  ].filter(Boolean).join(' · ') || 'Optional';
+
+  /** Max, Required and Hint for one field, kept in the library's `field-rules` table. */
+  function limitsEditor(field, key, disabled, onChange) {
+    const name = () => String(field.label || '').trim() || field.auto;
+    const sum = h('summary', { class: 'bs-limits-sum' }, `Limits · ${limitText(field)}`);
+    const changed = () => {
+      sum.textContent = `Limits · ${limitText(field)}`;
+      onChange();
+    };
+    return h(
+      'details',
+      {
+        class: 'bs-limits',
+        open: field.limitsOpen ? true : undefined,
+        ontoggle: (e) => {
+          if (e.target.isConnected) field.limitsOpen = e.target.open;
+        },
+      },
+      sum,
+      h(
+        'div',
+        { class: 'bs-limits-grid' },
+        counted(field) ? h('label', { class: 'bs-small' }, 'Max characters', h('input', {
+          class: 'bs-input',
+          type: 'number',
+          min: '0',
+          value: field.max || '',
+          placeholder: field.maxDefault ? String(field.maxDefault) : 'None',
+          'aria-label': `Max characters for ${name()}`,
+          dataset: { key: `${key}:max` },
+          disabled,
+          oninput: (e) => {
+            field.max = e.target.value;
+            changed();
+          },
+        })) : null,
+        h('label', { class: 'bs-small bs-limits-check' }, h('input', {
+          type: 'checkbox',
+          checked: !!field.required,
+          dataset: { key: `${key}:required` },
+          disabled,
+          onchange: (e) => {
+            field.required = e.target.checked;
+            changed();
+          },
+        }), 'Required'),
+        h('label', { class: 'bs-small bs-limits-hint' }, 'Hint for authors', h('input', {
+          class: 'bs-input',
+          value: field.hint || '',
+          placeholder: 'Shown under the field',
+          'aria-label': `Hint for ${name()}`,
+          dataset: { key: `${key}:hint` },
+          disabled,
+          oninput: (e) => {
+            field.hint = e.target.value;
+            changed();
+          },
+        })),
+      ),
+    );
+  }
+
   function namingFields(naming, onLabel) {
     return naming.rows.map((row, r) => {
       if (row.option) return null;
@@ -1262,33 +1343,54 @@ export default function createPanel(root, state, on) {
         'div',
         { class: 'bs-naming-cell' },
         row.cells.filter((cell) => cell.length).length > 1 ? h('p', { class: 'bs-naming-col' }, `Column ${c + 1}`) : null,
-        fields.map((field, f) => h(
-          'label',
-          { class: 'bs-naming-field' },
-          h('span', { class: 'bs-naming-meta' }, h('span', { class: 'bs-tag' }, title(field.type)), h('span', { class: 'bs-naming-text' }, field.text || 'Empty')),
-          h('input', {
-            class: 'bs-input',
-            value: field.label,
-            placeholder: field.auto,
-            'aria-label': `Name for ${field.auto}`,
-            dataset: { key: `name:${r}:${c}:${f}` },
-            disabled: naming.step === 'saving',
-            oninput: (e) => {
-              field.label = e.target.value;
-              onLabel();
-            },
-          }),
-        )),
+        fields.map((field, f) => {
+          const key = `name:${r}:${c}:${f}`;
+          const saving = naming.step === 'saving';
+          return h(
+            'div',
+            { class: 'bs-naming-field' },
+            h(
+              naming.readOnly ? 'div' : 'label',
+              { class: 'bs-naming-label' },
+              h(
+                'span',
+                { class: 'bs-naming-meta' },
+                h('span', { class: 'bs-tag' }, title(field.type)),
+                h('span', { class: 'bs-naming-text' }, field.text || 'Empty'),
+                sourceTag(field.source),
+              ),
+              naming.readOnly ? h('span', { class: 'bs-naming-name' }, field.shown) : h('input', {
+                class: 'bs-input',
+                value: field.label,
+                placeholder: field.auto,
+                'aria-label': `Name for ${field.auto}`,
+                title: field.locked ? 'Change this name in the fields sheet of the block library' : undefined,
+                dataset: { key },
+                disabled: saving || field.locked,
+                oninput: (e) => {
+                  field.label = e.target.value;
+                  onLabel();
+                },
+              }),
+            ),
+            naming.readOnly ? h('p', { class: 'bs-muted bs-small bs-limits-read' }, limitText(field))
+              : limitsEditor(field, key, saving, onLabel),
+          );
+        }),
       ) : null));
       return h('div', { class: 'bs-naming-row' }, h('p', { class: 'bs-label' }, row.title), cells);
     });
   }
 
   function namingSection() {
-    const { naming } = state;
-    if (!naming && (!state.canName || locked())) return null;
+    const { naming, names } = state;
+    if (!names && !naming) return null;
     const step = naming?.step || 'closed';
-    const named = () => naming.rows.some((row) => row.cells?.some((fields) => fields.some((field) => String(field.label || '').trim())));
+    const named = names?.named || naming?.named;
+    const edit = names?.edit && !naming?.readOnly;
+    const fields = () => naming.rows.flatMap((row) => (row.cells || []).flat());
+    const canSave = () => (naming.named ? namesKey(naming.rows) !== naming.saved
+      : fields().some((field) => String(field.label || '').trim()));
     let body = null;
     if (step === 'loading') {
       body = h('div', { class: 'bs-alert bs-info' }, h('span', { class: 'bs-spinner' }), 'Reading the block library…');
@@ -1297,15 +1399,25 @@ export default function createPanel(root, state, on) {
         h('div', { class: 'bs-alert bs-naming-error', role: 'alert' }, icon('alert'), naming.error),
         h('div', { class: 'bs-naming-actions' }, h('button', { type: 'button', class: 'bs-btn bs-small-btn', onclick: () => on.cancelNaming() }, 'Close')),
       ];
+    } else if (naming?.readOnly) {
+      body = h('div', { class: 'bs-naming-rows' }, namingFields(naming, () => {}));
     } else if (naming) {
       const saving = step === 'saving';
       const save = h('button', {
-        type: 'button', class: 'bs-btn bs-primary bs-small-btn', onclick: () => on.saveNaming(), disabled: saving || !named(),
+        type: 'button', class: 'bs-btn bs-primary bs-small-btn', onclick: () => on.saveNaming(),
       }, saving ? 'Saving…' : 'Save names');
-      const canSave = () => { save.disabled = saving || !named(); };
+      const plan = h('ul', {});
+      const update = () => {
+        save.disabled = saving || !canSave();
+        const limits = JSON.stringify(fieldLimits(naming.rows)) !== naming.limits
+          ? limitsChange(naming.rows, naming.hadRules, naming.opts.title) : naming.rulesChange;
+        plan.replaceChildren(...[...naming.changes, limits].filter(Boolean).map((change) => h('li', {}, change)));
+      };
+      update();
       body = [
-        h('div', { class: 'bs-naming-rows' }, namingFields(naming, canSave)),
-        h('div', { class: 'bs-naming-plan' }, h('p', { class: 'bs-label' }, 'Saving will'), h('ul', {}, naming.changes.map((change) => h('li', {}, change)))),
+        h('div', { class: 'bs-naming-rows' }, namingFields(naming, update)),
+        fields().some((field) => field.locked) ? h('p', { class: 'bs-muted bs-small' }, 'Names from the fields sheet can only be changed in that sheet. Their limits can be set here.') : null,
+        h('div', { class: 'bs-naming-plan' }, h('p', { class: 'bs-label' }, 'Saving will'), plan),
         naming.notes.map((note) => h('p', { class: 'bs-muted bs-small' }, note)),
         naming.error ? h('div', { class: 'bs-alert bs-naming-error', role: 'alert' }, icon('alert'), naming.error) : null,
         h('div', { class: 'bs-naming-actions' }, h('button', {
@@ -1313,19 +1425,28 @@ export default function createPanel(root, state, on) {
         }, 'Cancel'), save),
       ];
     }
+    let intro = 'Nothing names these fields yet, so authors see names like “Text 2”. Name them once in the block library and every author sees your names.';
+    if (named) intro = 'Authors see these names. They are kept in the block library.';
+    else if (!edit) intro = 'Nothing names these fields yet, so authors see names Block Studio picks from the content.';
     return h(
       'details',
       {
         class: 'bs-naming',
         open: state.namingOpen ? true : undefined,
         ontoggle: (e) => {
+          // A details element made open fires toggle later, even once it is replaced.
+          if (!e.target.isConnected) return;
           state.namingOpen = e.target.open;
           if (e.target.open && !state.naming) on.startNaming();
         },
       },
-      h('summary', { class: 'bs-naming-sum' }, icon('tag'), 'Name this block\'s fields'),
-      h('p', { class: 'bs-muted bs-small' }, 'Nothing names these fields yet, so authors see names like “Text 2”. Name them once in the block library and every author sees your names.'),
+      h('summary', { class: 'bs-naming-sum' }, icon('tag'), edit && !named ? 'Name this block\'s fields' : 'Field names'),
+      h('p', { class: 'bs-muted bs-small' }, intro),
       body,
+      names && !names.edit ? h('p', { class: 'bs-muted bs-small' }, 'Only people who can edit the block library can change these names.') : null,
+      names?.link ? h('p', { class: 'bs-small' }, h('a', {
+        class: 'bs-naming-link', href: names.link, target: '_blank', rel: 'noopener',
+      }, 'Open in block library')) : null,
     );
   }
 
@@ -1383,7 +1504,8 @@ export default function createPanel(root, state, on) {
       state.target.index, state.model.name, state.model.mode, state.model.noun,
       state.model.variants, state.editable,
       state.ai?.available, state.ai?.busy, state.addingOption, [...state.open].sort(),
-      state.canName, state.namingOpen, state.naming?.step, state.naming?.error,
+      state.names, state.namingOpen, state.naming?.step, state.naming?.error,
+      state.naming?.readOnly,
       state.rules?.variants, state.libraryVariants,
       [...optionDefs().values()].map((d) => [d.key, d.type, d.type === 'text' ? '' : optionNow(d.key)?.value ?? null, d.type === 'image' && !!on.optionBusy?.(d.key), (state.issues || []).filter((i) => i.target === `option:${d.key}`).length]),
       view().options.map((o) => [o.key, valuesFor(o.key).length ? o.value : '', (state.issues || []).filter((i) => i.target === `option:${o.key}`).length]),

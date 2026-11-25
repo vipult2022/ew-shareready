@@ -1,0 +1,228 @@
+/* __TITLE__ panel. Scoped to .__PREFIX__-* classes; works from 280 px wide. */
+
+:root {
+  --__PREFIX__-font: 'Adobe Clean', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, sans-serif;
+  --__PREFIX__-text: #222;
+  --__PREFIX__-muted: #6e6e6e;
+  --__PREFIX__-border: #e1e1e1;
+  --__PREFIX__-soft: #f5f5f5;
+  --__PREFIX__-accent: #3b63fb;
+  --__PREFIX__-accent-hover: #274dea;
+  --__PREFIX__-error: #d7373f;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: #fff;
+}
+
+body {
+  font: 14px/1.45 var(--__PREFIX__-font);
+  color: var(--__PREFIX__-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.__PREFIX__-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.__PREFIX__-app button,
+.__PREFIX__-app input {
+  font: inherit;
+  color: inherit;
+}
+
+.__PREFIX__-app a {
+  color: var(--__PREFIX__-accent);
+}
+
+.__PREFIX__-muted {
+  color: var(--__PREFIX__-muted);
+  font-size: 12px;
+}
+
+.__PREFIX__-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--__PREFIX__-border);
+}
+
+.__PREFIX__-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+}
+
+.__PREFIX__-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--__PREFIX__-soft);
+  font-size: 11px;
+  color: var(--__PREFIX__-muted);
+}
+
+.__PREFIX__-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.__PREFIX__-button {
+  padding: 6px 14px;
+  border: 1px solid var(--__PREFIX__-border);
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.__PREFIX__-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.__PREFIX__-button:hover:not(:disabled) {
+  border-color: var(--__PREFIX__-accent);
+}
+
+.__PREFIX__-primary {
+  border-color: var(--__PREFIX__-accent);
+  background: var(--__PREFIX__-accent);
+  color: #fff;
+}
+
+.__PREFIX__-app .__PREFIX__-primary {
+  color: #fff;
+}
+
+.__PREFIX__-primary:hover:not(:disabled) {
+  background: var(--__PREFIX__-accent-hover);
+}
+
+.__PREFIX__-quiet {
+  align-self: flex-start;
+  border-color: transparent;
+  padding: 4px 8px;
+}
+
+.__PREFIX__-search {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--__PREFIX__-border);
+  border-radius: 6px;
+}
+
+.__PREFIX__-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.__PREFIX__-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--__PREFIX__-border);
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.__PREFIX__-item:hover,
+.__PREFIX__-item:focus-visible {
+  border-color: var(--__PREFIX__-accent);
+}
+
+.__PREFIX__-empty {
+  padding: 12px 0;
+  text-align: center;
+}
+
+.__PREFIX__-detail h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.__PREFIX__-detail p {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.__PREFIX__-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.__PREFIX__-setup h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.__PREFIX__-error {
+  padding: 10px;
+  border: 1px solid var(--__PREFIX__-error);
+  border-radius: 6px;
+  color: var(--__PREFIX__-error);
+}
+
+.__PREFIX__-error p {
+  margin: 0 0 8px;
+}
+
+.__PREFIX__-foot {
+  position: sticky;
+  bottom: 0;
+  padding: 8px 12px;
+  background: #fff;
+  border-top: 1px solid var(--__PREFIX__-border);
+}
+
+.__PREFIX__-foot p {
+  margin: 0;
+}
+
+.__PREFIX__-toast {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  z-index: 5;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #222;
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.__PREFIX__-toast.__PREFIX__-show {
+  opacity: 1;
+  transform: none;
+}
