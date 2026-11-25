@@ -1443,7 +1443,7 @@ export default function createPanel(root, state, on) {
       h('summary', { class: 'bs-naming-sum' }, icon('tag'), edit && !named ? 'Name this block\'s fields' : 'Field names'),
       h('p', { class: 'bs-muted bs-small' }, intro),
       body,
-      names && !names.edit ? h('p', { class: 'bs-muted bs-small' }, 'Only people who can edit the block library can change these names.') : null,
+      names && !names.edit ? h('p', { class: 'bs-muted bs-small' }, 'Only block library editors can change these names.') : null,
       names?.link ? h('p', { class: 'bs-small' }, h('a', {
         class: 'bs-naming-link', href: names.link, target: '_blank', rel: 'noopener',
       }, 'Open in block library')) : null,

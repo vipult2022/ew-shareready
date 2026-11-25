@@ -174,6 +174,7 @@ Special fields:
 | `options` | `theme, autoplay` | Rows with these keys are always block options |
 | `items` | `faq, step`, or `all` | Rows with these keys are always items. `all` turns detection of options off. The `label` column names the items ("Slide") |
 | `icons` | `lock, piggy, phone` | Icons offered in the picker, in addition to the site's |
+| `editors` | `ana@example.com, @example.com` | Block `*` only. Who can change field names and limits in the panel: emails, or `@domain` for everyone at a domain. See [Who can change field names](#who-can-change-field-names) |
 
 Example, as used by the demo:
 
@@ -250,7 +251,22 @@ EW reads only the `library-metadata` keys it knows (`description`, `searchtags`)
 | **Site rule** | A `label` in the `block-studio` sheet | The `block-studio` sheet |
 | **Automatic** | The content itself (see [How blocks are read](#how-blocks-are-read)) | Name it here to replace it |
 
-**Open in block library** opens the block's library page in DA, so anyone can see where the names are stored. People who can write to the block library in DA can also change the names in the card. Anyone else sees the names and a note that only library editors can change them. Because the names live in the library, a change applies to every author on every page that uses the block.
+**Open in block library** opens the block's library page in DA, so anyone can see where the names are stored. Because the names live in the library, a change applies to every author on every page that uses the block.
+
+#### Who can change field names
+
+Everyone sees the card. Only block library editors can change names and limits in it. Anyone else sees them read-only, with the note "Only block library editors can change these names". Two settings decide who is an editor, and both are optional:
+
+1. **DA permissions (the real lock).** The card is editable only for people who can write to the block library folder (`/docs/library` or wherever the "Blocks" library row points). On many sites authors can write everywhere, including the library. To keep authors out, give the library folder read-only access for authors and write access for admins in the site config's `permissions` sheet ([DA permissions](https://docs.da.live/administrators/guides/permissions)). This also stops anyone editing the library page directly.
+2. **The `editors` row (a panel switch).** To narrow it further without changing DA permissions, add this row to the `block-studio` sheet:
+
+   | block | field | values |
+   | --- | --- | --- |
+   | * | editors | `ana@example.com, lee@example.com, @admins.example.com` |
+
+   Only the listed people, or everyone with an email at a listed `@domain`, can edit in the card. The panel reads the signed-in person's email from their Adobe profile. If it can't, the card stays read-only. A person must be on the list *and* able to write to the library.
+
+With neither, anyone who can write to the library can change the names. The `editors` row only controls the panel: someone with write access can still open the library page and edit it, so use DA permissions when it must be enforced.
 
 - **A block with no names yet.** The card is called **Name this block's fields**, and Block Studio suggests a name for every field: one row per item for a repeating block, or one row per row for a hero or columns. Names come from the rules sheet's `label` first, then the item's noun ("Slide image", "Slide title"). The noun is taken from the rules sheet's `noun`, the block's code (`blocks/carousel/carousel.js` says "slide") or the block's name.
 - **A block that already has names.** The card is pre-filled with the names exactly as the library has them. Fields the library leaves unnamed (`IGNORE`) are empty, with their automatic name as the placeholder. Clear a name to go back to the automatic one. **Save names** turns on once something changes.
@@ -343,7 +359,7 @@ Block Studio writes back only what you changed. Unedited fields, rows and cells 
 ## Security
 
 - **No secrets and no server.** The panel is static files. It has no worker and no keys.
-- **Your own sign-in.** Reading the config and uploading images use the IMS token EW gives the panel, sent only to `admin.da.live` and `content.da.live`, never to another host. The GitHub icon list is fetched without credentials.
+- **Your own sign-in.** Reading the config and uploading images use the IMS token EW gives the panel, sent only to `admin.da.live` and `content.da.live`. When the `block-studio` sheet has an `editors` row, it is also sent to Adobe IMS (`ims-na1.adobelogin.com/ims/profile/v1`), which issued it, to read the person's email. It is never sent to any other host. The GitHub icon list is fetched without credentials.
 - **Clean HTML only.** Every rich text value, typed or pasted, is rebuilt from paragraphs, lists, line breaks, links, bold, italic, underline, strikethrough, sub, sup and code. Every other tag and every attribute except a link's `href` and `title` is dropped, so scripts, styles, frames, forms and event handlers can't get in. Links are limited to `https:`, `http:`, `mailto:` and `tel:`.
 - **The assistant edits only through EW.** Block Studio doesn't call an AI service. It asks the EW assistant, which uses the author's own permissions and EW's own safeguards.
 

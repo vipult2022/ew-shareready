@@ -17,7 +17,7 @@ import {
 import {
   DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryBlock, exampleFieldsFor,
   exampleRulesFor, withLibraryFields, parseRules, parseLibraryOptions, parseOptionDefs,
-  parseItemFields, parseMultiBlocks,
+  parseItemFields, parseMultiBlocks, namingEditors, canEditNames, imsEmail,
 } from './lib/rules.js';
 import { checkBlock } from './lib/check.js';
 import { fieldPrompt, altPrompt, briefPrompt } from './lib/ai.js';
@@ -277,7 +277,8 @@ function loadVariants(name) {
 /**
  * The Field names card, shown when the site has a block library and the block has
  * fields: `named` when the library or the `fields` sheet names them, `edit` when the
- * signed-in person can change the library, `link` to open the library page in DA.
+ * signed-in person can write to the library and is on the `editors` list (if the
+ * site has one), `link` to open the library page in DA.
  */
 function namesInfo() {
   const { model } = state;
@@ -294,7 +295,12 @@ function namesInfo() {
 
 async function checkLibraryWritable() {
   if (!settings.libraryIndex || !daSource(settings.libraryIndex)) return;
-  libraryWritable = await libraryStore.writable(settings.libraryIndex);
+  const editors = namingEditors(settings.rules);
+  const [writable, email] = await Promise.all([
+    libraryStore.writable(settings.libraryIndex),
+    editors.length ? imsEmail(token) : '',
+  ]);
+  libraryWritable = writable && canEditNames(editors, email);
   if (!libraryWritable || !state.model) return;
   derive();
   render();

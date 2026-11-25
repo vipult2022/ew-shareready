@@ -10,6 +10,7 @@ import {
   parseRules, blockRules, parseLibraryOptions, parseValues, blocksLibraryUrls, makeFetcher,
   loadSiteSettings, fieldRule, sheetRows, libraryVariants, parseOptionDefs, parseItemFields,
   libraryBlock, exampleFieldsFor, withLibraryFields, parseMultiBlocks, exampleRulesFor,
+  namingEditors, canEditNames, imsEmail, IMS_PROFILE,
 } from '../lib/rules.js';
 import { fieldPrompt, altPrompt, briefPrompt } from '../lib/ai.js';
 
@@ -296,4 +297,34 @@ test('config: the editor sheet marks repeating blocks as multi', () => {
   assert.deepEqual([...multi], ['accordion', 'cards']);
   assert.equal(blockRules([], 'Accordion', new Map(), { multiBlocks: multi }).multi, true);
   assert.equal(blockRules([], 'hero', new Map(), { multiBlocks: multi }).multi, false);
+});
+
+test('config: the editors row limits who can change field names', async () => {
+  const rules = parseRules([
+    { block: '*', field: 'editors', values: 'Ana@Northwind.example, @admins.northwind.example' },
+    { block: 'cards', field: 'editors', values: 'ignored@northwind.example' },
+    { block: 'cards', field: 'title', max: '60' },
+  ]);
+  const editors = namingEditors(rules);
+  assert.deepEqual(editors, ['ana@northwind.example', '@admins.northwind.example']);
+  assert.equal(blockRules(rules, 'cards', null).fields.has('editors'), false, 'not a field');
+
+  assert.equal(canEditNames([], ''), true, 'no list: DA permissions decide');
+  assert.equal(canEditNames(editors, 'ANA@northwind.example'), true);
+  assert.equal(canEditNames(editors, 'lee@admins.northwind.example'), true, '@domain');
+  assert.equal(canEditNames(editors, 'lee@northwind.example'), false);
+  assert.equal(canEditNames(editors, 'lee@evil-admins.northwind.example.com'), false);
+  assert.equal(canEditNames(editors, ''), false, 'unknown person: no');
+
+  const calls = [];
+  const ok = async (url, opts) => {
+    calls.push([url, opts.headers.Authorization]);
+    return { ok: true, json: async () => ({ email: ' Ana@Northwind.example ' }) };
+  };
+  assert.equal(await imsEmail('tok', ok), 'ana@northwind.example');
+  assert.deepEqual(calls, [[IMS_PROFILE, 'Bearer tok']]);
+  assert.equal(await imsEmail('', ok), '', 'no token, no call');
+  assert.equal(calls.length, 1);
+  assert.equal(await imsEmail('tok', async () => ({ ok: false })), '');
+  assert.equal(await imsEmail('tok', async () => { throw new Error('offline'); }), '');
 });

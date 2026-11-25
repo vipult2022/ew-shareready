@@ -68,6 +68,39 @@ export function parseRules(rows) {
 }
 
 /**
+ * Who may change field names and limits from the panel: the `editors` row of the
+ * `block-studio` sheet (block `*`), a comma list of emails and `@domain` entries.
+ * Empty when there is no row, which leaves it to DA permissions alone.
+ */
+export function namingEditors(rules) {
+  return (rules || []).filter((row) => row.field === 'editors' && row.block === 'all')
+    .flatMap((row) => list(row.values || row.label)).map((entry) => entry.toLowerCase());
+}
+
+/** Whether `email` is on the `editors` list; anyone is when the list is empty. */
+export function canEditNames(editors, email) {
+  if (!editors?.length) return true;
+  const who = String(email || '').trim().toLowerCase();
+  if (!who.includes('@')) return false;
+  return editors.some((entry) => (entry.startsWith('@') ? who.endsWith(entry) : who === entry));
+}
+
+export const IMS_PROFILE = 'https://ims-na1.adobelogin.com/ims/profile/v1';
+
+/** The signed-in person's email from IMS, or '' when it can't be read. */
+export async function imsEmail(token, fetchImpl = fetch) {
+  if (!token) return '';
+  try {
+    const resp = await fetchImpl(IMS_PROFILE, { headers: { Authorization: `Bearer ${token}` } });
+    if (!resp.ok) return '';
+    const profile = await resp.json();
+    return String(profile.email || '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/**
  * The rules that apply to one block, with block rows overriding `all` rows.
  * `schema` adds the block library's typed options (`optionDefs`), the `fields` sheet
  * (`itemFields`) and the example's `field-rules` table (`fieldRules`), so a new block is
@@ -87,7 +120,7 @@ export function blockRules(rules, name, libraryOptions, schema = {}) {
       if (row.label) result.noun = row.label;
     } else if (row.field === 'variants') result.variants = list(row.values).map(toClass);
     else if (row.field === 'icons') result.icons = list(row.values).map(toClass);
-    else {
+    else if (row.field !== 'editors') {
       const set = Object.fromEntries(Object.entries(row).filter(([, v]) => v));
       fields.set(row.field, { ...(fields.get(row.field) || {}), ...set });
       if (row.values) result.values.set(row.field, parseValues(row.values));
