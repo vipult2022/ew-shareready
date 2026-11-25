@@ -211,8 +211,7 @@ test('config: typed options and the fields sheet configure a block without code'
   const labelled = blockRules(parseRules([{
     block: 'cards', field: 'heading', label: 'Headline', max: '60',
   }]), 'cards', new Map());
-  assert.equal(fieldRule(labelled, 'Heading', 'heading').label, 'Headline');
-  assert.deepEqual([fieldRule(labelled, 'Card title', 'heading', 'Heading').label, fieldRule(labelled, 'Card title', 'heading', 'Heading').max], ['', 60], 'a library name wins over the rule\'s label, not its limits');
+  assert.deepEqual([fieldRule(labelled, 'Heading', 'heading').label, fieldRule(labelled, 'Heading', 'heading').max], [undefined, 60], 'a rule sets limits, never a field\'s name');
   assert.equal(rules.fields.get('theme').required, true, 'the block-studio sheet still applies');
   assert.equal(blockRules([], 'hero', new Map(), { optionDefs: defs }).optionDefs.get('spacing').type, 'select');
 });

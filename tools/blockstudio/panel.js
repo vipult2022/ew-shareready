@@ -326,7 +326,7 @@ export default function createPanel(root, state, on) {
 
   function fieldHead(slot, key, gi, parts = {}) {
     const rule = ruleFor(slot);
-    const label = rule.label || slot.label;
+    const { label } = slot;
     const id = `bs-${key.replaceAll(':', '-')}`;
     const count = h('span', { class: 'bs-counter', 'aria-live': 'off' });
     const tools = [];
@@ -1259,7 +1259,6 @@ export default function createPanel(root, state, on) {
   const SOURCES = {
     library: ['Block library', 'Named in the block library'],
     sheet: ['Fields sheet', 'Named by the fields sheet of the block library'],
-    rule: ['Site rule', 'Named by a rule in the block-studio sheet'],
     auto: ['Automatic', 'Named by Block Studio from the content'],
   };
   const sourceTag = (source) => {

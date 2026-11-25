@@ -10,7 +10,7 @@ import { escapeHtml } from './dom.js';
 import {
   parseBlock, layout, labelFields, fieldText, nounFor, toClass,
 } from './model.js';
-import { DA_ADMIN, fieldRule, fieldRuleRows } from './rules.js';
+import { DA_ADMIN, fieldRuleRows } from './rules.js';
 import { limitFor } from './check.js';
 import {
   parseHtml, blockElements, classesOf, cleanBlock, previewUrl,
@@ -74,10 +74,9 @@ const clip = (text, max = 60) => (text.length > max ? `${text.slice(0, max - 1).
  * Names for each field of an example block. A block of items is named by its first
  * item, which names every item; other blocks are named row by row, and their settings
  * rows are left out. Each field says where its current name comes from (`source`:
- * 'library', 'sheet', 'rule' or 'auto'). Once the library or the `fields` sheet names
- * the block (`named`), the labels are those names as they are, and other fields are
- * left empty so they keep their automatic name. Otherwise they are suggestions: a rule
- * from the site's `block-studio` sheet keeps its label, and other names in an item
+ * 'library', 'sheet' or 'auto'). Once the library or the `fields` sheet names the block
+ * (`named`), the labels are those names as they are, and other fields are left empty so
+ * they keep their automatic name. Otherwise they are suggestions: names in an item
  * start with the item's noun (from the rules, the code, or the block name). Names from
  * the `fields` sheet are `locked`: only the sheet changes them. Each field also has the
  * limits the example's `field-rules` table (`opts.fieldRules`) sets for it (`max`,
@@ -102,13 +101,13 @@ export function suggestNames(blockEl, hints = {}, opts = {}) {
       const slot = slots.find((s) => s.field === field);
       const label = slot?.label || fallback[f];
       const plain = slot?.auto || label;
-      const shown = fieldRule(rules, label, field.type, plain).label || label;
+      const shown = label;
       return {
         type: field.type,
         shown,
         plain,
-        auto: fieldRule(rules, plain, field.type).label || plain,
-        source: slot?.source || (shown !== plain ? 'rule' : 'auto'),
+        auto: plain,
+        source: slot?.source || 'auto',
         units: field.units ?? 1,
         text: clip(fieldText(field, doc)),
         maxDefault: limitFor({ label: shown, type: field.type, auto: plain }, baseRules),
@@ -142,7 +141,6 @@ export function suggestNames(blockEl, hints = {}, opts = {}) {
   fields.forEach((field) => {
     field.locked = field.source === 'sheet';
     if (named) field.label = ['library', 'sheet'].includes(field.source) ? field.shown : '';
-    else if (field.source === 'rule') field.label = field.shown;
     else field.label = multi ? itemLabel(noun, field.shown) : field.shown;
     const keys = [field.label, field.shown, field.plain].map(toClass).filter(Boolean);
     const own = fieldRules.find((rule) => keys.includes(rule.field)) || {};

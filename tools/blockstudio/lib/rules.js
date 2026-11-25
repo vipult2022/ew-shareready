@@ -164,10 +164,9 @@ export function fieldRule(rules, label, type, auto = label) {
     const slug = toClass(text);
     return slug ? rules.fields.get(slug) || rules.fields.get(slug.replace(/-\d+$/, '')) : null;
   };
-  const own = find(label);
-  if (own) return own;
-  const rule = (auto !== label && find(auto)) || rules.fields.get(type) || {};
-  return auto === label || !rule.label ? rule : { ...rule, label: '' };
+  const { label: _, ...rule } = find(label) || (auto !== label && find(auto))
+    || rules.fields.get(type) || {};
+  return rule;
 }
 
 export const OPTION_TYPES = ['select', 'text', 'image', 'toggle'];

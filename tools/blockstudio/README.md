@@ -60,7 +60,7 @@ Open a page in EW, then **Extensions › Block Studio**, and click inside any bl
 | Block health | "No issues" or "3 issues". Open it to see each issue; click one to jump to its field. Items with issues show a red or amber count. |
 | Fill from a brief | One line in ("Spring savings offers for young families"), and the assistant writes every field of the block. |
 | Block options | A **Variant** dropdown: Default plus the block's documented variants (from the block library or the rules sheet), with the chosen one's description. Authors can't type their own. Then the block's **options**: each option the library's `options` sheet defines for the block is always shown as a dropdown, text field, switch or image picker, with its default. Other setting rows (`theme`, `autoplay`, …) show as a dropdown with friendly labels, or a text field, and **+ Add option** lists the known settings this block doesn't have yet. |
-| Item fields | Each field is named from the block library: the `fields` table in an example's `library-metadata` ("Question", "Answer") or the library's `fields` sheet ("Card title", "Card background"), which also adds limits, required flags and slots for any declared field an item is missing. |
+| Item fields | Each field is named automatically from the content, or from the block library: the `fields` table in an example's `library-metadata` ("Question", "Answer"), which you can also edit from the panel's Field names card. |
 | Items | Slides, cards, tabs or accordion rows as collapsible items, named from the block ("Slide 1", "Card 2") with their heading as a subtitle. Add, duplicate, move up or down, delete (with Undo). New items go in before the settings rows, which never move. |
 | Groups | Blocks whose rows differ (hero, columns) are shown row by row as fixed groups instead of items. |
 
@@ -160,7 +160,7 @@ Add a sheet named **`block-studio`** to the site config (`https://da.live/config
 | --- | --- |
 | `block` | Block name (`carousel`, `cards`), or `*` for every block |
 | `field` | Field label, as a slug (`heading`, `eyebrow`, `primary-button`, `description`), or a field type (`heading`, `text`, `button`, `image`), or a setting key (`theme`), or one of the special fields below |
-| `label` | Label shown in the panel |
+| `label` | For a setting: the label shown in the panel. Ignored for fields; [field names](#configure-a-block-from-the-block-library) come only from the block library |
 | `max` | Character limit |
 | `required` | `yes` to report an empty field as an error |
 | `hint` | Help text shown under the field |
@@ -193,7 +193,7 @@ Example, as used by the demo:
 
 Block Studio has no per-block code. A new block is configured in the site's **block library** (the **Blocks** row of the `library` sheet; see [Set up the library](https://www.aem.live/docs/ew/administering/set-up-library)), so the same panel works on any project. The library can be published pages (`/library/blocks.json`) or kept in DA (`https://content.da.live/{org}/{site}/library/blocks.json`); DA-hosted files are read with your EW sign-in.
 
-A block gets five kinds of configuration:
+A block gets four kinds of configuration:
 
 | What | Where | Panel shows |
 | --- | --- | --- |
@@ -201,11 +201,10 @@ A block gets five kinds of configuration:
 | **Block options**: settings for the whole block (`theme`, `background`) | The library's `options` sheet | One typed control per option |
 | **Field names**: what each field in an example is | A `fields` table in the example's `library-metadata`, plus `multi` in the `editor` sheet for repeating blocks | "Question" and "Answer" instead of "Title" and "Description" |
 | **Field limits**: max characters, required, hint per field | A `field-rules` table in the example's `library-metadata` | Character counters, "is required" errors and help text |
-| **Item fields**: the cells of each card, slide or tab | The library's `fields` sheet | Named fields, limits, required checks and "Add …" slots |
 
 **Variants.** Each example on a block's library page whose class has variants is one choice in the **Variant** dropdown, with all its classes together: `cards horizontal` adds Horizontal and `cards icons compact` adds "Icons, Compact". The same classes in another order are the same choice, and an example without variants is the Default. The example's `library-metadata` description is shown under the dropdown when it's chosen. Each value in the rules sheet's `variants` field adds a single-class choice. Authors can only choose from this list; there's no free-text variant. A variant already on the page that isn't documented is shown as "(undocumented)" with a warning, so the author can pick a documented one or Default.
 
-**Field names.** Block Studio names fields automatically (see [How blocks are read](#how-blocks-are-read)), so an accordion's question and answer show as **Title** and **Description**. To give them real names, add a `fields` row to the `library-metadata` block under the example on the block's library page. Its value is a table in [Block Inspector](https://github.com/adobe-rnd/ew-extensions)'s format, so a library set up for Block Inspector already works:
+**Field names.** A field's name comes from one of two places: automatic, or the block library. Block Studio names fields automatically (see [How blocks are read](#how-blocks-are-read)), so an accordion's question and answer show as **Title** and **Description**. To give them real names, add a `fields` row to the `library-metadata` block under the example on the block's library page. Its value is a table in [Block Inspector](https://github.com/adobe-rnd/ew-extensions)'s format, so a library set up for Block Inspector already works:
 
 - The first row is a single **Fields** cell.
 - For a block of repeating items (cards, accordion, carousel), mark it `multi` in the library's `editor` sheet (below) and add **one** row of labels for the first item. It names every item, so adding a card or an FAQ never needs a library change.
@@ -227,7 +226,7 @@ The library's `editor` sheet (Block Inspector's, in the same `blocks.json` as `b
 | accordion | multi |
 | cards | multi |
 
-Without it, Block Studio still treats one label row as naming every item, and in a block of items the first item's labels also name items beyond the example. Each variant's example can name its fields; a block with no example for its variant uses the default example's names. When labels don't line up with the example's content, that cell keeps its automatic names. The `fields` sheet below wins for any column it describes.
+Without it, Block Studio still treats one label row as naming every item, and in a block of items the first item's labels also name items beyond the example. Each variant's example can name its fields; a block with no example for its variant uses the default example's names. When labels don't line up with the example's content, that cell keeps its automatic names. (On a site set up for Block Inspector, its `fields` sheet also works; see [Block Inspector's fields sheet](#block-inspectors-fields-sheet).)
 
 **Field limits.** Limits live beside the names, so the block's library page documents both. Add a `field-rules` row to the same `library-metadata` block. Its value is a table:
 
@@ -240,15 +239,14 @@ Without it, Block Studio still treats one label row as naming every item, and in
 | fields | (a table:) **Fields**, then **Question** \| **Answer** |
 | field-rules | (a table:) **Field rules**, then **Field** \| **Max** \| **Required** \| **Hint**, then **Question** \| 80 \| yes \| Ask one thing |
 
-EW reads only the `library-metadata` keys it knows (`description`, `searchtags`), so it ignores `field-rules`, and a library without one works as before. Each variant's example can have its own limits, matched like its names. **Which limit wins**, from weakest to strongest: the built-in limit for the field's type, the `fields` sheet, the `block-studio` sheet's `*` rows, the `field-rules` table, then the `block-studio` sheet's rows for that block. A `block-studio` row for a type (`heading`) is weaker than all of these. A limit the table leaves empty comes from the one below it.
+EW reads only the `library-metadata` keys it knows (`description`, `searchtags`), so it ignores `field-rules`, and a library without one works as before. Each variant's example can have its own limits, matched like its names. **Which limit wins**, from weakest to strongest: the built-in limit for the field's type, a Block Inspector `fields` sheet, the `block-studio` sheet's `*` rows, the `field-rules` table, then the `block-studio` sheet's rows for that block. A `block-studio` row for a type (`heading`) is weaker than all of these. A limit the table leaves empty comes from the one below it.
 
 **Field names (from the panel).** Authors can always see what each field is called and where the name comes from. Whenever the site has a block library and the open block has fields, the panel shows a **Field names** card. Each field shows its current name and a tag for where that name comes from:
 
 | Tag | Where the name comes from | Changed in |
 | --- | --- | --- |
 | **Block library** | The `fields` table under the block's example | This card, or the library page |
-| **Fields sheet** | The library's `fields` sheet | The sheet only (the card shows it read-only) |
-| **Site rule** | A `label` in the `block-studio` sheet | The `block-studio` sheet |
+| **Fields sheet** | Block Inspector's `fields` sheet, on sites that have one | The sheet only (the card shows it read-only) |
 | **Automatic** | The content itself (see [How blocks are read](#how-blocks-are-read)) | Name it here to replace it |
 
 **Open in block library** opens the block's library page in DA, so anyone can see where the names are stored. Because the names live in the library, a change applies to every author on every page that uses the block.
@@ -268,7 +266,7 @@ Everyone sees the card. Only block library editors can change names and limits i
 
 With neither, anyone who can write to the library can change the names. The `editors` row only controls the panel: someone with write access can still open the library page and edit it, so use DA permissions when it must be enforced.
 
-- **A block with no names yet.** The card is called **Name this block's fields**, and Block Studio suggests a name for every field: one row per item for a repeating block, or one row per row for a hero or columns. Names come from the rules sheet's `label` first, then the item's noun ("Slide image", "Slide title"). The noun is taken from the rules sheet's `noun`, the block's code (`blocks/carousel/carousel.js` says "slide") or the block's name.
+- **A block with no names yet.** The card is called **Name this block's fields**, and Block Studio suggests a name for every field: one row per item for a repeating block, or one row per row for a hero or columns. Names start with the item's noun ("Slide image", "Slide title"). The noun is taken from the `label` of the rules sheet's `items` row, the block's code (`blocks/carousel/carousel.js` says "slide") or the block's name.
 - **A block that already has names.** The card is pre-filled with the names exactly as the library has them. Fields the library leaves unnamed (`IGNORE`) are empty, with their automatic name as the placeholder. Clear a name to go back to the automatic one. **Save names** turns on once something changes.
 - Each field has a **Limits** line (Max characters, Required, Hint for authors), saved as the `field-rules` table. It opens with the table's values; the placeholder shows the limit the field has without it. Images and icons have no Max. Fields named by the `fields` sheet can't be renamed here, but their limits can be set.
 - Under the names, **Saving will** lists each change first.
@@ -301,27 +299,9 @@ The panel uses the new names straight away. EW's own library list picks up a new
 | cards | theme | `Light=light\|Dark=dark` | Theme | select | light |
 | cards | background | | Block background | image | |
 
-**Item fields.** Add a sheet named **`fields`** to the library's `blocks.json`, after `blocks` and `options` (EW reads the first sheet as the block list, so `blocks` must stay first):
+#### Block Inspector's fields sheet
 
-| Column | Meaning |
-| --- | --- |
-| `block` | Block name or a comma list |
-| `column` | The cell, counting from 1 |
-| `name` | A short id (`title`, `background`) |
-| `type` | `image`, `text`, `heading`, `button` or `icon` |
-| `label` | Name shown in the panel; also the name the rules sheet's `field` column matches |
-| `required` | `yes` to report it missing or empty as an error |
-| `max` | Character limit |
-| `hint` | Help text |
-
-| block | column | name | type | label | required | max | hint |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| cards | 1 | image | image | Card image | | | |
-| cards | 2 | title | heading | Card title | | 60 | |
-| cards | 2 | body | text | Card text | yes | 160 | One or two short sentences. |
-| cards | 3 | background | image | Card background | | | Fills the card behind the text. |
-
-A `field-rules` table in the block's library page beats this sheet, and the `block-studio` sheet's rows for the block win over both (see **Which limit wins** above).
+You don't need this for Block Studio. A site already set up for [Block Inspector](https://github.com/adobe-rnd/ew-extensions) may have a **`fields`** sheet in the library's `blocks.json` (`block | column | name | type | label | required | max | hint`, one row per cell). Block Studio reads it so those sites work with no changes: its labels name fields (the card shows them as **Fields sheet**, read-only), its limits apply, and a declared field an item is missing gets an "Add …" slot. For a new site, name fields in the block library instead.
 
 #### The block contract (site code)
 
