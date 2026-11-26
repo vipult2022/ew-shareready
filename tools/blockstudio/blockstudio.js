@@ -16,8 +16,8 @@ import {
 } from './lib/model.js';
 import {
   DA_ADMIN, makeFetcher, loadSiteSettings, blockRules, libraryBlock, exampleFieldsFor,
-  exampleRulesFor, withLibraryFields, parseRules, parseLibraryOptions, parseOptionDefs,
-  parseItemFields, parseMultiBlocks,
+  exampleRulesFor, withLibraryFields, parseRules, parseOptionDefs,
+  parseItemFields, parseMultiBlocks, namingEditors, canEditNames, imsEmail,
 } from './lib/rules.js';
 import { checkBlock } from './lib/check.js';
 import { fieldPrompt, altPrompt, briefPrompt } from './lib/ai.js';
@@ -65,7 +65,6 @@ const state = {
   ai: {
     available: false, busy: false, slow: false, label: '', undo: null,
   },
-  addingOption: '',
   showIssues: false,
   briefOpen: false,
   libraryVariants: [],
@@ -82,7 +81,6 @@ let host = null;
 let context = {};
 let settings = {
   rules: [],
-  libraryOptions: new Map(),
   optionDefs: new Map(),
   itemFields: new Map(),
   multiBlocks: new Set(),
@@ -129,7 +127,6 @@ const blockAt = (index) => (index == null ? null : blockElements(liveDoc)[index]
 const blockTitle = () => title(state.model?.name || 'selected');
 const hintsFor = (rules) => ({
   knownKeys: rules.knownKeys,
-  options: rules.options,
   items: rules.items,
   noun: rules.noun,
   multi: rules.multi,
@@ -209,7 +206,7 @@ function fetchLibrary(name) {
   if (!settings.libraryBlocks?.length) return null;
   let pending = libraryCache.get(name);
   if (!pending) {
-    const hints = hintsFor(blockRules(settings.rules, name, settings.libraryOptions, settings));
+    const hints = hintsFor(blockRules(settings.rules, name, settings));
     pending = libraryBlock(settings.libraryBlocks, name, libraryFetch, { hints })
       .catch(() => ({ variants: [], examples: [] }))
       .then((lib) => {
@@ -229,7 +226,7 @@ function blockRulesFor(name, variants) {
   const examples = libraryLoaded.get(name)?.examples;
   const fieldRules = exampleRulesFor(examples, variants);
   const schema = { ...settings, fieldRules };
-  const rules = blockRules(settings.rules, name, settings.libraryOptions, schema);
+  const rules = blockRules(settings.rules, name, schema);
   rules.itemFields = withLibraryFields(rules.itemFields, exampleFieldsFor(examples, variants));
   return rules;
 }
@@ -243,7 +240,7 @@ const rulesFor = (el) => blockRulesFor(blockName(el), classesOf(el).slice(1));
 function limitRules(name) {
   const { variants } = state.model;
   const fieldRules = exampleRulesFor(libraryLoaded.get(name)?.examples, variants);
-  const baseRules = blockRules(settings.rules, name, settings.libraryOptions, settings);
+  const baseRules = blockRules(settings.rules, name, settings);
   return { rules: state.rules, baseRules, fieldRules };
 }
 
@@ -277,7 +274,8 @@ function loadVariants(name) {
 /**
  * The Field names card, shown when the site has a block library and the block has
  * fields: `named` when the library or the `fields` sheet names them, `edit` when the
- * signed-in person can change the library, `link` to open the library page in DA.
+ * signed-in person can write to the library and is on the `editors` list (if the
+ * site has one), `link` to open the library page in DA.
  */
 function namesInfo() {
   const { model } = state;
@@ -294,7 +292,12 @@ function namesInfo() {
 
 async function checkLibraryWritable() {
   if (!settings.libraryIndex || !daSource(settings.libraryIndex)) return;
-  libraryWritable = await libraryStore.writable(settings.libraryIndex);
+  const editors = namingEditors(settings.rules);
+  const [writable, email] = await Promise.all([
+    libraryStore.writable(settings.libraryIndex),
+    editors.length ? imsEmail(token) : '',
+  ]);
+  libraryWritable = writable && canEditNames(editors, email);
   if (!libraryWritable || !state.model) return;
   derive();
   render();
@@ -406,7 +409,7 @@ async function saveNaming() {
     const sourceKey = (url) => daSource(url)?.url || String(url).replace(/(\.plain)?\.html$/, '');
     const readSaved = (url) => (sourceKey(url) === sourceKey(opts.pageUrl)
       ? Promise.resolve(new Response(saved, { status: 200 })) : libraryFetch(url));
-    const hints = hintsFor(blockRules(settings.rules, name, settings.libraryOptions, settings));
+    const hints = hintsFor(blockRules(settings.rules, name, settings));
     const lib = await libraryBlock(settings.libraryBlocks, name, readSaved, { hints });
     libraryCache.set(name, Promise.resolve(lib));
     libraryLoaded.set(name, lib);
@@ -648,7 +651,6 @@ function openBlock(el, index, same) {
     undoStack = saved?.undo || [];
     redoStack = saved?.redo || [];
     state.open = new Set([1]);
-    state.addingOption = '';
     state.showIssues = false;
     state.briefOpen = false;
     state.naming = null;
@@ -1263,7 +1265,6 @@ function startDemo() {
   pageUrl = window.location.href;
   settings = {
     rules: parseRules(DEMO_RULES),
-    libraryOptions: parseLibraryOptions(DEMO_LIBRARY.options),
     optionDefs: parseOptionDefs(DEMO_LIBRARY.options),
     itemFields: parseItemFields(DEMO_LIBRARY.fields),
     multiBlocks: parseMultiBlocks(DEMO_LIBRARY.editor),

@@ -23,7 +23,7 @@ const CAROUSEL = `<div class="carousel media-left">
 const CAROUSEL_RULES = blockRules(parseRules([
   { block: 'carousel', field: 'description', max: '160' },
   { block: 'carousel', field: 'eyebrow', label: 'Kicker' },
-]), 'carousel', new Map());
+]), 'carousel');
 const CAROUSEL_HINTS = { noun: 'Slide', knownKeys: new Set(['theme']) };
 
 const HERO = `<div class="hero">
@@ -45,9 +45,9 @@ test('naming: a block of items is named by its first item, with the noun and the
   assert.equal(names.noun, 'Slide', 'the rules\' noun wins over the code\'s');
   assert.equal(names.rows.length, 1, 'one row names every item; settings rows are left out');
   assert.equal(names.rows[0].title, 'Every slide');
-  assert.deepEqual(labelsOf(names.rows), [[['Slide image'], ['Kicker', 'Slide title', 'Slide description', 'Primary button']]]);
+  assert.deepEqual(labelsOf(names.rows), [[['Slide image'], ['Slide eyebrow', 'Slide title', 'Slide description', 'Primary button']]], 'a rules sheet label never names a field');
   const text = names.rows[0].cells[1];
-  assert.deepEqual(text.map((f) => f.auto), ['Kicker', 'Heading', 'Description', 'Primary button'], 'auto is what the panel shows unnamed');
+  assert.deepEqual(text.map((f) => f.auto), ['Eyebrow', 'Heading', 'Description', 'Primary button'], 'auto is what the panel shows unnamed');
   assert.deepEqual(text.map((f) => f.units), [1, 1, 2, 1], 'two paragraphs are one field');
   assert.equal(text[1].text, 'Instant Saver');
   const fromCode = suggestNames(blockOf(CAROUSEL), { knownKeys: new Set(['theme']) }, { codeNoun: 'Panel' });
@@ -98,9 +98,9 @@ test('naming: once named, the names are shown as they are, with where each comes
     'not rewritten to "Slide title"; unnamed stays empty',
   );
   const text = again.rows[0].cells[1];
-  assert.deepEqual(text.map((f) => f.source), ['rule', 'library', 'library', 'library']);
-  assert.deepEqual(text.map((f) => f.shown), ['Kicker', 'Title', 'Slide description', 'Primary button']);
-  assert.equal(text[0].auto, 'Kicker', 'an empty name shows the rule\'s');
+  assert.deepEqual(text.map((f) => f.source), ['auto', 'library', 'library', 'library']);
+  assert.deepEqual(text.map((f) => f.shown), ['Eyebrow', 'Title', 'Slide description', 'Primary button']);
+  assert.equal(text[0].auto, 'Eyebrow', 'an empty name shows the automatic one');
   assert.equal(namesKey(again.rows), namesKey(names.rows), 'nothing changed');
 
   const sheet = suggestNames(blockOf(CAROUSEL), { ...CAROUSEL_HINTS, schema: [{ c: 1, type: 'heading', label: 'Headline' }] }, { rules: CAROUSEL_RULES });
@@ -120,7 +120,7 @@ test('naming: limits are saved as a field-rules table beside the names, and read
   assert.notEqual(namesKey(names.rows), before, 'a limit is a change');
   const table = fieldRulesTable(names.rows);
   assert.match(table, /<td><p>Slide title<\/p><\/td><td><p>40<\/p><\/td><td><p>yes<\/p><\/td><td><p>Say &lt;what&gt; it is<\/p><\/td>/);
-  assert.match(table, /<td><p>Kicker<\/p><\/td><td><p><\/p><\/td>/, 'an unnamed field by its automatic name');
+  assert.match(table, /<td><p>Eyebrow<\/p><\/td><td><p><\/p><\/td>/, 'an unnamed field by its automatic name');
 
   const opts = {
     name: 'carousel', title: 'Carousel', rows: names.rows, pageUrl: 'https://content.da.live/o/s/library/blocks/carousel', indexUrl: 'https://content.da.live/o/s/library/blocks.json', exampleHtml: exampleFromBlock(blockOf(CAROUSEL), 'https://main--s--o.aem.page/savings'),
@@ -132,7 +132,7 @@ test('naming: limits are saved as a field-rules table beside the names, and read
   const lib = await read(plan.page.html);
   const fieldRules = exampleRulesFor(lib.examples, ['media-left']);
   assert.deepEqual(fieldRules.map((r) => [r.field, r.max, r.required, r.hint]), [
-    ['kicker', 0, false, 'One or two words'], ['slide-title', 40, true, 'Say <what> it is'],
+    ['eyebrow', 0, false, 'One or two words'], ['slide-title', 40, true, 'Say <what> it is'],
   ]);
   const hints = { ...CAROUSEL_HINTS, schema: exampleFieldsFor(lib.examples, ['media-left']) };
   const again = suggestNames(blockOf(CAROUSEL), hints, { rules: CAROUSEL_RULES, fieldRules });

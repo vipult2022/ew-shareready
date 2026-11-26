@@ -207,16 +207,7 @@ export default function createPanel(root, state, on) {
       // eslint-disable-next-line no-use-before-define
       render(true);
     }
-    const missing = target.startsWith('option-missing:') ? target.slice(15) : '';
-    const definedKey = missing && state.rules?.optionDefs?.has(missing);
-    if (missing && !definedKey) {
-      state.addingOption = missing;
-      // eslint-disable-next-line no-use-before-define
-      render(true);
-    }
-    const fallback = definedKey ? `option:${missing}` : target.replace(/^option-missing:.*/, 'add-option');
-    const el = ui.body.querySelector(`[data-target="${CSS.escape(target)}"]`)
-      || ui.body.querySelector(`[data-target="${CSS.escape(fallback)}"]`);
+    const el = ui.body.querySelector(`[data-target="${CSS.escape(target)}"]`);
     if (!el) return;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     el.classList.remove('bs-flash');
@@ -326,7 +317,7 @@ export default function createPanel(root, state, on) {
 
   function fieldHead(slot, key, gi, parts = {}) {
     const rule = ruleFor(slot);
-    const label = rule.label || slot.label;
+    const { label } = slot;
     const id = `bs-${key.replaceAll(':', '-')}`;
     const count = h('span', { class: 'bs-counter', 'aria-live': 'off' });
     const tools = [];
@@ -997,35 +988,9 @@ export default function createPanel(root, state, on) {
   }
 
   const optionDefs = () => state.rules?.optionDefs || new Map();
-  const optionLabel = (key, keyText) => optionDefs().get(key)?.label
-    || state.rules?.fields?.get(key)?.label || title(keyText || key);
-  const valuesFor = (key) => state.rules?.values?.get(key) || [];
+  const optionLabel = (key, keyText) => optionDefs().get(key)?.label || title(keyText || key);
   const optionNow = (key) => view().options.find((o) => o.key === key);
   const isOff = (value) => /^(|false|no|off|0)$/i.test(String(value ?? '').trim());
-
-  function optionControl(option) {
-    const values = valuesFor(option.key);
-    const key = `option:${option.key}`;
-    if (values.length) {
-      const known = values.some((v) => v.value === option.value || v.title === option.value);
-      const select = h('select', {
-        class: 'bs-input',
-        id: `bs-${key.replace(':', '-')}`,
-        dataset: { key },
-        disabled: locked(),
-        onchange: (e) => on.setOption(option.key, e.target.value, option.keyText),
-      }, known ? null : h('option', { value: option.value }, option.value ? `${option.value} (not in the list)` : 'Choose…'), values.map((v) => h('option', { value: v.value }, v.title)));
-      const match = values.find((v) => v.value === option.value || v.title === option.value);
-      select.value = match?.value ?? option.value;
-      return select;
-    }
-    const el = h('input', {
-      class: 'bs-input', id: `bs-${key.replace(':', '-')}`, value: option.value, dataset: { key }, disabled: locked(),
-    });
-    el.addEventListener('input', () => on.setOption(option.key, el.value, option.keyText, false));
-    el.addEventListener('change', () => on.setOption(option.key, el.value, option.keyText));
-    return el;
-  }
 
   /**
    * A control for an option the library defines. The block's default needs no row, so
@@ -1043,7 +1008,7 @@ export default function createPanel(root, state, on) {
       } else on.setOption(def.key, v, def.keyText, commit);
     };
     if (def.type === 'select') {
-      const values = def.values.length ? def.values : valuesFor(def.key);
+      const { values } = def;
       const fallback = values.find((v) => v.value === def.default);
       const match = values.find((v) => v.value === current || v.title === current);
       const select = h(
@@ -1126,84 +1091,12 @@ export default function createPanel(root, state, on) {
     return el;
   }
 
-  /** Known settings the block doesn't have yet; with library definitions, the only ones to add. */
-  function addableKeys() {
-    const present = new Set(view().options.map((o) => o.key));
-    const defs = optionDefs();
-    return [...(state.rules?.values?.keys() || []), ...(state.rules?.options || [])]
-      .filter((key, i, all) => !present.has(key) && !defs.has(key) && all.indexOf(key) === i);
-  }
-
-  function addOptionForm() {
-    const known = addableKeys();
-    const free = !optionDefs().size;
-    if (!state.addingOption) {
-      return locked() ? null : h('button', {
-        type: 'button',
-        class: 'bs-link-btn bs-add-option',
-        dataset: { target: 'add-option', key: 'add-option' },
-        onclick: () => {
-          state.addingOption = known[0] || '-';
-          // eslint-disable-next-line no-use-before-define
-          render(true);
-        },
-      }, icon('plus'), known.length ? `Add option (${known.map((k) => optionLabel(k)).join(', ')})` : 'Add option');
-    }
-    const keyInput = h('input', {
-      class: 'bs-input',
-      placeholder: 'Setting, e.g. theme',
-      'aria-label': 'Option name',
-      list: 'bs-option-keys',
-      dataset: { key: 'new-option-key' },
-      value: state.addingOption === '-' ? '' : state.addingOption,
-    });
-    const keyList = h('datalist', { id: 'bs-option-keys' }, known.map((k) => h('option', { value: k }, optionLabel(k))));
-    const valueBox = h('div', { class: 'bs-grow' });
-    let valueInput;
-    const fillValue = () => {
-      const values = valuesFor(toClass(keyInput.value));
-      valueInput = values.length
-        ? h('select', { class: 'bs-input', 'aria-label': 'Option value' }, values.map((v) => h('option', { value: v.value }, v.title)))
-        : h('input', { class: 'bs-input', placeholder: 'Value', 'aria-label': 'Option value' });
-      fill(valueBox, valueInput);
-    };
-    keyInput.addEventListener('input', fillValue);
-    fillValue();
-    const done = () => {
-      state.addingOption = '';
-      // eslint-disable-next-line no-use-before-define
-      render(true);
-    };
-    return h(
-      'div',
-      { class: 'bs-add-option-form', dataset: { target: 'add-option' } },
-      h('div', { class: 'bs-option-grid' }, keyInput, keyList, valueBox),
-      h('div', { class: 'bs-inline bs-end' }, h('button', { type: 'button', class: 'bs-btn bs-small-btn', onclick: done }, 'Cancel'), h('button', {
-        type: 'button',
-        class: 'bs-btn bs-primary bs-small-btn',
-        onclick: () => {
-          const key = toClass(keyInput.value);
-          if (!key) {
-            toast('Give the option a name, such as theme.');
-            return;
-          }
-          if (!free && !known.includes(key)) {
-            toast(`This block's options are set by the library. Add one of: ${known.map((k) => optionLabel(k)).join(', ')}.`);
-            return;
-          }
-          on.setOption(key, valueInput.value, keyInput.value.trim().toLowerCase());
-          done();
-        },
-      }, 'Add')),
-    );
-  }
-
   const optionIssues = (key) => h('ul', { class: 'bs-field-issues bs-option-issues' }, issuesFor(`option:${key}`).map((issue) => h('li', { class: `bs-${issue.level}` }, issueIcon(issue.level), issue.message)));
 
   /**
-   * Options the library defines are always listed, in sheet order, with a control for
-   * their type. Other settings rows on the block are listed after them; free-form
-   * options can be added only when the block has no definitions.
+   * Options the library's `options` sheet defines are always listed, in sheet order, with
+   * a control for their type; authors can't add others. A settings row already on the page
+   * that the sheet doesn't define is shown read-only, with a Remove button.
    */
   function optionsSection() {
     const defs = optionDefs();
@@ -1218,7 +1111,9 @@ export default function createPanel(root, state, on) {
       'div',
       { class: 'bs-option', dataset: { target: `option:${option.key}` } },
       h('label', { class: 'bs-label', for: `bs-option-${option.key}` }, optionLabel(option.key, option.keyText)),
-      optionControl(option),
+      h('input', {
+        class: 'bs-input', id: `bs-option-${option.key}`, value: option.value, readOnly: true, dataset: { key: `option:${option.key}` },
+      }),
       locked() ? null : iconBtn('close', `Remove ${optionLabel(option.key, option.keyText)}`, () => on.removeOption(option.key)),
       optionIssues(option.key),
     ));
@@ -1226,7 +1121,14 @@ export default function createPanel(root, state, on) {
       'section',
       { class: 'bs-section' },
       h('div', { class: 'bs-section-head' }, h('h2', {}, 'Block options'), h('span', { class: 'bs-grow' }), h('span', { class: 'bs-muted bs-small' }, 'Once per block')),
-      h('div', { class: 'bs-card bs-options' }, variantsSection(), defined, rows, !defs.size || addableKeys().length ? addOptionForm() : null),
+      h(
+        'div',
+        { class: 'bs-card bs-options' },
+        variantsSection(),
+        defined,
+        rows,
+        rows.length && !state.rules?.optionSheet ? h('p', { class: 'bs-muted bs-small' }, "To edit these settings here, add them to the block library's options sheet.") : null,
+      ),
     );
   }
 
@@ -1259,7 +1161,6 @@ export default function createPanel(root, state, on) {
   const SOURCES = {
     library: ['Block library', 'Named in the block library'],
     sheet: ['Fields sheet', 'Named by the fields sheet of the block library'],
-    rule: ['Site rule', 'Named by a rule in the block-studio sheet'],
     auto: ['Automatic', 'Named by Block Studio from the content'],
   };
   const sourceTag = (source) => {
@@ -1443,7 +1344,7 @@ export default function createPanel(root, state, on) {
       h('summary', { class: 'bs-naming-sum' }, icon('tag'), edit && !named ? 'Name this block\'s fields' : 'Field names'),
       h('p', { class: 'bs-muted bs-small' }, intro),
       body,
-      names && !names.edit ? h('p', { class: 'bs-muted bs-small' }, 'Only people who can edit the block library can change these names.') : null,
+      names && !names.edit ? h('p', { class: 'bs-muted bs-small' }, 'Only block library editors can change these names.') : null,
       names?.link ? h('p', { class: 'bs-small' }, h('a', {
         class: 'bs-naming-link', href: names.link, target: '_blank', rel: 'noopener',
       }, 'Open in block library')) : null,
@@ -1503,12 +1404,12 @@ export default function createPanel(root, state, on) {
     return JSON.stringify([
       state.target.index, state.model.name, state.model.mode, state.model.noun,
       state.model.variants, state.editable,
-      state.ai?.available, state.ai?.busy, state.addingOption, [...state.open].sort(),
+      state.ai?.available, state.ai?.busy, state.rules?.optionSheet, [...state.open].sort(),
       state.names, state.namingOpen, state.naming?.step, state.naming?.error,
       state.naming?.readOnly,
       state.rules?.variants, state.libraryVariants,
       [...optionDefs().values()].map((d) => [d.key, d.type, d.type === 'text' ? '' : optionNow(d.key)?.value ?? null, d.type === 'image' && !!on.optionBusy?.(d.key), (state.issues || []).filter((i) => i.target === `option:${d.key}`).length]),
-      view().options.map((o) => [o.key, valuesFor(o.key).length ? o.value : '', (state.issues || []).filter((i) => i.target === `option:${o.key}`).length]),
+      view().options.map((o) => [o.key, o.value, (state.issues || []).filter((i) => i.target === `option:${o.key}`).length]),
       view().groups.map((g) => [g.kind, g.title, g.cells.map((cell) => cell.map((s) => [s.type, !!s.field, s.label, s.field?.style === 'accent']))]),
     ]);
   }

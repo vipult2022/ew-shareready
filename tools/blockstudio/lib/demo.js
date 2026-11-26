@@ -63,14 +63,8 @@ const PAGE = `<main>
 </div>
 </main>`;
 
-/** The demo site's rules sheet (block | field | label | max | required | hint | values). */
+/** The demo site's `block-studio` sheet (block | field | label | max | required | hint | values) */
 export const DEMO_RULES = [
-  {
-    block: 'carousel', field: 'theme', label: 'Background', required: 'yes', hint: 'The colour behind the slides.', values: 'No background=none|Light surface=surface-light|Brand tint=surface-tint|Dark surface=surface-dark',
-  },
-  {
-    block: 'carousel', field: 'autoplay', label: 'Autoplay', values: 'Off=off|Every 5 seconds=5s|Every 8 seconds=8s',
-  },
   { block: 'carousel', field: 'variants', values: 'media-left, media-right, full-width' },
   { block: 'carousel', field: 'items', label: 'Slide' },
   {
@@ -90,6 +84,12 @@ export const DEMO_RULES = [
  */
 export const DEMO_LIBRARY = {
   options: [
+    {
+      blocks: 'carousel', key: 'theme', values: 'No background=none|Light surface=surface-light|Brand tint=surface-tint|Dark surface=surface-dark', label: 'Background', type: 'select', default: 'none',
+    },
+    {
+      blocks: 'carousel', key: 'autoplay', values: 'Off=off|Every 5 seconds=5s|Every 8 seconds=8s', label: 'Autoplay', type: 'select', default: 'off',
+    },
     {
       blocks: 'cards', key: 'theme', values: 'Light=light|Dark=dark', label: 'Theme', type: 'select', default: 'light',
     },
