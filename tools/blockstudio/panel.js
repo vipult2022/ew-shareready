@@ -1096,10 +1096,12 @@ export default function createPanel(root, state, on) {
   /**
    * Options the library's `options` sheet defines are always listed, in sheet order, with
    * a control for their type; authors can't add others. A settings row already on the page
-   * that the sheet doesn't define is shown read-only, with a Remove button.
+   * that the sheet doesn't define is shown read-only, with a Remove button. A block with no
+   * variants and no options has nothing to choose, so the section is hidden.
    */
   function optionsSection() {
     const defs = optionDefs();
+    const variants = variantsSection();
     const defined = [...defs.values()].map((def) => h(
       'div',
       { class: `bs-option bs-option-${def.type}`, dataset: { target: `option:${def.key}` } },
@@ -1117,6 +1119,7 @@ export default function createPanel(root, state, on) {
       locked() ? null : iconBtn('close', `Remove ${optionLabel(option.key, option.keyText)}`, () => on.removeOption(option.key)),
       optionIssues(option.key),
     ));
+    if (!variants && !defined.length && !rows.length) return null;
     return h(
       'section',
       { class: 'bs-section' },
@@ -1124,7 +1127,7 @@ export default function createPanel(root, state, on) {
       h(
         'div',
         { class: 'bs-card bs-options' },
-        variantsSection(),
+        variants,
         defined,
         rows,
         rows.length && !state.rules?.optionSheet ? h('p', { class: 'bs-muted bs-small' }, "To edit these settings here, add them to the block library's options sheet.") : null,
